@@ -1,0 +1,8 @@
+{
+  "name": "dashboard-reconstrucoes",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Dashboard de redes sociais do Reconstruções. Local: node server.js. Vercel: ver README.",
+  "scripts": { "start": "node server.js", "build": "cd web && npm install && npm run build" },
+  "dependencies": { "@vercel/blob": "^2.8.1" }
+}
