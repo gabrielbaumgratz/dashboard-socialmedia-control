@@ -16,7 +16,7 @@ export async function uploadMedia(itemId, file, slot, cloud) {
   const ext = '.' + (file.name.split('.').pop() || '').toLowerCase().replace('jpeg', 'jpg');
   if (!cloud) return api(`/api/items/${itemId}/media?name=${encodeURIComponent(file.name)}${slot ? '&slot=' + slot : ''}`, { method: 'POST', raw: file });
   const base = slot === 'cutout' ? 'media-cutout' : slot === 'add' ? 'media-add-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) : ext === '.mp4' ? 'media-video' : 'media-photo';
-  const { upload } = await import('@vercel/blob/client');
+  const { uploadPresigned: upload } = await import('@vercel/blob/client');
   await upload(`images/${itemId}/${base}${ext}`, file, { access: 'private', handleUploadUrl: '/api/blob-upload', multipart: file.size > 50e6 });
   return api(`/api/items/${itemId}/media-ref`, { method: 'POST', body: { file: base + ext, slot } });
 }

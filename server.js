@@ -421,14 +421,18 @@ async function handleApi(req, res, url) {
   }
   if (p === '/api/blob-upload' && m === 'POST') { // upload direto navegador -> Blob (arquivos grandes)
     const body = await readJson(req);
-    if (body.type === 'blob.generate-client-token' && !authed(req)) return send(res, 401, { error: 'faça login' });
-    const { handleUpload } = await import('@vercel/blob/client');
+    if (body.type !== 'blob.upload-completed' && !authed(req)) return send(res, 401, { error: 'faça login' });
+    const { handleUploadPresigned } = await import('@vercel/blob/client'), { issueSignedToken } = await import('@vercel/blob');
     try {
-      const out = await handleUpload({
+      const out = await handleUploadPresigned({
         body, request: req,
-        onBeforeGenerateToken: async pathname => {
+        getSignedToken: async pathname => {
           if (!/^images\/[\w-]+\/[\w.-]+$/.test(pathname)) throw new Error('caminho inválido');
-          return { allowedContentTypes: Object.values(MEDIA_TYPES), maximumSizeInBytes: 500 * 1024 * 1024, addRandomSuffix: false, allowOverwrite: true };
+          const ct = Object.values(MEDIA_TYPES);
+          return {
+            token: await issueSignedToken({ pathname, operations: ['put'], allowedContentTypes: ct, maximumSizeInBytes: 500 * 1024 * 1024, validUntil: Date.now() + 3600e3 }),
+            urlOptions: { allowedContentTypes: ct, maximumSizeInBytes: 500 * 1024 * 1024, addRandomSuffix: false, allowOverwrite: true, validUntil: Date.now() + 600e3 }
+          };
         },
         onUploadCompleted: async () => {}
       });

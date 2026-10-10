@@ -5,7 +5,7 @@ import { typeOf } from './util.js';
 
 async function send(id, name, blob, cloud) {
   if (!cloud) return api(`/api/items/${id}/export?name=${name}`, { method: 'POST', raw: blob });
-  const { upload } = await import('@vercel/blob/client');
+  const { uploadPresigned: upload } = await import('@vercel/blob/client');
   await upload(`images/${id}/${name}`, blob, { access: 'private', handleUploadUrl: '/api/blob-upload', contentType: blob.type, multipart: blob.size > 50e6 });
 }
 
