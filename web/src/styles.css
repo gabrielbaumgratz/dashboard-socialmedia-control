@@ -463,6 +463,8 @@ input.mini{width:auto;padding:8px 10px;font-size:13px}
 .capbox{display:grid;gap:8px}
 .caphead{display:flex;justify-content:space-between;align-items:center}
 button.mini{padding:5px 10px;font-size:12px}
+button.aibtn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;font-size:14px;font-weight:800;background:var(--accent,#00b0ac);color:#04282b;border:0}
+button.aibtn.ghost{background:transparent;color:inherit;border:1px solid currentColor}
 .donebox{display:grid;gap:8px;padding:12px;border-radius:16px;border:1px dashed var(--line2)}
 textarea{field-sizing:content;resize:none;min-height:3.2em;max-height:none;overflow:hidden}
 
@@ -501,7 +503,7 @@ button,a,[role=button]{touch-action:manipulation;-webkit-tap-highlight-color:tra
 .thumbacts{pointer-events:none}.thumbacts button{pointer-events:auto;box-shadow:none}
 .thumbwrap{position:relative}
 .thumbwrap:hover .thumbacts,.thumbacts:focus-within{opacity:1;transform:none}
-.exportbox{display:flex;gap:6px;align-items:center}.exportbox select{width:auto;padding:7px 8px;font-size:13px}.exportbox button{flex:1;padding:8px 10px;font-size:13px}
+.exportbox{display:flex;gap:6px;align-items:center;justify-content:flex-end}.exportbox select{width:auto;padding:4px 6px;font-size:12px}.exportbox button{flex:none;padding:4px 10px;font-size:12px;font-weight:600}
 
 .dt{border:0;padding:0;margin:0;display:grid;grid-template-columns:1.3fr 1fr;gap:8px}
 .dt legend{font-size:12.5px;font-weight:800;color:var(--mut);padding:0;margin-bottom:6px}
@@ -555,13 +557,6 @@ button.ok{background:color-mix(in srgb,var(--ok) 70%,transparent);color:#06231c}
 .phone-screen.story .st-bottom{position:absolute;left:0;right:0;bottom:3%;top:auto}
 
 .iconseg button{padding:7px 10px;display:grid;place-items:center}.iconseg svg{display:block;position:relative;z-index:1}
-
-/* barra lateral com vidro 3D (GlassBar) */
-.side.has3d{background:transparent!important;backdrop-filter:none!important;overflow:hidden;isolation:isolate}
-.glassbar{position:absolute;inset:0;z-index:0;border-radius:inherit;overflow:hidden;pointer-events:none}
-.glassbar canvas{width:100%!important;height:100%!important}
-.side.has3d>*:not(.glassbar){position:relative;z-index:1}
-@media(max-width:820px){.glassbar{display:none}.side.has3d{background:color-mix(in srgb,var(--glass) 70%,transparent)!important;backdrop-filter:blur(14px)!important}}
 
 .rl-media{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);aspect-ratio:9/16;overflow:hidden}
 .rl-media>video,.rl-media>img{width:100%;height:100%;object-fit:cover;display:block}

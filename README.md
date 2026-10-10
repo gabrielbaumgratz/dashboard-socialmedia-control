@@ -51,7 +51,7 @@ O mesmo código roda local (`node server.js`) e na Vercel. Na Vercel o banco e a
    - `GEMINI_API_KEY` (opcional): se não colocar, cole a chave em Configurações depois de entrar.
 5. **Redeploy** e abra o endereço da Vercel.
 
-Como fica a checagem do site: o dashboard aberto checa a cada `pollMinutes`. O cron da Vercel Hobby só roda 1 vez por dia, então o relógio de verdade é o **GitHub Actions** (`.github/workflows/tick.yml`), que chama `/api/cron` a cada 15 minutos, de graça. No repositório do GitHub: **Settings > Secrets and variables > Actions > New repository secret** e crie `SITE_URL` (ex.: `https://seu-projeto.vercel.app`, sem barra no fim) e `CRON_SECRET` (o mesmo valor da Vercel). O GitHub pode atrasar alguns minutos; ele pausa o agendamento se o repositório ficar 60 dias sem atividade.
+Como fica a checagem do site: o dashboard aberto checa a cada `pollMinutes`. O cron da Vercel Hobby só roda 1 vez por dia, então o relógio de verdade é o **GitHub Actions** (`.github/workflows/tick.yml`), que chama `/api/cron` a cada hora, de graça. No repositório do GitHub: **Settings > Secrets and variables > Actions > New repository secret** e crie `SITE_URL` (ex.: `https://seu-projeto.vercel.app`, sem barra no fim) e `CRON_SECRET` (o mesmo valor da Vercel). O GitHub pode atrasar alguns minutos; ele pausa o agendamento se o repositório ficar 60 dias sem atividade.
 
 ## Postar no Instagram sozinho
 

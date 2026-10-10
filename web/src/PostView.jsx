@@ -132,7 +132,7 @@ export default function PostView() {
 
           <div className="capbox">
             <div className="caphead"><b>Legenda</b>
-              {!posted && <button className="ghost mini" onClick={regen} disabled={busy}>{busy ? <Spin /> : vars.length ? 'Gerar de novo' : 'Gerar com IA'}</button>}</div>
+              {!posted && <button className={'aibtn' + (vars.length ? ' ghost' : '')} onClick={regen} disabled={busy}>{busy ? <Spin /> : null}{busy ? 'Gerando…' : vars.length ? 'Gerar legendas de novo' : 'Gerar legendas com IA'}</button>}</div>
             {vars.length > 0 && !posted && <Seg value={String(it.chosen || 0)} onChange={i => { saveItem(it, { chosen: +i, caption: vars[+i].text }); setCaption(vars[+i].text); }}
               options={vars.map((v, i) => [String(i), STYLE[v.style] || `Opção ${i + 1}`])} />}
             <textarea value={caption} readOnly={posted} onChange={e => setCaption(e.target.value)} />
@@ -151,7 +151,7 @@ export default function PostView() {
             </div>
             <div className="exportbox">
               {video && it.videoUrl && <button className="ghost" onClick={doReel} disabled={exp}>{exp ? <><Spin /> Gravando…</> : 'Exportar reel'}</button>}
-              <button className="ghost" onClick={doExport} disabled={exp}>{exp ? <><Spin /> Exportando…</> : video ? 'Capa 4K' : 'Exportar em 4K'}</button>
+              <button className="ghost" onClick={doExport} disabled={exp}>{exp ? <><Spin /> Exportando…</> : video ? 'Capa 4K' : 'Baixar 4K'}</button>
               <select value={fmt} onChange={e => setFmt(e.target.value)} aria-label="Formato"><option value="png">PNG</option><option value="jpg">JPG</option></select>
             </div>
             <button className="danger" onClick={discard}>Excluir</button>

@@ -1,6 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
-const GlassBar = lazy(() => import('./GlassBar.jsx'));
-const webgl = (() => { try { return !!document.createElement('canvas').getContext('webgl2'); } catch { return false; } })();
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useApp, weekGoal } from './store.jsx';
 import { Icon } from './icons.jsx';
@@ -29,8 +27,7 @@ function Sidebar() {
     setDark(!dark);
   };
   return (
-    <aside className={'side glass-dark' + (webgl ? ' has3d' : '')}>
-      {webgl && <Suspense fallback={null}><GlassBar /></Suspense>}
+    <aside className={'side glass-dark'}>
       <div className="brand">{logo ? <img src="/assets/logo-branco.png" alt="Reconstruções" /> : 'Reconstruções'}</div>
       <nav>
         {NAV.map(([id, icon, label]) => (
