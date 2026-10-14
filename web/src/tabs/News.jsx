@@ -61,17 +61,17 @@ export default function News() {
   
   async function send(n) {
     let it = items.find(i => i.newsId === n.id);
-    if (it) { if (it.status === 'draft') setTab('queue'); else openPost(it.id); return; }
+    if (it) { openPost(it.id); return; }
     try {
       it = await api('/api/items', { method: 'POST', body: { newsId: n.id, origTitle: n.title, title: n.title, category: n.category || '', link: n.link, newsText: n.text || n.excerpt || '', newsDate: n.date, photoUrl: n.image || '', description: (n.excerpt || '').slice(0, 200) } });
-      setItems(l => [...l, it]); setReading(null); setTab('queue');
+      setItems(l => [...l, it]); setReading(null); openPost(it.id); // abre direto a página do post: arte, legendas e Programar
       if (cfg.hasKey) {
         try { const s = await api(`/api/items/${it.id}/ai`, { method: 'POST' }); setItems(l => l.map(x => (x.id === s.id ? s : x))); toast('3 legendas prontas.'); }
         catch (e) { toast(e.message, true); }
-      } else toast('Na fila. Coloque a chave do Gemini em Configurações para gerar as legendas.');
+      } else toast('Post criado. Coloque a chave do Gemini em Configurações para gerar as legendas.');
     } catch (e) { toast(e.message, true); }
   }
-  const labelFor = n => { const it = items.find(i => i.newsId === n.id); return it ? (it.status === 'posted' ? 'Já postada' : 'Ver na fila') : 'Mandar para a fila'; };
+  const labelFor = n => { const it = items.find(i => i.newsId === n.id); return it ? (it.status === 'posted' ? 'Já postada' : 'Abrir post') : 'Criar post'; };
   // atualiza a lista e já roda o motor (cria rascunho do que for novo)
   const refresh = async () => {
     setChecking(true);

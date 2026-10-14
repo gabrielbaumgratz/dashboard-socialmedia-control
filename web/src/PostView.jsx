@@ -16,7 +16,7 @@ export function downloadSet(set, video) {
 }
 
 export default function PostView() {
-  const { postId, postMode, setPostId, byId, items, cfg, saveItem, replace, removeItem, toast, setEditorId } = useApp();
+  const { postId, postMode, setPostId, byId, items, cfg, saveItem, replace, trashItem, toast, setEditorId } = useApp();
   const it = byId(postId);
   const video = it && typeOf(it) === 'video', posted = it && it.status === 'posted';
   const [mode, setMode] = useState('feed'), [guides, setGuides] = useState(false);
@@ -103,7 +103,7 @@ export default function PostView() {
     catch (e) { toast(e.message, true); }
     setExp(false);
   };
-  const discard = async () => { if (confirm('Mandar este post pra lixeira? Ele fica lá 7 dias.')) { await removeItem(it.id); close(); } };
+  const discard = async () => { await trashItem(it.id); close(); };
 
   return (
     <div className="page post">

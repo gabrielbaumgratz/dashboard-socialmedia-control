@@ -8,7 +8,7 @@ import { Icon } from '../icons.jsx';
 import { STYLE, cap1, fmtTags, parseTags, sortKey, suggestWhen, toLocalInput, typeOf } from '../util.js';
 
 function QueueRow({ it }) {
-  const { items, cfg, saveItem, removeItem, replace, toast, openPost, setEditorId } = useApp();
+  const { items, cfg, saveItem, trashItem, replace, toast, openPost, setEditorId } = useApp();
   const [caption, setCaption] = useState(it.caption || '');
   const [tags, setTags] = useState(fmtTags(it.hashtags));
   const [chosen, setChosen] = useState(it.chosen || 0);
@@ -46,7 +46,7 @@ function QueueRow({ it }) {
     catch (e) { toast(e.message, true); }
     setBusy(false);
   };
-  const del = async () => { if (confirm('Mandar este post pra lixeira? Ele fica lá 7 dias.')) vt(() => removeItem(it.id)); };
+  const del = () => trashItem(it.id);
   const postNow = async () => {
     await navigator.clipboard.writeText(caption + (tags ? '\n\n' + tags : '')).catch(() => {});
     downloadSet(await renderSet(it), typeOf(it) === 'video');
@@ -60,7 +60,7 @@ function QueueRow({ it }) {
           {t === 'video' && it.videoUrl ? <video src={it.videoUrl} muted preload="metadata" /> : <Cover it={it} />}
           {t === 'video' && <Icon name="play" className="playbadge" />}
         </button>
-        <span className="thumbacts"><button type="button" onClick={() => openPost(it.id)}><Icon name="expand" />Abrir</button><button type="button" onClick={() => setEditorId(it.id)}><Icon name="edit" />Editar</button></span></div>
+        <span className="thumbacts"><button type="button" onClick={() => setEditorId(it.id)} title="Editar arte" aria-label="Editar arte"><Icon name="edit" /></button><button type="button" className="del" onClick={() => trashItem(it.id)} title="Excluir" aria-label="Excluir"><Icon name="trash" /></button></span></div>
         {it.link && <a className="srclink" href={it.link} target="_blank" rel="noopener noreferrer">matéria original</a>}
       </div>
       <div className="qmain">
@@ -92,7 +92,7 @@ function QueueRow({ it }) {
 
 
 function QueueCard({ it }) {
-  const { openPost, setEditorId } = useApp();
+  const { openPost, setEditorId, trashItem } = useApp();
   const t = typeOf(it);
   return (
     <article className="qcard" data-id={it.id}>
@@ -100,7 +100,7 @@ function QueueCard({ it }) {
         {t === 'video' && it.videoUrl ? <video src={it.videoUrl} muted preload="metadata" /> : <Cover it={it} />}
         {t === 'video' && <Icon name="play" className="playbadge" />}
       </button>
-      <span className="thumbacts"><button type="button" onClick={() => openPost(it.id)}><Icon name="expand" />Abrir</button><button type="button" onClick={() => setEditorId(it.id)}><Icon name="edit" />Editar arte</button></span></div>
+      <span className="thumbacts"><button type="button" onClick={() => setEditorId(it.id)} title="Editar arte" aria-label="Editar arte"><Icon name="edit" /></button><button type="button" className="del" onClick={() => trashItem(it.id)} title="Excluir" aria-label="Excluir"><Icon name="trash" /></button></span></div>
       <div className="inline"><Status st={it.status} /></div>
       <h4>{it.origTitle || it.title}</h4>
       <span className="meta">{it.scheduledAt ? new Date(it.scheduledAt).toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Sem data ainda'}</span>

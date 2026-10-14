@@ -79,7 +79,7 @@ main{position:relative;z-index:1;padding:24px 34px 80px;max-width:1440px;width:1
 /* ===== controles ===== */
 button,.btn{font:inherit;font-weight:800;border:0;border-radius:12px;padding:9px 16px;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 100%,#fff 14%),var(--accent));color:var(--accent-ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;text-align:center;font-size:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 4px 14px color-mix(in srgb,var(--accent) 30%,transparent);transition:filter .2s,transform .15s,background .2s}
 button:hover,.btn:hover{filter:brightness(1.08)}
-button:active,.btn:active{transform:scale(.98)}
+
 button:disabled{opacity:.5;cursor:default;transform:none}
 button.ghost,.btn.ghost{background:color-mix(in srgb,var(--surface) 40%,transparent);color:var(--txt);border:1px solid var(--line2);box-shadow:none;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 button.ghost:hover,.btn.ghost:hover{background:color-mix(in srgb,var(--surface2) 80%,transparent);filter:none}
@@ -133,13 +133,11 @@ input.mini{width:auto;padding:8px 10px;font-size:13px}
 .qrow{display:grid;grid-template-columns:210px minmax(0,1fr) 230px;gap:28px;padding:22px 0;border-bottom:1px solid var(--line)}
 .qwrap:last-child .qrow{border-bottom:0}
 .qart{display:grid;gap:8px;align-content:start;justify-items:start}
-.qart .thumb{position:relative;width:100%;aspect-ratio:4/5;border-radius:18px;background:var(--surface2);padding:0;overflow:hidden;cursor:zoom-in;box-shadow:0 12px 30px rgba(0,0,0,.25);transition:transform .25s}
-.qart .thumb:hover{transform:translateY(-3px)}
+.qart .thumb{position:relative;width:100%;aspect-ratio:4/5;border-radius:18px;background:var(--surface2);padding:0;overflow:hidden;cursor:zoom-in;box-shadow:0 12px 30px rgba(0,0,0,.25);}
 .qart .thumb video{width:100%;height:100%;object-fit:cover}
 .playbadge{position:absolute;right:8px;top:8px;width:24px;height:24px;color:#fff;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
-.thumbacts{position:absolute;inset:auto 8px 8px;display:flex;gap:6px;opacity:0;transform:translateY(6px);transition:opacity .2s,transform .2s}
-.thumb:hover .thumbacts,.thumb:focus-visible .thumbacts{opacity:1;transform:none}
-.thumbacts button{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:7px 4px;font-size:12.5px;font-weight:800;color:#fff;border-radius:11px;background:rgba(10,20,34,.6);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2)}
+.thumbacts{position:absolute;top:8px;right:8px;display:flex;gap:6px}
+.thumbacts button{display:grid;place-items:center;width:32px;height:32px;padding:0;font-size:12.5px;font-weight:800;color:#fff;border-radius:11px;background:rgba(10,20,34,.6);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2)}
 .thumbacts .ico{width:14px;height:14px}
 .qmain{display:grid;gap:12px;align-content:start;min-width:0}
 .qmain h3{font-size:19px;line-height:1.3}
@@ -421,8 +419,7 @@ input.mini{width:auto;padding:8px 10px;font-size:13px}
 .filters .grow{flex:1;min-width:0}
 .qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:22px}
 .qcard{display:grid;gap:8px;align-content:start}
-.qcard .thumb{position:relative;width:100%;aspect-ratio:4/5;border-radius:18px;background:var(--surface2);padding:0;overflow:hidden;cursor:zoom-in;box-shadow:0 12px 30px rgba(0,0,0,.25);transition:transform .2s}
-.qcard .thumb:hover{transform:translateY(-3px)}
+.qcard .thumb{position:relative;width:100%;aspect-ratio:4/5;border-radius:18px;background:var(--surface2);padding:0;overflow:hidden;cursor:zoom-in;box-shadow:0 12px 30px rgba(0,0,0,.25);}
 .qcard .thumb video{width:100%;height:100%;object-fit:cover}
 .qcard h4{margin:0;font-size:14.5px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .qcard .row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}.qcard .row2 button{padding:8px 6px;font-size:12.5px}
@@ -502,7 +499,6 @@ select option{background:var(--surface);color:var(--txt)}
 button,a,[role=button]{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .thumbacts{pointer-events:none}.thumbacts button{pointer-events:auto;box-shadow:none}
 .thumbwrap{position:relative}
-.thumbwrap:hover .thumbacts,.thumbacts:focus-within{opacity:1;transform:none}
 .exportbox{display:flex;gap:6px;align-items:center;justify-content:flex-end}.exportbox select{width:auto;padding:4px 6px;font-size:12px}.exportbox button{flex:none;padding:4px 10px;font-size:12px;font-weight:600}
 
 .dt{border:0;padding:0;margin:0;display:grid;grid-template-columns:1.3fr 1fr;gap:8px}
@@ -519,7 +515,7 @@ input[type=file]::file-selector-button{font:inherit;font-weight:800;font-size:13
 
 /* ===== Liquid Glass (glass.js gera o filtro de refração por tamanho) ===== */
 button:where(:not(.linklike)),.btn{
-  position:relative;isolation:isolate;transform:var(--lg-t,none);transition:filter .2s,background-color .2s,color .2s;
+  position:relative;isolation:isolate;transition:filter .15s,background-color .15s,color .15s;
   background:
     
     color-mix(in srgb,var(--accent) 58%,transparent);
@@ -528,7 +524,6 @@ button:where(:not(.linklike)),.btn{
   -webkit-backdrop-filter:blur(6px) saturate(180%);backdrop-filter:blur(6px) saturate(180%)}
 .lg-on button:where(:not(.linklike)),.lg-on .btn{backdrop-filter:var(--lg-filter,blur(0)) blur(3px) saturate(185%) brightness(1.05)}
 button:where(:not(.linklike)):hover,.btn:hover{filter:brightness(1.06)}
-button:where(:not(.linklike)):active,.btn:active{transform:var(--lg-t,none)}
 button.ghost,.btn.ghost{
   background:rgba(255,255,255,.05);
   color:var(--txt);border:0}
@@ -563,3 +558,10 @@ button.ok{background:color-mix(in srgb,var(--ok) 70%,transparent);color:#06231c}
 .rl-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .reel .phone-screen{background:#000}
 .rl-media.reelpv{position:relative;top:auto;transform:none;width:225px;border-radius:12px}.reelpv video{object-fit:cover}
+
+.thumbacts button:hover{background:rgba(10,20,34,.85)}.thumbacts button.del:hover{background:var(--danger);border-color:transparent}
+.thumbacts{pointer-events:none}.thumbacts button{pointer-events:auto}
+.toast .tact{margin-left:14px;padding:4px 12px;font-size:13px}
+
+.thumbacts button{background:rgba(10,20,34,.62)}.thumbacts button:hover{background:rgba(10,20,34,.85)}.thumbacts button.del:hover{background:var(--danger);border-color:transparent}
+.toast .tact{margin-left:14px;padding:4px 12px;font-size:13px}

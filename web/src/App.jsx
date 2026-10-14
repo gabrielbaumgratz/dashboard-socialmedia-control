@@ -69,7 +69,7 @@ export default function App() {
       </main>
       <AnimatePresence>{toastMsg && (
         <motion.div key={toastMsg.k} className={'toast glass' + (toastMsg.err ? ' err' : '')} role="status"
-          initial={{ opacity: 0, y: 16, scale: .96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }}>{toastMsg.msg}</motion.div>
+          initial={{ opacity: 0, y: 16, scale: .96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10 }}>{toastMsg.msg}{toastMsg.action && <button className="ghost tact" onClick={toastMsg.action.fn}>{toastMsg.action.label}</button>}</motion.div>
       )}</AnimatePresence>
     </div>
   );

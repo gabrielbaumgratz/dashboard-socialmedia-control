@@ -65,30 +65,7 @@ function apply(el) {
   el.style.setProperty('--lg-filter', `url(#${id})`);
 }
 
-// física: o vidro "estica" na direção do ponteiro e afunda ao apertar, com mola (sem CSS transition)
-const springs = new Map();
-function spring(el) {
-  let s = springs.get(el);
-  if (!s) { s = { x: 0, y: 0, sc: 1, vx: 0, vy: 0, vs: 0, tx: 0, ty: 0, ts: 1, run: false }; springs.set(el, s); }
-  return s;
-}
-function tick(el) {
-  const s = spring(el); if (s.run) return; s.run = true;
-  const step = () => {
-    const k = 0.18, damp = 0.72;
-    s.vx = (s.vx + (s.tx - s.x) * k) * damp; s.x += s.vx;
-    s.vy = (s.vy + (s.ty - s.y) * k) * damp; s.y += s.vy;
-    s.vs = (s.vs + (s.ts - s.sc) * k) * damp; s.sc += s.vs;
-    el.style.setProperty('--lg-t', `translate(${s.x.toFixed(2)}px, ${s.y.toFixed(2)}px) scale(${s.sc.toFixed(4)}, ${(s.sc + (s.ts < 1 ? 0.01 : 0)).toFixed(4)})`);
-    if (Math.abs(s.tx - s.x) + Math.abs(s.ty - s.y) + Math.abs(s.ts - s.sc) + Math.abs(s.vx) + Math.abs(s.vs) > 0.002) requestAnimationFrame(step);
-    else s.run = false;
-  };
-  requestAnimationFrame(step);
-}
-
-const reduce = matchMedia('(prefers-reduced-motion: reduce)');
 const SEL = 'button:not(.linklike), .btn, .glass, .glass-dark, .seg, .chip';
-const target = e => e.target.closest && e.target.closest('button:not(.linklike):not(:disabled), .btn');
 
 export function initGlass() {
   document.documentElement.classList.toggle('lg-on', ok);
@@ -97,15 +74,4 @@ export function initGlass() {
   const scan = root => root.querySelectorAll && root.querySelectorAll(SEL).forEach(el => { if (!seen.has(el)) { seen.add(el); ro.observe(el); } });
   if (ok) { scan(document); new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => n.nodeType === 1 && (n.matches?.(SEL) && !seen.has(n) && (seen.add(n), ro.observe(n)), scan(n))))).observe(document.body, { childList: true, subtree: true }); }
 
-  // brilho especular segue o ponteiro + puxão elástico
-  document.addEventListener('pointermove', e => {
-    const el = target(e); if (!el) return;
-    const b = el.getBoundingClientRect(), mx = (e.clientX - b.left) / b.width, my = (e.clientY - b.top) / b.height;
-    el.style.setProperty('--mx', (mx * 100).toFixed(1) + '%'); el.style.setProperty('--my', (my * 100).toFixed(1) + '%');
-    if (reduce.matches) return;
-    const s = spring(el); s.tx = (mx - 0.5) * Math.min(6, b.width * 0.03); s.ty = (my - 0.5) * Math.min(4, b.height * 0.08); tick(el);
-  }, { passive: true });
-  document.addEventListener('pointerout', e => { const el = target(e); if (!el || el.contains(e.relatedTarget)) return; const s = spring(el); s.tx = 0; s.ty = 0; s.ts = 1; tick(el); });
-  document.addEventListener('pointerdown', e => { const el = target(e); if (!el || reduce.matches) return; spring(el).ts = 0.94; tick(el); });
-  document.addEventListener('pointerup', e => { const el = target(e); if (!el || reduce.matches) return; const s = spring(el); s.ts = 1.03; tick(el); setTimeout(() => { s.ts = 1; tick(el); }, 110); });
 }

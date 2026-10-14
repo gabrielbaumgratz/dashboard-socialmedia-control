@@ -1,9 +1,9 @@
-# Relógio grátis: a cada 15 min chama o dashboard na Vercel, que busca notícias novas
+# Relógio grátis: a cada hora chama o dashboard na Vercel, que busca notícias novas
 # e publica no Instagram o que estiver no horário. (O cron da Vercel Hobby só roda 1x por dia.)
 name: tick
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '0 * * * *'
   workflow_dispatch: {}
 jobs:
   tick:

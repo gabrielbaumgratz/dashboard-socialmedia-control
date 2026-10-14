@@ -77,7 +77,7 @@ const MIME = {
 };
 function send(res, code, body, headers = {}) {
   const isObj = body && typeof body === 'object' && !Buffer.isBuffer(body);
-  res.writeHead(code, { 'Content-Type': isObj ? 'application/json' : 'text/plain; charset=utf-8', ...headers });
+  res.writeHead(code, { 'Content-Type': isObj ? 'application/json' : 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', ...headers });
   res.end(isObj ? JSON.stringify(body) : body);
 }
 function readBody(req, limit) {
@@ -514,7 +514,13 @@ async function handleApi(req, res, url) {
     if (m === 'DELETE') {
       if (url.searchParams.get('forever') || db.items[idx].deletedAt) { await store.delFiles(mm[1]); db.items.splice(idx, 1); }
       else db.items[idx].deletedAt = new Date().toISOString(); // vai pra lixeira (7 dias)
-      await saveDb(db); return send(res, 200, { ok: true });
+      await saveDb(db);
+      for (let t = 0; t < 2; t++) { // confere se gravou de verdade (outra gravação ao mesmo tempo pode ter sobrescrito)
+        const chk = findItem(await loadDb(), mm[1]);
+        if (!chk || chk.deletedAt || url.searchParams.get('forever')) break;
+        const d2 = await loadDb(), x = findItem(d2, mm[1]); if (x) { x.deletedAt = new Date().toISOString(); await saveDb(d2); }
+      }
+      return send(res, 200, { ok: true });
     }
   }
   mm = p.match(/^\/api\/items\/([\w-]+)\/ai$/);

@@ -28,14 +28,21 @@ export function AppProvider({ children }) {
   const itemsRef = useRef(items); itemsRef.current = items;
   const toastT = useRef();
 
-  const toast = useCallback((msg, err) => {
-    setToastMsg({ msg, err, k: Date.now() });
-    clearTimeout(toastT.current); toastT.current = setTimeout(() => setToastMsg(null), err ? 5000 : 2600);
+  const toast = useCallback((msg, err, action) => {
+    setToastMsg({ msg, err, action, k: Date.now() });
+    clearTimeout(toastT.current); toastT.current = setTimeout(() => setToastMsg(null), err ? 5000 : action ? 7000 : 2600);
   }, []);
   const setTab = useCallback(t => vt(() => { setTabRaw(t); setPostId(null); setEditorId(null); window.scrollTo(0, 0); }), []);
 
   const loadCfg = useCallback(async () => { const c = await api('/api/config'); setCfg(c); Render.setBrand({ handle: c.instagram || '@reconstrucoes.observatorio', location: c.location || '' }); return c; }, []);
-  const reload = useCallback(async () => { const list = await api('/api/items'); setItems(list); return list; }, []);
+  // ids apagados ficam anotados neste navegador por 10 min: se o servidor ainda devolver o item (leitura atrasada), ele continua escondido
+  const tomb = () => { try { return JSON.parse(localStorage.getItem('deleted') || '{}'); } catch { return {}; } };
+  const setTomb = (id, on) => { try { const t = tomb(); if (on) t[id] = Date.now(); else delete t[id]; localStorage.setItem('deleted', JSON.stringify(t)); } catch {} };
+  const reload = useCallback(async () => {
+    const list = await api('/api/items'), t = tomb(), now = Date.now();
+    const out = list.map(x => (!x.deletedAt && t[x.id] && now - t[x.id] < 6e5 ? { ...x, deletedAt: new Date(t[x.id]).toISOString() } : x));
+    setItems(out); return out;
+  }, []);
   const refreshEngine = useCallback(async () => { try { setEngine(await api('/api/engine')); } catch {} }, []);
 
   const replace = useCallback(saved => setItems(list => (list.some(x => x.id === saved.id) ? list.map(x => (x.id === saved.id ? saved : x)) : [...list, saved])), []);
@@ -47,9 +54,19 @@ export function AppProvider({ children }) {
   }, [replace]);
   const openPost = useCallback((id, mode = '') => { setPostMode(mode); setPostId(id); }, []);
   // excluir manda pra lixeira (fica 7 dias); da lixeira dá pra restaurar ou apagar de vez
-  const removeItem = useCallback(async id => { await api('/api/items/' + id, { method: 'DELETE' }); setItems(l => l.map(x => (x.id === id ? { ...x, deletedAt: new Date().toISOString() } : x))); }, []);
+  const removeItem = useCallback(async id => {
+    const at = new Date().toISOString(); setTomb(id, true);
+    setItems(l => l.map(x => (x.id === id ? { ...x, deletedAt: at } : x))); // some da tela na hora
+    try { await api('/api/items/' + id, { method: 'DELETE' }); }
+    catch (e) { setTomb(id, false); setItems(l => l.map(x => (x.id === id ? { ...x, deletedAt: undefined } : x))); throw e; }
+  }, []);
   const purgeItem = useCallback(async id => { await api('/api/items/' + id + '?forever=1', { method: 'DELETE' }); setItems(l => l.filter(x => x.id !== id)); }, []);
-  const restoreItem = useCallback(async id => { const s = await api('/api/items/' + id + '/restore', { method: 'POST' }); setItems(l => l.map(x => (x.id === id ? s : x))); }, []);
+  const restoreItem = useCallback(async id => { const s = await api('/api/items/' + id + '/restore', { method: 'POST' }); setTomb(id, false); setItems(l => l.map(x => (x.id === id ? s : x))); }, []);
+  // excluir com um clique: vai pra lixeira (7 dias) e dá pra desfazer na hora
+  const trashItem = useCallback(async id => {
+    try { await removeItem(id); toast('Movido pra lixeira.', false, { label: 'Desfazer', fn: () => restoreItem(id).catch(e => toast(e.message, true)) }); }
+    catch (e) { toast('Não consegui excluir: ' + e.message, true); }
+  }, [removeItem, restoreItem, toast]);
 
   useEffect(() => {
     (async () => { await loadCfg(); await reload(); setReady(true); refreshEngine(); setTimeout(refreshEngine, 5000); })().catch(e => toast(e.message, true));
@@ -76,7 +93,7 @@ export function AppProvider({ children }) {
   const live = useMemo(() => items.filter(i => !i.deletedAt), [items]), trash = useMemo(() => items.filter(i => i.deletedAt), [items]);
   const value = useMemo(() => ({
     items: live, trash, purgeItem, restoreItem, setItems, cfg, loadCfg, ready, tab, setTab, postId, setPostId, postMode, openPost, editorId, setEditorId, toast, toastMsg,
-    banner, setBanner, engine, refreshEngine, reload, saveItem, removeItem, replace, clearCovers,
+    banner, setBanner, engine, refreshEngine, reload, saveItem, removeItem, trashItem, replace, clearCovers,
     byId: id => items.find(i => i.id === id)
   }), [items, live, trash, cfg, ready, tab, postId, postMode, editorId, toastMsg, banner, engine]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
