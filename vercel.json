@@ -3,12 +3,33 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/images/:path*", "destination": "/api/files/:path*" },
-    { "source": "/pub/:path*", "destination": "/api/pub/:path*" },
-    { "source": "/apps-script.gs", "destination": "/api/apps-script" }
+    {
+      "source": "/images/:path*",
+      "destination": "/api/index?__p=images/:path*"
+    },
+    {
+      "source": "/pub/:path*",
+      "destination": "/api/index?__p=pub/:path*"
+    },
+    {
+      "source": "/apps-script.gs",
+      "destination": "/api/index?__p=api/apps-script"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "/api/index?__p=api/:path*"
+    }
   ],
   "functions": {
-    "api/**": { "maxDuration": 60, "includeFiles": "planilha/**" }
+    "api/**": {
+      "maxDuration": 60,
+      "includeFiles": "planilha/**"
+    }
   },
-  "crons": [{ "path": "/api/cron", "schedule": "0 11 * * *" }]
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "0 11 * * *"
+    }
+  ]
 }
