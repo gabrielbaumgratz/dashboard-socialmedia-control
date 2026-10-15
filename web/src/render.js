@@ -156,9 +156,14 @@ const Render = (() => {
   }
   const up = s => String(s || '').toUpperCase();
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
-  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28 }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28 }, bg: { color: C.tealE, fade: 100, ph: 760 } };
+  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto' } };
   const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) } });
   const rgba = (hex, a) => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+  const lum = hex => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16), f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(n >> 16) + .7152 * f((n >> 8) & 255) + .0722 * f(n & 255); };
+  // cor do texto: a escolhida, ou automática (escura quando o fundo atrás do texto é claro)
+  const ink = (p, bgColor, solid) => p.tc && p.tc !== 'auto' ? p.tc : (solid && lum(bgColor) > 0.5 ? C.preto : C.branco);
+  const panelInk = p => ink(p, p.color, p.on && p.opacity >= 45);
+  const darkInk = c => lum(c) < 0.2; // texto escuro: troca acentos claros por versões escuras
   function panel(ctx, p, y, h) { if (!p.on) return; ctx.fillStyle = rgba(p.color, p.opacity / 100); rrect(ctx, 36, y, 1008, h, p.r); ctx.fill();
     if (p.bw > 0) { ctx.strokeStyle = rgba(p.bc, p.bo / 100); ctx.lineWidth = p.bw; rrect(ctx, 36 + p.bw / 2, y + p.bw / 2, 1008 - p.bw, h - p.bw, Math.max(0, p.r - p.bw / 2)); ctx.stroke(); } }
 
@@ -228,11 +233,12 @@ const Render = (() => {
     await logo(ctx, false, 72, 72, 298.7);
     const ti = block(ctx, d.title, 900, size, lh, 936, withHandle ? 4 : 5), hh = withHandle ? lineH(30) + 24 : 0;
     let y = 1350 - pb - hh - ti.h - 24 - 8 - 24 - lineH(40);
-    panel(ctx, look(d).post, y - 36, lineH(40) + 24 + 8 + 24 + ti.h + (withHandle ? 24 + lineH(30) : 0) + 72);
-    font(ctx, 700, 40, 2); ctx.fillStyle = C.verde; ctx.fillText(up(d.category || 'Notícia'), 72, y, 936); y += lineH(40) + 24;
+    const lp = look(d).post, tc = panelInk(lp), dk = darkInk(tc);
+    panel(ctx, lp, y - 36, lineH(40) + 24 + 8 + 24 + ti.h + (withHandle ? 24 + lineH(30) : 0) + 72);
+    font(ctx, 700, 40, 2); ctx.fillStyle = dk ? C.tealE : C.verde; ctx.fillText(up(d.category || 'Notícia'), 72, y, 936); y += lineH(40) + 24;
     rrect(ctx, 72, y, 300, 8, 4); ctx.fill(); y += 8 + 24;
-    y = draw(ctx, ti, 72, y, C.branco) + 24;
-    if (withHandle) { font(ctx, 600, 30); ctx.fillStyle = C.branco; ctx.fillText(BRAND.handle, 72, y); credit(ctx, d.credit, 1278); }
+    y = draw(ctx, ti, 72, y, tc) + 24;
+    if (withHandle) { font(ctx, 600, 30); ctx.fillStyle = tc; ctx.fillText(BRAND.handle, 72, y); credit(ctx, d.credit, 1278); }
   }
 
   // ---------- carrossel ----------
@@ -324,14 +330,15 @@ const Render = (() => {
       ctx.fillStyle = bg.color; ctx.fillRect(0, 0, 1080, 1920);
       symbol(ctx, 420, 1000, 792, 0.08);
       vgrad(ctx, 1020, 900, 'rgba(15,23,42,0)', `rgba(15,23,42,${0.55 * bg.fade / 100})`);
-      await logo(ctx, false, 72, 262, 248.9);
+      const tc = ink(bg, bg.color, true), dk = darkInk(tc);
+      await logo(ctx, dk, 72, 262, 248.9);
       chip(ctx, 'NOVA NOTÍCIA', 980, 262.5, 30, { right: true });
       // card com o próprio post do feed dentro
       const pc = document.createElement('canvas'); await post(pc, d, img);
       ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 24;
       rrect(ctx, 140, 380, 800, 1000, 36); ctx.fillStyle = C.navy; ctx.fill(); ctx.restore();
       ctx.save(); rrect(ctx, 140, 380, 800, 1000, 36); ctx.clip(); ctx.drawImage(pc, 140, 380, 800, 1000); ctx.restore();
-      font(ctx, 700, 32); ctx.fillStyle = C.branco; ctx.textAlign = 'center'; ctx.fillText(BRAND.site, 540, 1400); ctx.textAlign = 'left';
+      font(ctx, 700, 32); ctx.fillStyle = tc; ctx.textAlign = 'center'; ctx.fillText(BRAND.site, 540, 1400); ctx.textAlign = 'left';
       zone = { x: 140, y: 1470, w: 800, h: 110 };
     } else if (t === 's03') {
       const bg = look(d).bg, fh = 20 + 240 * bg.fade / 100; // degradê da foto pro painel: mais baixo = foto aparece mais
@@ -346,8 +353,9 @@ const Render = (() => {
       symbol(ctx, 860, ph - 52, 105.6);
       let y = ph + 70;
       y += chip(ctx, up(d.category || 'Notícia'), 72, y, 30).h + 22;
-      y = draw(ctx, ti, 72, y, C.branco) + 22;
-      if (de) y = draw(ctx, de, 72, y, C.branco) + 22;
+      const tc = ink(bg, bg.color, true);
+      y = draw(ctx, ti, 72, y, tc) + 22;
+      if (de) y = draw(ctx, de, 72, y, tc) + 22;
       zone = { x: 72, y, w: 908, h: 110 };
     } else {
       ctx.fillStyle = C.navy; ctx.fillRect(0, 0, 1080, 1920);
@@ -357,9 +365,10 @@ const Render = (() => {
       await logo(ctx, false, 72, 262, 248.9);
       const ti = block(ctx, d.title, 900, 76, 90, 908, 5), chipH = lineH(32) + 24;
       let y = 1920 - 480 - 120 - 24 - ti.h - 24 - chipH;
-      panel(ctx, look(d).story, y - 36, chipH + 24 + ti.h + 72);
+      const ls = look(d).story;
+      panel(ctx, ls, y - 36, chipH + 24 + ti.h + 72);
       chip(ctx, up(d.category || 'Notícia'), 72, y, 32); y += chipH + 24;
-      y = draw(ctx, ti, 72, y, C.branco) + 24;
+      y = draw(ctx, ti, 72, y, panelInk(ls)) + 24;
       zone = { x: 72, y, w: 760, h: 120 };
     }
     if (opts.guides) {

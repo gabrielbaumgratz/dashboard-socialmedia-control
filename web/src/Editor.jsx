@@ -100,9 +100,11 @@ function Crop({ f, set, photo, w, h, extra }) {
   const min = fitZoom(photo, w, h), r = v => Math.round(v * 100) / 100;
   return (
     <div className="crop">
-      <label>Zoom<input type="range" min={r(min)} max="3" step="0.01" value={f.zoom} onChange={ev => set({ ...f, zoom: +ev.target.value })} /></label>
-      <label>Horizontal<input type="range" min="0" max="1" step="0.01" value={f.x} onChange={ev => set({ ...f, x: +ev.target.value })} /></label>
-      <label>Vertical<input type="range" min="0" max="1" step="0.01" value={f.y} onChange={ev => set({ ...f, y: +ev.target.value })} /></label>
+      <div className="rng2">
+        <Rng label="Zoom" value={Math.round(f.zoom * 100)} unit="%" min={Math.round(min * 100)} max={300} onChange={v => set({ ...f, zoom: v / 100 })} />
+        <Rng label="Horizontal" value={Math.round(f.x * 100)} unit="%" min={0} max={100} onChange={v => set({ ...f, x: v / 100 })} />
+        <Rng label="Vertical" value={Math.round(f.y * 100)} unit="%" min={0} max={100} onChange={v => set({ ...f, y: v / 100 })} />
+      </div>
       <div className="crop-btns">
         <button className="ghost" onClick={() => set({ x: .5, y: .5, zoom: min })}>Foto inteira</button>
         <button className="ghost" onClick={() => set({ x: .5, y: .5, zoom: 1 })}>Padrão (preencher)</button>
@@ -117,8 +119,14 @@ function ColorPick({ value, onChange }) {
   return <div className="swatches">{SWATCHES.map(([c, n]) => <button type="button" key={c} title={n} aria-label={n} className={'sw' + (value.toLowerCase() === c ? ' on' : '')} style={{ background: c }} onClick={() => onChange(c)} />)}
     <input type="color" aria-label="Outra cor" value={value} onChange={ev => onChange(ev.target.value)} /></div>;
 }
-function Rng({ label, value, unit = '', min, max, onChange }) {
-  return <label className="rng"><span>{label}<b>{value}{unit}</b></span><input type="range" min={min} max={max} value={value} onChange={ev => onChange(+ev.target.value)} /></label>;
+function Rng({ label, value, unit = '', min, max, step = 1, onChange }) {
+  return <label className="rng"><span>{label}<b>{value}{unit}</b></span><input type="range" min={min} max={max} step={step} value={value} onChange={ev => onChange(+ev.target.value)} /></label>;
+}
+function TextColor({ value, onChange }) {
+  return <div className="txtcolor"><span>Cor do texto</span>
+    <button type="button" className={'chipbtn' + (value === 'auto' ? ' on' : '')} onClick={() => onChange('auto')}>Auto</button>
+    {[['#ffffff', 'Branco'], ['#1d1d1b', 'Preto'], ['#006173', 'Verde petróleo'], ['#0f172a', 'Azul marinho']].map(([c, n]) => <button type="button" key={c} title={n} aria-label={n} className={'sw' + (value === c ? ' on' : '')} style={{ background: c }} onClick={() => onChange(c)} />)}
+    <input type="color" aria-label="Outra cor de texto" value={value === 'auto' ? '#ffffff' : value} onChange={ev => onChange(ev.target.value)} /></div>;
 }
 // controles de aparência: k = 'post' | 'story' (painel atrás do texto) ou 'bg' (fundo do story: cor, altura da foto, degradê)
 function LookCtl({ e, patch, k, tpl }) {
@@ -128,9 +136,10 @@ function LookCtl({ e, patch, k, tpl }) {
     <div className="lookbox"><div className="lookhead"><b>Fundo do story</b>{reset}</div>
       <ColorPick value={cur.color} onChange={color => set({ color })} />
       <div className="rng2">
-        {tpl === 's03' && <Rng label="Altura da foto" value={cur.ph} min={400} max={1500} onChange={ph => set({ ph })} />}
+        {tpl === 's03' && <Rng label="Altura da foto" value={Math.round(cur.ph / 19.2)} unit="%" min={21} max={78} onChange={v => set({ ph: Math.round(v * 19.2) })} />}
         <Rng label="Degradê" value={cur.fade} unit="%" min={0} max={100} onChange={fade => set({ fade })} />
-      </div></div>);
+      </div>
+      <TextColor value={cur.tc} onChange={tc => set({ tc })} /></div>);
   return (
     <div className="lookbox"><div className="lookhead"><label className="chk"><input type="checkbox" checked={cur.on} onChange={ev => set({ on: ev.target.checked })} />Fundo atrás do texto</label>{reset}</div>
       {cur.on && <>
@@ -141,7 +150,8 @@ function LookCtl({ e, patch, k, tpl }) {
           <Rng label="Contorno" value={cur.bw} unit=" px" min={0} max={12} onChange={bw => set({ bw })} />
           {cur.bw > 0 && <Rng label="Opacidade do contorno" value={cur.bo} unit="%" min={10} max={100} onChange={bo => set({ bo })} />}
         </div>
-        {cur.bw > 0 && <ColorPick value={cur.bc} onChange={bc => set({ bc })} />}</>}</div>);
+        {cur.bw > 0 && <ColorPick value={cur.bc} onChange={bc => set({ bc })} />}
+        <TextColor value={cur.tc} onChange={tc => set({ tc })} /></>}</div>);
 }
 
 function Field({ label, k, e, patch, ph, multi }) {

@@ -195,6 +195,14 @@ const AI_SCHEMA = {
   },
   required: ['titulo', 'categoria', 'descricao', 'hashtags', 'variacoes']
 };
+function buildDescPrompt(n) {
+  return `Resuma a notícia abaixo em UMA frase de no máximo 140 caracteres, em português do Brasil, para aparecer numa arte do Instagram.
+Use só fatos do texto, não invente nada, não copie o título, sem emojis e sem travessão (—).
+TÍTULO: ${n.title}
+TEXTO:
+${(n.text || '').slice(0, 6000)}`;
+}
+const DESC_SCHEMA = { type: 'object', properties: { descricao: { type: 'string' } }, required: ['descricao'] };
 function extractGeminiText(j) {
   if (Array.isArray(j.steps)) {
     for (const s of j.steps) {
@@ -209,34 +217,52 @@ function extractGeminiText(j) {
   if (c && c.parts) return c.parts.map(p => p.text || '').join('');
   return null;
 }
-// modelo vazio (ou o antigo padrão 3.8 Flash) = o Flash comum mais novo que a chave enxerga (nunca o Lite)
-let liteCache = null;
-async function pickModel(cfg) {
-  if (cfg.geminiModel && cfg.geminiModel !== 'gemini-3.8-flash') return cfg.geminiModel;
-  if (liteCache) return liteCache;
-  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + encodeURIComponent(cfg.geminiKey));
+// modelos Flash (nunca o Lite) que a chave enxerga, do mais novo pro mais velho
+const flashCache = {};
+async function flashModels(key) {
+  if (flashCache[key]) return flashCache[key];
+  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + encodeURIComponent(key));
   const names = ((await r.json()).models || []).map(m => m.name.replace(/^models\//, '')).filter(n => /^gemini-[\d.]+-flash$/.test(n));
   names.sort((a, b) => parseFloat(b.split('-')[1]) - parseFloat(a.split('-')[1]));
-  if (!names.length) throw new Error('Não achei um modelo Flash para essa chave. Escolha um modelo em Configurações.');
-  return (liteCache = names[0]);
+  return (flashCache[key] = names);
 }
-async function callGemini(news) {
-  const cfg = loadConfig();
-  if (!cfg.geminiKey) throw new Error('Falta a chave do Gemini (Configurações).');
-  const model = process.env.GEMINI_URL ? (cfg.geminiModel || 'teste') : await pickModel(cfg);
-  const r = await fetch(process.env.GEMINI_URL || 'https://generativelanguage.googleapis.com/v1beta/interactions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.geminiKey },
-    body: JSON.stringify({ model, input: buildPrompt(news, cfg), response_format: { type: 'text', mime_type: 'application/json', schema: AI_SCHEMA } })
-  });
-  const raw = await r.text();
-  if (!r.ok) throw new Error(`Gemini respondeu ${r.status}: ${raw.slice(0, 400)}`);
-  const txt = extractGeminiText(JSON.parse(raw));
-  if (!txt) throw new Error('Não consegui ler a resposta do Gemini: ' + raw.slice(0, 300));
-  const out = JSON.parse(txt.trim().replace(/^```json\s*|```$/g, ''));
-  out.hashtags = (out.hashtags || []).map(h => String(h).replace(/^#/, '').replace(/\s+/g, '')).filter(Boolean);
-  out.variacoes = (out.variacoes || []).slice(0, 3);
-  return out;
+// o modelo escolhido primeiro; se o Google disser "alta demanda", tenta o próximo Flash. Se a cota da chave acabar, tenta a 2a chave.
+async function callGemini(news, kind = 'full') {
+  const cfg = loadConfig(), keys = [cfg.geminiKey, cfg.geminiKey2].filter(Boolean);
+  if (!keys.length) throw new Error('Falta a chave do Gemini (Configurações).');
+  const desc = kind === 'desc';
+  let models;
+  if (process.env.GEMINI_URL) models = [cfg.geminiModel || 'teste'];
+  else {
+    const auto = await flashModels(keys[0]);
+    const pick = cfg.geminiModel && cfg.geminiModel !== 'gemini-3.8-flash' ? cfg.geminiModel : '';
+    models = [...new Set([pick, ...auto].filter(Boolean))].slice(0, 3);
+    if (!models.length) throw new Error('Não achei um modelo Flash para essa chave. Escolha um modelo em Configurações.');
+  }
+  const body = m => JSON.stringify({ model: m, input: desc ? buildDescPrompt(news) : buildPrompt(news, cfg), response_format: { type: 'text', mime_type: 'application/json', schema: desc ? DESC_SCHEMA : AI_SCHEMA } });
+  let last = '';
+  for (const m of models) {
+    for (const k of keys) {
+      let r, raw;
+      try {
+        r = await fetch(process.env.GEMINI_URL || 'https://generativelanguage.googleapis.com/v1beta/interactions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': k }, body: body(m), signal: AbortSignal.timeout(25000) });
+        raw = await r.text();
+      } catch (e) { last = `${m} não respondeu a tempo`; break; } // modelo lento: outra chave não ajuda, vai pro próximo modelo
+      if (r.ok) {
+        const txt = extractGeminiText(JSON.parse(raw));
+        if (!txt) throw new Error('Não consegui ler a resposta do Gemini: ' + raw.slice(0, 300));
+        const out = JSON.parse(txt.trim().replace(/^```json\s*|```$/g, ''));
+        out.hashtags = (out.hashtags || []).map(h => String(h).replace(/^#/, '').replace(/\s+/g, '')).filter(Boolean);
+        out.variacoes = (out.variacoes || []).slice(0, 3);
+        return out;
+      }
+      last = `${m} respondeu ${r.status}: ${raw.slice(0, 200)}`;
+      if (r.status === 429) continue;                 // cota da chave acabou: tenta a outra chave
+      if ([500, 502, 503, 504].includes(r.status)) break; // modelo sobrecarregado: tenta o próximo modelo
+      throw new Error(`Gemini ${last}`);              // erro de verdade (chave errada, pedido inválido)
+    }
+  }
+  throw new Error(`O Gemini está ocupado agora (tentei ${models.length} modelo(s) e ${keys.length} chave(s)). Tente de novo em alguns minutos. Último erro: ${last}`);
 }
 // junta legenda + chamada padrão
 function withCta(text, cfg) { return `${String(text || '').trim()}\n\n${cfg.ctaText}`.trim(); }
@@ -449,18 +475,19 @@ async function handleApi(req, res, url) {
 
 
   if (p === '/api/config' && m === 'GET') {
-    const c = loadConfig(), out = { hasKey: !!c.geminiKey, cloud: CLOUD, hasIg: !!(c.igToken && c.igUserId), igReady: !!(c.igToken && c.igUserId) && (CLOUD || !!process.env.SITE_URL) };
+    const c = loadConfig(), out = { hasKey: !!c.geminiKey, hasKey2: !!c.geminiKey2, cloud: CLOUD, hasIg: !!(c.igToken && c.igUserId), igReady: !!(c.igToken && c.igUserId) && (CLOUD || !!process.env.SITE_URL) };
     for (const k of PUBLIC_KEYS) out[k] = c[k];
     return send(res, 200, out);
   }
   if (p === '/api/config' && m === 'POST') {
     const b = await readJson(req), patch = {};
-    for (const k of ['geminiKey', ...PUBLIC_KEYS]) if (k in b && b[k] !== undefined && b[k] !== null) {
-      if (k === 'geminiKey' && !String(b[k]).trim()) continue;
+    for (const k of ['geminiKey', 'geminiKey2', ...PUBLIC_KEYS]) if (k in b && b[k] !== undefined && b[k] !== null) {
+      if ((k === 'geminiKey' || k === 'geminiKey2') && !String(b[k]).trim()) continue;
       patch[k] = typeof b[k] === 'string' ? b[k].trim() : b[k];
     }
     if (String(b.igToken || '').trim()) { patch.igToken = b.igToken.trim(); patch.igTokenAt = new Date().toISOString(); }
     if (b.clearKey) patch.geminiKey = '';
+    if (b.clearKey2) patch.geminiKey2 = '';
     if (b.clearIg) { patch.igToken = ''; patch.igTokenAt = ''; }
     await saveConfig(patch);
     if ('pollMinutes' in patch) scheduleEngine();
@@ -547,7 +574,7 @@ async function handleApi(req, res, url) {
   if (mm && m === 'POST') { // só devolve a descrição curta; o editor decide se aplica
     const it = findItem(await loadDb(), mm[1]);
     if (!it) return send(res, 404, { error: 'item não existe' });
-    try { const ai = await callGemini({ title: it.origTitle || it.title, text: it.newsText || it.description }); return send(res, 200, { description: String(ai.descricao || '').trim().slice(0, 200) }); }
+    try { const ai = await callGemini({ title: it.origTitle || it.title, text: it.newsText || it.description }, 'desc'); return send(res, 200, { description: String(ai.descricao || '').trim().slice(0, 200) }); }
     catch (e) { return send(res, 502, { error: e.message }); }
   }
   mm = p.match(/^\/api\/items\/([\w-]+)\/media$/);

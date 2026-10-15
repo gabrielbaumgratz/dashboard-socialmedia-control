@@ -20,7 +20,7 @@ export default function Settings() {
   const { cfg, loadCfg, engine, refreshEngine, toast } = useApp();
   const [models, setModels] = useState([]);
   useEffect(() => { if (cfg.hasKey) api('/api/models').then(setModels).catch(() => {}); }, [cfg.hasKey]);
-  const [igTok, setIgTok] = useState(''), [form, setForm] = useState({}), [editKey, setEditKey] = useState(false), [key, setKey] = useState(''), [logoOk, setLogoOk] = useState(false);
+  const [key2, setKey2] = useState(''), [igTok, setIgTok] = useState(''), [form, setForm] = useState({}), [editKey, setEditKey] = useState(false), [key, setKey] = useState(''), [logoOk, setLogoOk] = useState(false);
   useEffect(() => { const f = {}; KEYS.forEach(k => { f[k] = cfg[k] ?? ''; }); setForm(f); }, [cfg]);
   useEffect(() => { refreshEngine(); Render.loadImage('/assets/logo-branco.png').then(() => setLogoOk(true)).catch(() => {}); }, []);
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
@@ -48,6 +48,12 @@ export default function Settings() {
                 {cfg.hasKey && <button className="ghost" onClick={() => { setEditKey(false); setKey(''); }}>Cancelar</button>}</div>
             </div>
           )}
+          <div className="keyview">
+            {cfg.hasKey2 ? <div className="keyrow"><span className="hint">Segunda chave salva (usada quando a cota da primeira acabar)</span>
+                <button className="danger" onClick={() => post({ clearKey2: true }, 'Segunda chave removida.')}>Remover</button></div>
+              : <><label>Segunda chave (opcional, reserva)<input className="secret" type="text" name="gemini-key-2" spellCheck={false} autoCapitalize="off" autoComplete="off" data-lpignore="true" placeholder="cole a outra chave aqui" value={key2} onChange={e => setKey2(e.target.value)} /></label>
+                <div className="row2"><button className="ghost" onClick={() => key2.trim() ? post({ geminiKey2: key2.trim() }, 'Segunda chave salva.').then(() => setKey2('')) : toast('Cole a chave primeiro.', true)}>Salvar segunda chave</button></div></>}
+          </div>
           <label>Modelo
             <select value={form.geminiModel === 'gemini-3.8-flash' ? '' : form.geminiModel || ''} onChange={set('geminiModel')}>
               <option value="">Automático (o Flash mais novo da sua chave)</option>
