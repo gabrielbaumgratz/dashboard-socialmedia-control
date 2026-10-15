@@ -91,6 +91,16 @@ const Render = (() => {
     }
     return out.filter((l, i, a) => l || (i && i < a.length - 1));
   }
+  // linhas equilibradas (sem "viúva"): procura a menor largura que mantém o mesmo número de linhas,
+  // assim as linhas ficam parecidas entre si sem esticar espaços como no justificado
+  function balance(ctx, text, maxW, n) {
+    let lo = maxW * 0.45, hi = maxW, best = wrap(ctx, text, maxW);
+    for (let k = 0; k < 14; k++) {
+      const mid = (lo + hi) / 2, t = wrap(ctx, text, mid);
+      if (t.length <= n && t.every(ln => ctx.measureText(ln).width <= mid + 0.5)) { best = t; hi = mid; } else lo = mid;
+    }
+    return best;
+  }
   // mede um bloco de texto; se passar de maxLines, diminui a fonte (mínimo 70% do tamanho do template)
   function block(ctx, text, weight, size, lh, maxW, maxLines = 99, spacing = 0) {
     let s = size, l = lh, lines;
@@ -99,6 +109,7 @@ const Render = (() => {
       if (lines.length <= maxLines) break;
     }
     if (lines.length > maxLines) { lines = lines.slice(0, maxLines); lines[maxLines - 1] = lines[maxLines - 1].replace(/\s*\S*$/, '') + '…'; }
+    else if (lines.length > 1) lines = balance(ctx, text, maxW, lines.length);
     return { weight, size: s, lh: l, lines, spacing, h: lines.length * l };
   }
   function draw(ctx, b, x, y, color, align = 'left', w = 0) {
@@ -141,9 +152,9 @@ const Render = (() => {
     tri([[2, 2], [3, 2], [2, 3]], C.tealE);
     ctx.restore();
   }
-  function credit(ctx, text, bottomY) {
+  function credit(ctx, text, bottomY, x = 1050) {
     if (!text) return;
-    ctx.save(); ctx.translate(1020 + 30, bottomY); ctx.rotate(-Math.PI / 2);
+    ctx.save(); ctx.translate(x, bottomY); ctx.rotate(-Math.PI / 2);
     font(ctx, 600, 22); ctx.fillStyle = C.branco; ctx.textBaseline = 'bottom';
     ctx.fillText('FOTO: ' + text, 0, 0);
     ctx.restore(); ctx.textBaseline = 'top';
@@ -155,6 +166,7 @@ const Render = (() => {
     if (!last) chip(ctx, 'ARRASTE →', 1008, 1219, 28, { right: true });
   }
   const up = s => String(s || '').toUpperCase();
+  const catOf = d => String(d.category || '').trim(); // categoria em branco = sem texto (fica só o tracinho)
   const G = 20; // respiro padrão entre blocos de texto nos posts (o story usa 22, como o Foto em cima + painel)
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
   const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100 }, uh: { bg: C.tealE, acc: C.turq } };
@@ -204,8 +216,10 @@ const Render = (() => {
       vgrad(ctx, 650, 700, 'rgba(15,23,42,0)', 'rgba(15,23,42,0.92)');
       await logo(ctx, false, 72, 72, 298.7);
       const ti = block(ctx, d.title, 800, 46, 52, 936, 2), hh = lineH(30) + G;
-      let y = 1350 - 96 - hh - ti.h - G - 8 - G - lineH(36);
-      font(ctx, 700, 36, 2); ctx.fillStyle = C.verde; ctx.fillText(up(d.category || 'Notícia'), 72, y, 936); y += lineH(36) + G;
+      const cat = catOf(d);
+      let y = 1350 - 96 - hh - ti.h - G - 8 - (cat ? G + lineH(36) : 0);
+      ctx.fillStyle = C.verde;
+      if (cat) { font(ctx, 700, 36, 2); ctx.fillText(up(cat), 72, y, 936); y += lineH(36) + G; }
       rrect(ctx, 72, y, 300, 8, 4); ctx.fill(); y += 8 + G;
       y = draw(ctx, ti, 72, y, C.branco) + G;
       font(ctx, 600, 30); ctx.fillStyle = C.branco; ctx.fillText(BRAND.handle, 72, y);
@@ -215,7 +229,7 @@ const Render = (() => {
       photo(ctx, img, 0, 0, 1080, 680, d.focal);
       symbol(ctx, 880, 628, 105.6);
       let y = 728;
-      font(ctx, 700, 32, 2); ctx.fillStyle = C.tealM; ctx.fillText(up(d.category || 'Notícia'), 72, y, 936); y += lineH(32) + 20;
+      if (catOf(d)) { font(ctx, 700, 32, 2); ctx.fillStyle = C.tealM; ctx.fillText(up(catOf(d)), 72, y, 936); y += lineH(32) + 20; }
       y = draw(ctx, block(ctx, d.title, 900, 56, 62, 936, 4), 72, y, C.preto) + G;
       if (d.description) y = draw(ctx, block(ctx, d.description, 400, 30, 39, 936, 3), 72, y, C.preto) + G;
       if (d.source) { font(ctx, 400, 26); ctx.fillStyle = 'rgba(29,29,27,.6)'; ctx.fillText('Fonte: ' + d.source, 72, y); }
@@ -234,10 +248,12 @@ const Render = (() => {
     vgrad(ctx, 0, 300, 'rgba(15,23,42,0.55)', 'rgba(15,23,42,0)');
     await logo(ctx, false, 72, 72, 298.7);
     const ti = block(ctx, d.title, 900, size, lh, 936, withHandle ? 4 : 5), hh = withHandle ? lineH(30) + G : 0;
-    let y = 1350 - pb - hh - ti.h - G - 8 - G - lineH(40);
+    const cat = catOf(d), catH = cat ? lineH(40) + G : 0;
+    let y = 1350 - pb - hh - ti.h - G - 8 - catH;
     const lp = look(d).post, tc = panelInk(lp), dk = darkInk(tc);
-    panel(ctx, lp, y - 36, lineH(40) + G + 8 + G + ti.h + (withHandle ? G + lineH(30) : 0) + 72);
-    font(ctx, 700, 40, 2); ctx.fillStyle = dk ? C.tealE : C.verde; ctx.fillText(up(d.category || 'Notícia'), 72, y, 936); y += lineH(40) + G;
+    panel(ctx, lp, y - 36, catH + 8 + G + ti.h + (withHandle ? G + lineH(30) : 0) + 72);
+    ctx.fillStyle = dk ? C.tealE : C.verde;
+    if (cat) { font(ctx, 700, 40, 2); ctx.fillText(up(cat), 72, y, 936); y += catH; }
     rrect(ctx, 72, y, 300, 8, 4); ctx.fill(); y += 8 + G;
     y = draw(ctx, ti, 72, y, tc) + G;
     if (withHandle) { font(ctx, 600, 30); ctx.fillStyle = tc; ctx.fillText(BRAND.handle, 72, y); credit(ctx, d.credit, 1278); }
@@ -344,7 +360,7 @@ const Render = (() => {
       zone = { x: 140, y: 1470, w: 800, h: 110 };
     } else if (t === 's03') {
       const bg = look(d).bg, fh = 20 + 240 * bg.fade / 100; // degradê da foto pro painel: mais baixo = foto aparece mais
-      const ti = block(ctx, d.title, 900, 62, 72, 908, 4), de = d.description ? block(ctx, d.description, 400, 32, 44, 908, 3) : null, chipH = lineH(30) + 24;
+      const ti = block(ctx, d.title, 900, 62, 72, 908, 4), de = d.description ? block(ctx, d.description, 400, 32, 44, 908, 3) : null, chipH = catOf(d) ? lineH(30) + 24 : -22;
       const need = 70 + chipH + 22 + ti.h + 22 + (de ? de.h + 22 : 0) + 110 + 80; // altura que o texto e o adesivo precisam embaixo
       const ph = Math.round(Math.max(400, Math.min(bg.ph, 1920 - need))); // onde a foto termina e o painel começa
       const a = bg.op / 100; // opacidade do fundo: abaixo de 100 a foto aparece por trás do painel inteiro
@@ -356,8 +372,9 @@ const Render = (() => {
       vgrad(ctx, 0, 360, 'rgba(15,23,42,0.5)', 'rgba(15,23,42,0)');
       await logo(ctx, false, 72, 262, 248.9);
       symbol(ctx, 860, ph - 52, 105.6);
+      credit(ctx, d.credit, ph - 40);
       let y = ph + 70;
-      y += chip(ctx, up(d.category || 'Notícia'), 72, y, 30).h + 22;
+      if (catOf(d)) y += chip(ctx, up(catOf(d)), 72, y, 30).h + 22;
       const tc = ink(bg, bg.color, bg.op >= 45);
       y = draw(ctx, ti, 72, y, tc) + 22;
       if (de) y = draw(ctx, de, 72, y, tc) + 22;
@@ -367,12 +384,14 @@ const Render = (() => {
       ctx.fillStyle = bg.color; ctx.fillRect(0, 0, 1080, 1920);
       symbol(ctx, 560, 1240, 700, dk ? 0.12 : 0.2);
       await logo(ctx, dk, 72, 262, 248.9);
-      const ti = block(ctx, d.title, 900, 62, 72, 936, 4), de = d.description ? block(ctx, d.description, 400, 32, 44, 936, 3) : null, chipH = lineH(30) + 24;
+      const ti = block(ctx, d.title, 900, 62, 72, 936, 4), de = d.description ? block(ctx, d.description, 400, 32, 44, 936, 3) : null, chipH = catOf(d) ? lineH(30) + 24 : -22;
       const textH = chipH + 22 + ti.h + (de ? 22 + de.h : 0), cardH = Math.max(560, Math.min(860, 1920 - 400 - textH - 48 - 110 - 300));
       ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 20; rrect(ctx, 72, 400, 936, cardH, 40); ctx.fillStyle = C.navy; ctx.fill(); ctx.restore();
       ctx.save(); rrect(ctx, 72, 400, 936, cardH, 40); ctx.clip(); photo(ctx, img, 72, 400, 936, cardH, (d.focalStory || d.focal)); ctx.restore();
+      credit(ctx, d.credit, 400 + cardH - 36, 990);
       let y = 400 + cardH + 48;
-      chip(ctx, up(d.category || 'Notícia'), 72, y, 30); y += chipH + 22;
+      if (catOf(d)) chip(ctx, up(catOf(d)), 72, y, 30);
+      y += chipH + 22;
       y = draw(ctx, ti, 72, y, tc);
       if (de) y = draw(ctx, de, 72, y + 22, tc);
       zone = { x: 72, y: y + 36, w: 936, h: 110 };
@@ -382,11 +401,13 @@ const Render = (() => {
       vgrad(ctx, 820, 1100, 'rgba(15,23,42,0)', 'rgba(15,23,42,0.95)');
       vgrad(ctx, 0, 420, 'rgba(15,23,42,0.55)', 'rgba(15,23,42,0)');
       await logo(ctx, false, 72, 262, 248.9);
-      const ti = block(ctx, d.title, 900, 62, 72, 908, 5), chipH = lineH(30) + 24;
+      const ti = block(ctx, d.title, 900, 62, 72, 908, 5), chipH = catOf(d) ? lineH(30) + 24 : -22;
       let y = 1920 - 480 - 120 - 22 - ti.h - 22 - chipH;
       const ls = look(d).story;
       panel(ctx, ls, y - 36, chipH + 22 + ti.h + 72);
-      chip(ctx, up(d.category || 'Notícia'), 72, y, 30); y += chipH + 22;
+      credit(ctx, d.credit, y - 36 - 30);
+      if (catOf(d)) chip(ctx, up(catOf(d)), 72, y, 30);
+      y += chipH + 22;
       y = draw(ctx, ti, 72, y, panelInk(ls)) + 22;
       zone = { x: 72, y, w: 760, h: 120 };
     }
@@ -413,9 +434,11 @@ const Render = (() => {
       const g = seg(t, 0, 0.8); ctx.globalAlpha = g; vgrad(ctx, 820, 1100, 'rgba(0,97,115,0)', 'rgba(0,97,115,0.95)'); ctx.globalAlpha = 1;
       const lg = seg(t, 0.2, 0.9); ctx.globalAlpha = lg; await logo(ctx, false, 759, 262 - (1 - lg) * 20, 249); ctx.globalAlpha = 1;
       const tg = seg(t, 0.3, 1.0); // etiqueta entra da esquerda
-      font(ctx, 900, 34, 1); const tw = ctx.measureText(up(d.category || 'Notícia')).width + 144;
-      ctx.save(); ctx.translate(-(1 - tg) * tw, 0); ctx.fillStyle = C.tealE; rrect(ctx, -20, 360, tw + 20, 78, 39); ctx.fill();
-      ctx.fillStyle = C.branco; ctx.fillText(up(d.category || 'Notícia'), 72, 376, 900); ctx.restore();
+      if (catOf(d)) {
+        font(ctx, 900, 34, 1); const tw = ctx.measureText(up(catOf(d))).width + 144;
+        ctx.save(); ctx.translate(-(1 - tg) * tw, 0); ctx.fillStyle = C.tealE; rrect(ctx, -20, 360, tw + 20, 78, 39); ctx.fill();
+        ctx.fillStyle = C.branco; ctx.fillText(up(catOf(d)), 72, 376, 900); ctx.restore();
+      }
       const bg = seg(t, 0.6, 1.5), dy = (1 - bg) * 80; // bloco do título sobe
       ctx.globalAlpha = bg; ctx.fillStyle = C.verde; rrect(ctx, 72, 980 + dy, 300 * bg, 8, 4); ctx.fill();
       const ti = block(ctx, d.title, 900, 76, 90, 908, 4); draw(ctx, ti, 72, 1012 + dy, C.branco);

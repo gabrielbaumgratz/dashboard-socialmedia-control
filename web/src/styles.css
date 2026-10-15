@@ -468,6 +468,7 @@ textarea{field-sizing:content;resize:none;min-height:3.2em;max-height:none;overf
 /* editor */
 .edsec{display:grid;grid-template-columns:auto minmax(0,1fr);gap:28px;align-items:start;padding:20px;border-radius:24px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 30%,transparent)}
 .edpv{display:grid;gap:10px;justify-items:center;position:sticky;top:90px}
+.savepng{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:7px 12px;min-height:34px}
 .edform{display:grid;gap:12px;align-content:start;min-width:0}
 .edform h3{margin:0;font-size:16px}
 .crop{display:grid;gap:6px;width:100%;max-width:340px}

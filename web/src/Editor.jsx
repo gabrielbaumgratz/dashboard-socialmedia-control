@@ -20,7 +20,14 @@ const SLIDE_FIELDS = {
 const POST_USES = { p01: ['title', 'category', 'credit'], p02: ['title', 'chip', 'description', 'credit'], p03: ['title', 'category', 'bigTitle', 'cutout', 'credit'], p04: ['title', 'category', 'description', 'source', 'credit'], p05: ['title', 'chip', 'description', 'credit'] };
 const CAR_USES = ['title', 'category'];
 const REEL_USES = { r00: [], r01: ['title', 'category'], r02: ['title', 'dateline', 'legendas'] };
-const STORY_USES = { s02: ['title', 'category'], s03: ['title', 'category', 'description'], s01: [], s04: ['title', 'category', 'description'] };
+const STORY_USES = { s02: ['title', 'category', 'credit'], s03: ['title', 'category', 'description', 'credit'], s01: [], s04: ['title', 'category', 'description', 'credit'] };
+// baixa em tamanho real, sem guias, exatamente o que está sendo editado
+async function savePng(draw, name) {
+  const c = document.createElement('canvas'); await draw(c);
+  c.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name + '.png'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }, 'image/png');
+}
+const slug = t => (t || 'arte').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'arte';
+const SaveBtn = ({ onClick }) => <button type="button" className="ghost savepng" onClick={onClick}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" /></svg>Baixar imagem</button>;
 const KIND = { post: 'Post único', carrossel: 'Carrossel', video: 'Reel' };
 
 function useDebounced(v, ms) { const [x, setX] = useState(v); useEffect(() => { const t = setTimeout(() => setX(v), ms); return () => clearTimeout(t); }, [v, ms]); return x; }
@@ -195,7 +202,7 @@ export default function Editor() {
   const thumbSig = JSON.stringify([e.title, e.category, e.chip, e.description, e.source, e.credit, e.bigTitle, e.look, e.slides, e.focal, e.photoUrl, e.cutoutUrl, kind, !!photo, !!cut]);
   const n = car ? Render.count(base) : 1, at = Math.min(cur, n - 1);
   const postUses = car ? CAR_USES : POST_USES[e.tpl.post] || [];
-  const storyOnly = (STORY_USES[e.tpl.story] || []).filter(k => !postUses.includes(k));
+  const storyOnly = (STORY_USES[e.tpl.story] || []).filter(k => !(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses).includes(k));
   const types = Render.SLIDE_TYPES[e.tpl.carousel] || Render.SLIDE_TYPES.A;
   const frame = car ? 'carousel' : 'post';
   const dd = (tplPatch, guides) => ({ ...base, tpl: { ...base.tpl, ...tplPatch }, guides });
@@ -244,7 +251,7 @@ export default function Editor() {
   const field = (k, label, ph, multi) => <Field key={k} k={k} label={label} ph={ph} multi={multi} e={e} patch={patch} />;
   const FIELDS = {
     title: () => field('title', 'Título', '', 1),
-    category: () => field('category', 'Categoria', 'Notícia'),
+    category: () => field('category', 'Categoria', 'em branco = sem categoria na arte'),
     chip: () => field('chip', 'Selo', 'ÚLTIMA HORA'),
     bigTitle: () => field('bigTitle', 'Título grande atrás do recorte', 'as 2 primeiras palavras do título'),
     description: () => <div key="description" className="descbox">{field('description', 'Descrição curta', 'sem descrição', 1)}<button type="button" className="ghost" onClick={genDesc} disabled={dbusy || !cfg.hasKey}>{dbusy ? 'Gerando…' : 'Gerar descrição com IA'}</button></div>,
@@ -298,6 +305,7 @@ export default function Editor() {
               label="" draw={c => (car ? Render.slide(c, { ...base, guides: true }, photo, at) : Render.post(c, { ...base, guides: true }, photo))} />
             {car && <div className="slidenav"><button className="ghost" disabled={!at} onClick={() => setCur(at - 1)} aria-label="Anterior">‹</button><span>{at === 0 ? 'Capa' : at === n - 1 ? 'Último slide' : 'Slide ' + (at + 1)} · {at + 1}/{n}</span><button className="ghost" disabled={at >= n - 1} onClick={() => setCur(at + 1)} aria-label="Próximo">›</button></div>}
             <Crop f={cf} set={setCf} photo={cp} w={1080} h={1350} />
+            <SaveBtn onClick={() => savePng(c => (car ? Render.slide(c, base, photo, at) : Render.post(c, base, photo)), slug(e.title) + (car ? '-slide-' + (at + 1) : '-post'))} />
           </>)}
         </div>
         <div className="edform">
@@ -317,7 +325,8 @@ export default function Editor() {
       <section className="edsec">
         <div className="sechead"><h3>{video ? 'Capa do reel e story' : 'Story'}</h3><button className="ghost" onClick={() => patch({ look: { ...(e.look || {}), story: undefined, bg: undefined }, focalStory: { x: .5, y: .5, zoom: 1 } })}>Restaurar padrão do story</button></div>
         <div className="edpv">
-          <CanvasPv w={225} h={400} sig={textSig} photo={photo} focal={e.focalStory} onFocal={f => patch({ focalStory: f })} label="" draw={c => Render.story(c, { ...base, guides: true }, photo, { guides: true })} />
+          <CanvasPv w={225} h={400} sig={textSig} photo={photo} focal={e.focalStory} onFocal={f => patch({ focalStory: f })} label="" draw={c => Render.story(c, base, photo)} />
+          <SaveBtn onClick={() => savePng(c => Render.story(c, base, photo), slug(e.title) + '-story')} />
           <Crop f={e.focalStory} set={f => patch({ focalStory: f })} photo={photo} w={1080} h={1920}
             extra={!video && <button className="ghost" onClick={() => patch({ focalStory: { ...e.focal } })}>Igual ao post</button>} />
         </div>

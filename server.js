@@ -127,6 +127,16 @@ function stripHtml(html = '') {
 const oneLine = t => stripHtml(t).replace(/\s+/g, ' ');
 
 // ================= WordPress =================
+// crédito vem da legenda da foto destacada ("... Foto: PMU", "Foto PMU", "Crédito: Fulano") ou do metadado da imagem
+function photoCredit(m) {
+  if (!m) return '';
+  const cap = oneLine(m.caption && m.caption.rendered);
+  const all = [...cap.matchAll(/\b(?:fotos?|cr[ée]ditos?|imagem)\b\s*[:\-–]?\s*/gi)], last = all[all.length - 1]; // a última menção é a do crédito
+  const hit = last && cap.slice(last.index + last[0].length).replace(/[\s.]+$/, '');
+  if (hit && hit.length <= 60) return hit;
+  const meta = m.media_details && m.media_details.image_meta;
+  return oneLine((meta && meta.credit) || '').slice(0, 60);
+}
 async function fetchNews({ page = 1, perPage = 12, after, before, search } = {}) {
   const cfg = loadConfig();
   const base = cfg.wpUrl.replace(/\/$/, '');
@@ -147,12 +157,13 @@ async function fetchNews({ page = 1, perPage = 12, after, before, search } = {})
     }
     const sizes = (m && m.media_details && m.media_details.sizes) || {};
     const terms = (p._embedded && p._embedded['wp:term'] && p._embedded['wp:term'][0]) || [];
+    const credit = photoCredit(m);
     items.push({
       id: p.id, title: oneLine(p.title && p.title.rendered), link: p.link, date: p.date,
       excerpt: oneLine(p.excerpt && p.excerpt.rendered), text: stripHtml(p.content && p.content.rendered),
       image: (m && m.source_url) || null,
       thumb: (sizes.medium_large || sizes.large || {}).source_url || (m && m.source_url) || null,
-      category: terms[0] ? oneLine(terms[0].name) : ''
+      category: terms[0] ? oneLine(terms[0].name) : '', credit
     });
   }
   return { items, totalPages };
@@ -303,7 +314,7 @@ async function runEngine() {
       if (db0.seenNews.includes(n.id)) continue;
       seen.push(n.id);
       if (firstRun || db0.items.some(i => i.newsId === n.id)) continue;
-      const it = newItem({ newsId: n.id, origTitle: n.title, title: n.title, category: n.category, link: n.link, newsText: n.text || n.excerpt, newsDate: n.date, photoUrl: n.image || '', description: (n.excerpt || '').slice(0, 200), isNew: true });
+      const it = newItem({ newsId: n.id, origTitle: n.title, title: n.title, category: n.category, link: n.link, newsText: n.text || n.excerpt, newsDate: n.date, photoUrl: n.image || '', credit: n.credit || '', description: (n.excerpt || '').slice(0, 200), isNew: true });
       if (cfg.geminiKey && cfg.autoAi) {
         try { applyAi(it, await callGemini(n), cfg); } catch (e) { it.aiError = e.message; }
       }
