@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { uploadMedia } from './api.js';
+import { api, uploadMedia } from './api.js';
 import { Seg } from './ui.jsx';
 import { ReelOverlay } from './previews.jsx';
 import { useApp, vt } from './store.jsx';
@@ -112,6 +112,25 @@ function Crop({ f, set, photo, w, h, extra }) {
   );
 }
 
+const SWATCHES = [['#006173', 'Verde petróleo'], ['#008995', 'Teal'], ['#00b0ac', 'Turquesa'], ['#5cbba4', 'Verde'], ['#0f172a', 'Azul marinho'], ['#1d1d1b', 'Preto'], ['#735400', 'Âmbar'], ['#ffffff', 'Branco']];
+function ColorPick({ value, onChange }) {
+  return <div className="swatches">{SWATCHES.map(([c, n]) => <button type="button" key={c} title={n} aria-label={n} className={'sw' + (value.toLowerCase() === c ? ' on' : '')} style={{ background: c }} onClick={() => onChange(c)} />)}
+    <input type="color" aria-label="Outra cor" value={value} onChange={ev => onChange(ev.target.value)} /></div>;
+}
+// controles de aparência: k = 'post' | 'story' (painel atrás do texto) ou 'bg' (cor e degradê do fundo)
+function LookCtl({ e, patch, k }) {
+  const base = Render.LOOK[k], cur = { ...base, ...((e.look || {})[k]) }, set = p => patch({ look: { ...(e.look || {}), [k]: { ...cur, ...p } } });
+  if (k === 'bg') return (
+    <div className="lookbox"><b>Fundo do story</b>
+      <ColorPick value={cur.color} onChange={color => set({ color })} />
+      <label>Degradê com a foto: {cur.fade}%<input type="range" min="0" max="100" value={cur.fade} onChange={ev => set({ fade: +ev.target.value })} /></label>
+      <button type="button" className="ghost" onClick={() => patch({ look: { ...(e.look || {}), bg: undefined } })}>Voltar ao padrão</button></div>);
+  return (
+    <div className="lookbox"><label className="chk"><input type="checkbox" checked={cur.on} onChange={ev => set({ on: ev.target.checked })} />Fundo atrás do texto</label>
+      {cur.on && <><ColorPick value={cur.color} onChange={color => set({ color })} />
+        <label>Opacidade: {cur.opacity}%<input type="range" min="10" max="100" value={cur.opacity} onChange={ev => set({ opacity: +ev.target.value })} /></label></>}</div>);
+}
+
 function Field({ label, k, e, patch, ph, multi }) {
   const p = { value: e[k] || '', placeholder: ph, onChange: ev => patch({ [k]: ev.target.value }) };
   return <label>{label}{multi ? <textarea rows={1} {...p} /> : <input {...p} />}</label>;
@@ -121,7 +140,7 @@ export default function Editor() {
   const { editorId, setEditorId, byId, saveItem, replace, toast, cfg } = useApp();
   const [src] = useState(() => byId(editorId));
   const [e, setE] = useState(() => ({ ...JSON.parse(JSON.stringify(src)), focal: src.focal || { x: .5, y: .5, zoom: 1 }, focalStory: src.focalStory || src.focal || { x: .5, y: .5, zoom: 1 }, tpl: { ...DEF_TPL, ...(src.tpl || {}) }, slides: Render.slidesOf(src) }));
-  const [photo, setPhoto] = useState(null), [cut, setCut] = useState(null), [imgs, setImgs] = useState({}), [over, setOver] = useState(false), [up, setUp] = useState(false);
+  const [photo, setPhoto] = useState(null), [cut, setCut] = useState(null), [imgs, setImgs] = useState({}), [over, setOver] = useState(false), [up, setUp] = useState(false), [dbusy, setDbusy] = useState(false);
   const [cur, setCur] = useState(0), [vr, setVr] = useState(null), [vp, setVp] = useState(false), vref = useRef(null);
   const kind = typeOf(e), car = kind === 'carrossel', video = kind === 'video';
   const patch = p => setE(x => ({ ...x, ...p }));
@@ -138,8 +157,8 @@ export default function Editor() {
   useEffect(() => { if (first.current) { first.current = false; return; } dirty.current = true; }, [e]);
   useEffect(() => { const h = ev => { if (dirty.current) { ev.preventDefault(); ev.returnValue = ''; } }; window.addEventListener('beforeunload', h); return () => window.removeEventListener('beforeunload', h); }, []);
   const base = useMemo(() => ({ ...artData(e), cutoutImg: cut, imgs }), [e, cut, imgs]);
-  const textSig = JSON.stringify([e.title, e.category, e.chip, e.description, e.source, e.credit, e.bigTitle, e.slides, e.tpl, e.focal, e.focalStory, e.photoUrl, e.cutoutUrl, kind, !!photo, !!cut, Object.keys(imgs).length, cur]);
-  const thumbSig = JSON.stringify([e.title, e.category, e.chip, e.description, e.source, e.credit, e.bigTitle, e.slides, e.focal, e.photoUrl, e.cutoutUrl, kind, !!photo, !!cut]);
+  const textSig = JSON.stringify([e.title, e.category, e.chip, e.description, e.source, e.credit, e.bigTitle, e.look, e.slides, e.tpl, e.focal, e.focalStory, e.photoUrl, e.cutoutUrl, kind, !!photo, !!cut, Object.keys(imgs).length, cur]);
+  const thumbSig = JSON.stringify([e.title, e.category, e.chip, e.description, e.source, e.credit, e.bigTitle, e.look, e.slides, e.focal, e.photoUrl, e.cutoutUrl, kind, !!photo, !!cut]);
   const n = car ? Render.count(base) : 1, at = Math.min(cur, n - 1);
   const postUses = car ? CAR_USES : POST_USES[e.tpl.post] || [];
   const storyOnly = (STORY_USES[e.tpl.story] || []).filter(k => !postUses.includes(k));
@@ -175,9 +194,15 @@ export default function Editor() {
     } catch (err) { toast(err.message, true); }
     setUp(false);
   }
+  async function genDesc() {
+    setDbusy(true);
+    try { const r = await api(`/api/items/${e.id}/ai-desc`, { method: 'POST' }); if (r.description) patch({ description: r.description }); else toast('A IA não devolveu descrição.', true); }
+    catch (err) { toast(err.message, true); }
+    setDbusy(false);
+  }
   async function save(leave) {
     try {
-      await saveItem(byId(e.id), { title: e.title.trim(), category: e.category.trim(), mediaType: e.mediaType, videoUrl: e.videoUrl, slides: e.slides, focal: e.focal, focalStory: e.focalStory, tpl: e.tpl, description: e.description.trim(), chip: e.chip.trim(), legendas: e.legendas || '', dateline: e.dateline || '', source: e.source.trim(), credit: e.credit.trim(), bigTitle: e.bigTitle.trim() });
+      await saveItem(byId(e.id), { title: e.title.trim(), category: e.category.trim(), mediaType: e.mediaType, videoUrl: e.videoUrl, slides: e.slides, focal: e.focal, focalStory: e.focalStory, tpl: e.tpl, description: e.description.trim(), chip: e.chip.trim(), legendas: e.legendas || '', dateline: e.dateline || '', source: e.source.trim(), credit: e.credit.trim(), bigTitle: e.bigTitle.trim(), look: e.look || {} });
       dirty.current = false; toast('Arte salva.'); if (leave) close();
     } catch (err) { toast(err.message, true); }
   }
@@ -187,7 +212,7 @@ export default function Editor() {
     category: () => field('category', 'Categoria', 'Notícia'),
     chip: () => field('chip', 'Selo', 'ÚLTIMA HORA'),
     bigTitle: () => field('bigTitle', 'Título grande atrás do recorte', 'as 2 primeiras palavras do título'),
-    description: () => field('description', 'Descrição curta', 'sem descrição', 1),
+    description: () => <div key="description" className="descbox">{field('description', 'Descrição curta', 'sem descrição', 1)}<button type="button" className="ghost" onClick={genDesc} disabled={dbusy || !cfg.hasKey}>{dbusy ? 'Gerando…' : 'Gerar descrição com IA'}</button></div>,
     source: () => field('source', 'Fonte', 'sem fonte'),
     credit: () => field('credit', 'Crédito da foto', 'sem crédito'),
     dateline: () => field('dateline', 'Linha de data', 'cidade · data da notícia'),
@@ -245,6 +270,7 @@ export default function Editor() {
             draw={(c, id) => car ? Render.slide(c, dd({ carousel: id }, false), photo, 0) : Render.post(c, dd({ post: id }, false), photo)} />}
           {video && <Seg value={e.tpl.reel || 'r01'} onChange={id => setE(x => ({ ...x, tpl: { ...x.tpl, reel: id } }))} options={Render.REELS.map(r => [r.id, r.name])} />}
           {(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses).map(k => FIELDS[k]())}
+          {!video && (car || e.tpl.post === 'p01') && <LookCtl e={e} patch={patch} k="post" />}
           {midSlide && <SlideRow s={types.some(t => t.id === e.slides[slideIdx].type) ? e.slides[slideIdx] : { ...e.slides[slideIdx], type: types[0].id }} i={slideIdx} types={types} set={v => slideSet(slideIdx, v)}
             remove={() => { setE(x => ({ ...x, slides: x.slides.filter((_, k) => k !== slideIdx) })); setCur(at - 1); }}
             up={() => { setE(x => { const a = [...x.slides]; [a[slideIdx - 1], a[slideIdx]] = [a[slideIdx], a[slideIdx - 1]]; return { ...x, slides: a }; }); setCur(at - 1); }} />}
@@ -263,6 +289,8 @@ export default function Editor() {
           <TplRow list={Render.STORIES} kname="story" e={e} sig={thumbSig} w={62} h={110} story onPick={id => setE(x => ({ ...x, tpl: { ...x.tpl, story: id } }))}
             draw={(c, id) => Render.story(c, dd({ story: id }, false), photo)} />
           {storyOnly.map(k => FIELDS[k]())}
+          {e.tpl.story === 's02' && <LookCtl e={e} patch={patch} k="story" />}
+          {(e.tpl.story === 's01' || e.tpl.story === 's03') && <LookCtl e={e} patch={patch} k="bg" />}
         </div>
       </section>
     </div>

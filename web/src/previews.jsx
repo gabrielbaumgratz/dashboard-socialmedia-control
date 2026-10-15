@@ -6,13 +6,13 @@ import { fullCaption, handleOf, shortWhen, fmtWhen, typeOf } from './util.js';
 
 export function useCover(it) {
   const [u, setU] = useState(null);
-  const key = JSON.stringify([it.id, it.focalStory, it.mediaType, it.title, it.category, it.photoUrl, it.focal, it.tpl, it.slides, it.description, it.chip, it.credit, it.source, it.bigTitle, it.cutoutUrl]);
+  const key = JSON.stringify([it.id, it.focalStory, it.mediaType, it.title, it.category, it.photoUrl, it.focal, it.tpl, it.slides, it.description, it.chip, it.credit, it.source, it.bigTitle, it.cutoutUrl, it.look]);
   useEffect(() => { let ok = true; setU(null); coverUrl(it).then(x => ok && setU(x)); return () => { ok = false; }; }, [key]);
   return u;
 }
 export function useSet(it, enabled = true) {
   const [s, setS] = useState(null);
-  const key = JSON.stringify([it.id, it.focalStory, it.mediaType, it.title, it.category, it.photoUrl, it.focal, it.tpl, it.slides, it.description, it.chip, it.credit, it.source, it.bigTitle, it.cutoutUrl]);
+  const key = JSON.stringify([it.id, it.focalStory, it.mediaType, it.title, it.category, it.photoUrl, it.focal, it.tpl, it.slides, it.description, it.chip, it.credit, it.source, it.bigTitle, it.cutoutUrl, it.look]);
   useEffect(() => {
     if (!enabled) return; let ok = true; setS(null);
     renderSet(it).then(x => ok && setS(x));

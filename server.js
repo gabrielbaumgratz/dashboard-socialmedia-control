@@ -165,6 +165,7 @@ Regras gerais:
 - Sem emojis e sem travessão (—).
 - "titulo": versão curta para a arte, no máximo 90 caracteres.
 - "categoria": 1 ou 2 palavras (ex.: Obras, Clima, Meio ambiente, Economia).
+- "descricao": resumo da notícia em uma frase, no máximo 140 caracteres, para aparecer na arte. Só fatos do texto, sem copiar o título.
 - "hashtags": de 6 a 10 hashtags sobre o assunto, sem o símbolo #, sem espaços e sem acentos.
 - "variacoes": exatamente 3 legendas CURTAS. Cada uma é uma chamada para a pessoa clicar no link da bio e ler a matéria no portal, não um resumo:
   * No máximo 2 frases e 220 caracteres.
@@ -185,13 +186,14 @@ const AI_SCHEMA = {
   properties: {
     titulo: { type: 'string' },
     categoria: { type: 'string' },
+    descricao: { type: 'string' },
     hashtags: { type: 'array', items: { type: 'string' } },
     variacoes: {
       type: 'array',
       items: { type: 'object', properties: { estilo: { type: 'string', enum: ['factual', 'comunidade', 'topicos'] }, legenda: { type: 'string' } }, required: ['estilo', 'legenda'] }
     }
   },
-  required: ['titulo', 'categoria', 'hashtags', 'variacoes']
+  required: ['titulo', 'categoria', 'descricao', 'hashtags', 'variacoes']
 };
 function extractGeminiText(j) {
   if (Array.isArray(j.steps)) {
@@ -328,7 +330,7 @@ function authed(req) {
 }
 
 // ================= publicação no Instagram =================
-const ART_KEYS = ['slides', 'focal', 'focalStory', 'tpl', 'title', 'bigTitle', 'chip', 'source', 'credit', 'description', 'photoUrl', 'videoUrl', 'cutoutUrl', 'customArt', 'mediaType', 'category'];
+const ART_KEYS = ['slides', 'focal', 'focalStory', 'tpl', 'title', 'bigTitle', 'chip', 'source', 'credit', 'description', 'photoUrl', 'videoUrl', 'cutoutUrl', 'customArt', 'mediaType', 'category', 'look'];
 const baseUrl = req => (process.env.SITE_URL || `https://${req.headers['x-forwarded-host'] || req.headers.host}`).replace(/\/$/, '');
 const pubKey = () => (PASS || 'local') + (process.env.CRON_SECRET || '') + 'pub';
 const pubSig = (rel, exp) => crypto.createHmac('sha256', pubKey()).update(rel + '.' + exp).digest('hex').slice(0, 32);
@@ -533,6 +535,13 @@ async function handleApi(req, res, url) {
     if (!it) return send(res, 404, { error: 'item não existe' });
     if (err) { it.aiError = err; await saveDb(db); return send(res, 502, { error: err }); }
     applyAi(it, ai, loadConfig()); await saveDb(db); return send(res, 200, it);
+  }
+  mm = p.match(/^\/api\/items\/([\w-]+)\/ai-desc$/);
+  if (mm && m === 'POST') { // só devolve a descrição curta; o editor decide se aplica
+    const it = findItem(await loadDb(), mm[1]);
+    if (!it) return send(res, 404, { error: 'item não existe' });
+    try { const ai = await callGemini({ title: it.origTitle || it.title, text: it.newsText || it.description }); return send(res, 200, { description: String(ai.descricao || '').trim().slice(0, 200) }); }
+    catch (e) { return send(res, 502, { error: e.message }); }
   }
   mm = p.match(/^\/api\/items\/([\w-]+)\/media$/);
   if (mm && m === 'POST') {

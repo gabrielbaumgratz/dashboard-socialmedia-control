@@ -155,6 +155,11 @@ const Render = (() => {
     if (!last) chip(ctx, 'ARRASTE →', 1008, 1219, 28, { right: true });
   }
   const up = s => String(s || '').toUpperCase();
+  // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
+  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70 }, story: { on: false, color: '#0f172a', opacity: 70 }, bg: { color: C.tealE, fade: 100 } };
+  const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) } });
+  const rgba = (hex, a) => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+  function panel(ctx, p, y, h) { if (!p.on) return; ctx.fillStyle = rgba(p.color, p.opacity / 100); rrect(ctx, 36, y, 1008, h, 28); ctx.fill(); }
 
   // ---------- posts ----------
   async function post(canvas, d, img) {
@@ -222,6 +227,7 @@ const Render = (() => {
     await logo(ctx, false, 72, 72, 298.7);
     const ti = block(ctx, d.title, 900, size, lh, 936, withHandle ? 4 : 5), hh = withHandle ? lineH(30) + 24 : 0;
     let y = 1350 - pb - hh - ti.h - 24 - 8 - 24 - lineH(40);
+    panel(ctx, look(d).post, y - 36, lineH(40) + 24 + 8 + 24 + ti.h + (withHandle ? 24 + lineH(30) : 0) + 72);
     font(ctx, 700, 40, 2); ctx.fillStyle = C.verde; ctx.fillText(up(d.category || 'Notícia'), 72, y, 936); y += lineH(40) + 24;
     rrect(ctx, 72, y, 300, 8, 4); ctx.fill(); y += 8 + 24;
     y = draw(ctx, ti, 72, y, C.branco) + 24;
@@ -313,9 +319,10 @@ const Render = (() => {
     const ctx = setup(canvas, 1080, 1920), t = d.tpl.story || 's02';
     let zone;
     if (t === 's01') {
-      ctx.fillStyle = C.tealE; ctx.fillRect(0, 0, 1080, 1920);
+      const bg = look(d).bg;
+      ctx.fillStyle = bg.color; ctx.fillRect(0, 0, 1080, 1920);
       symbol(ctx, 420, 1000, 792, 0.08);
-      vgrad(ctx, 1020, 900, 'rgba(15,23,42,0)', 'rgba(15,23,42,0.55)');
+      vgrad(ctx, 1020, 900, 'rgba(15,23,42,0)', `rgba(15,23,42,${0.55 * bg.fade / 100})`);
       await logo(ctx, false, 72, 262, 248.9);
       chip(ctx, 'NOVA NOTÍCIA', 980, 262.5, 30, { right: true });
       // card com o próprio post do feed dentro
@@ -326,9 +333,10 @@ const Render = (() => {
       font(ctx, 700, 32); ctx.fillStyle = C.branco; ctx.textAlign = 'center'; ctx.fillText(BRAND.site, 540, 1400); ctx.textAlign = 'left';
       zone = { x: 140, y: 1470, w: 800, h: 110 };
     } else if (t === 's03') {
-      ctx.fillStyle = C.tealE; ctx.fillRect(0, 0, 1080, 1920);
+      const bg = look(d).bg, fh = 20 + 240 * bg.fade / 100; // degradê da foto pro painel: mais baixo = foto aparece mais
+      ctx.fillStyle = bg.color; ctx.fillRect(0, 0, 1080, 1920);
       photo(ctx, img, 0, 0, 1080, 760, (d.focalStory || d.focal));
-      vgrad(ctx, 500, 260, 'rgba(0,97,115,0)', C.tealE);
+      vgrad(ctx, 760 - fh, fh, rgba(bg.color, 0), bg.color);
       vgrad(ctx, 0, 360, 'rgba(15,23,42,0.5)', 'rgba(15,23,42,0)');
       await logo(ctx, false, 72, 262, 248.9);
       symbol(ctx, 860, 708, 105.6);
@@ -345,6 +353,7 @@ const Render = (() => {
       await logo(ctx, false, 72, 262, 248.9);
       const ti = block(ctx, d.title, 900, 76, 90, 908, 5), chipH = lineH(32) + 24;
       let y = 1920 - 480 - 120 - 24 - ti.h - 24 - chipH;
+      panel(ctx, look(d).story, y - 36, chipH + 24 + ti.h + 72);
       chip(ctx, up(d.category || 'Notícia'), 72, y, 32); y += chipH + 24;
       y = draw(ctx, ti, 72, y, C.branco) + 24;
       zone = { x: 72, y, w: 760, h: 120 };
@@ -405,7 +414,7 @@ const Render = (() => {
     setScale(s) { S = s || 1; },
     // capa: a primeira imagem do post (post único ou capa do carrossel)
     cover: (canvas, d, img) => d.format === 'carrossel' ? slide(canvas, d, img, 0) : post(canvas, d, img),
-    post, slide, story, symbol,
+    post, slide, story, symbol, LOOK,
     // só a foto enquadrada (usada pra mandar pro editor livre)
     crop(canvas, img, w, h, focal) { const ctx = setup(canvas, w, h); photo(ctx, img, 0, 0, w, h, focal); }
   };

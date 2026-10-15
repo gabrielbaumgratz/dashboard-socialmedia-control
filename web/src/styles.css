@@ -565,3 +565,12 @@ button.ok{background:color-mix(in srgb,var(--ok) 70%,transparent);color:#06231c}
 
 .thumbacts button{background:rgba(10,20,34,.62)}.thumbacts button:hover{background:rgba(10,20,34,.85)}.thumbacts button.del:hover{background:var(--danger);border-color:transparent}
 .toast .tact{margin-left:14px;padding:4px 12px;font-size:13px}
+
+.descbox{display:grid;gap:6px}.descbox button{justify-self:start}
+
+.lookbox{display:grid;gap:8px;padding:12px;border-radius:14px;border:1px solid var(--line)}
+.lookbox label.chk{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;font-weight:700}.lookbox label.chk input{width:20px;height:20px;flex:none;padding:0}
+.swatches{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.swatches .sw{width:30px;height:30px;padding:0;border-radius:50%;border:2px solid var(--line)}
+.swatches .sw.on{outline:3px solid var(--accent,#00b0ac);outline-offset:2px}
+.swatches input[type=color]{width:34px;height:34px;padding:0;border:none;background:none}
