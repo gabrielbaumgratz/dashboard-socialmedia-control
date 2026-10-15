@@ -18,7 +18,7 @@ const DEFAULTS = {
   port: 3000,
   wpUrl: 'https://reconstrucoes.digital',
   geminiKey: '',
-  geminiModel: '', // vazio = usa o Flash-Lite mais novo que a chave enxergar
+  geminiModel: '', // vazio = usa o Flash (não o Lite) mais novo que a chave enxergar
   instagram: '@reconstrucoes.observatorio',
   location: 'Ubá, Minas Gerais',
   ctaText: 'Leia a matéria completa no link da bio.',
@@ -209,15 +209,15 @@ function extractGeminiText(j) {
   if (c && c.parts) return c.parts.map(p => p.text || '').join('');
   return null;
 }
-// modelo vazio (ou o antigo padrão 3.8 Flash) = o Flash-Lite mais novo que a chave enxerga, o mais barato
+// modelo vazio (ou o antigo padrão 3.8 Flash) = o Flash comum mais novo que a chave enxerga (nunca o Lite)
 let liteCache = null;
 async function pickModel(cfg) {
   if (cfg.geminiModel && cfg.geminiModel !== 'gemini-3.8-flash') return cfg.geminiModel;
   if (liteCache) return liteCache;
   const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + encodeURIComponent(cfg.geminiKey));
-  const names = ((await r.json()).models || []).map(m => m.name.replace(/^models\//, '')).filter(n => /^gemini-[\d.]+-flash-lite$/.test(n));
+  const names = ((await r.json()).models || []).map(m => m.name.replace(/^models\//, '')).filter(n => /^gemini-[\d.]+-flash$/.test(n));
   names.sort((a, b) => parseFloat(b.split('-')[1]) - parseFloat(a.split('-')[1]));
-  if (!names.length) throw new Error('Não achei um modelo Flash-Lite para essa chave. Escolha um modelo em Configurações.');
+  if (!names.length) throw new Error('Não achei um modelo Flash para essa chave. Escolha um modelo em Configurações.');
   return (liteCache = names[0]);
 }
 async function callGemini(news) {

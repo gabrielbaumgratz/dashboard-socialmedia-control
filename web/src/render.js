@@ -156,10 +156,11 @@ const Render = (() => {
   }
   const up = s => String(s || '').toUpperCase();
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
-  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70 }, story: { on: false, color: '#0f172a', opacity: 70 }, bg: { color: C.tealE, fade: 100 } };
+  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60 }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60 }, bg: { color: C.tealE, fade: 100 } };
   const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) } });
   const rgba = (hex, a) => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
-  function panel(ctx, p, y, h) { if (!p.on) return; ctx.fillStyle = rgba(p.color, p.opacity / 100); rrect(ctx, 36, y, 1008, h, 28); ctx.fill(); }
+  function panel(ctx, p, y, h) { if (!p.on) return; ctx.fillStyle = rgba(p.color, p.opacity / 100); rrect(ctx, 36, y, 1008, h, 28); ctx.fill();
+    if (p.bw > 0) { ctx.strokeStyle = rgba(p.bc, p.bo / 100); ctx.lineWidth = p.bw; rrect(ctx, 36 + p.bw / 2, y + p.bw / 2, 1008 - p.bw, h - p.bw, 28); ctx.stroke(); } }
 
   // ---------- posts ----------
   async function post(canvas, d, img) {

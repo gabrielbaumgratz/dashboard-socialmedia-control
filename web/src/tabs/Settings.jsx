@@ -50,7 +50,7 @@ export default function Settings() {
           )}
           <label>Modelo
             <select value={form.geminiModel === 'gemini-3.8-flash' ? '' : form.geminiModel || ''} onChange={set('geminiModel')}>
-              <option value="">Automático (Flash-Lite, o mais barato)</option>
+              <option value="">Automático (o Flash mais novo da sua chave)</option>
               {models.map(m => <option key={m} value={m}>{m}</option>)}
             </select></label>
           <label className="check"><input type="checkbox" checked={!!form.autoAi} onChange={set('autoAi')} /> Gerar legendas sozinho quando chegar notícia nova</label>

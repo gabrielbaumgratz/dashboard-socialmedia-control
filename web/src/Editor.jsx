@@ -105,7 +105,7 @@ function Crop({ f, set, photo, w, h, extra }) {
       <label>Vertical<input type="range" min="0" max="1" step="0.01" value={f.y} onChange={ev => set({ ...f, y: +ev.target.value })} /></label>
       <div className="crop-btns">
         <button className="ghost" onClick={() => set({ x: .5, y: .5, zoom: min })}>Foto inteira</button>
-        <button className="ghost" onClick={() => set({ x: .5, y: .5, zoom: 1 })}>Preencher</button>
+        <button className="ghost" onClick={() => set({ x: .5, y: .5, zoom: 1 })}>Padrão (preencher)</button>
         {extra}
       </div>
     </div>
@@ -124,11 +124,15 @@ function LookCtl({ e, patch, k }) {
     <div className="lookbox"><b>Fundo do story</b>
       <ColorPick value={cur.color} onChange={color => set({ color })} />
       <label>Degradê com a foto: {cur.fade}%<input type="range" min="0" max="100" value={cur.fade} onChange={ev => set({ fade: +ev.target.value })} /></label>
-      <button type="button" className="ghost" onClick={() => patch({ look: { ...(e.look || {}), bg: undefined } })}>Voltar ao padrão</button></div>);
+      {(e.look || {}).bg && <button type="button" className="ghost" onClick={() => patch({ look: { ...(e.look || {}), bg: undefined } })}>Voltar ao padrão</button>}</div>);
   return (
     <div className="lookbox"><label className="chk"><input type="checkbox" checked={cur.on} onChange={ev => set({ on: ev.target.checked })} />Fundo atrás do texto</label>
       {cur.on && <><ColorPick value={cur.color} onChange={color => set({ color })} />
-        <label>Opacidade: {cur.opacity}%<input type="range" min="10" max="100" value={cur.opacity} onChange={ev => set({ opacity: +ev.target.value })} /></label></>}</div>);
+        <label>Opacidade: {cur.opacity}%<input type="range" min="10" max="100" value={cur.opacity} onChange={ev => set({ opacity: +ev.target.value })} /></label>
+        <label>Contorno: {cur.bw ? cur.bw + ' px' : 'sem'}<input type="range" min="0" max="12" value={cur.bw} onChange={ev => set({ bw: +ev.target.value })} /></label>
+        {cur.bw > 0 && <><ColorPick value={cur.bc} onChange={bc => set({ bc })} />
+          <label>Opacidade do contorno: {cur.bo}%<input type="range" min="10" max="100" value={cur.bo} onChange={ev => set({ bo: +ev.target.value })} /></label></>}</>}
+      {(e.look || {})[k] && <button type="button" className="ghost" onClick={() => patch({ look: { ...(e.look || {}), [k]: undefined } })}>Voltar ao padrão</button>}</div>);
 }
 
 function Field({ label, k, e, patch, ph, multi }) {
@@ -251,7 +255,7 @@ export default function Editor() {
       </section>
 
       <section className="edsec">
-        <div className="sechead"><h3>{video ? 'Reel' : car ? 'Carrossel' : 'Post'}</h3></div>
+        <div className="sechead"><h3>{video ? 'Reel' : car ? 'Carrossel' : 'Post'}</h3>{!video && <button className="ghost" onClick={() => patch({ look: { ...(e.look || {}), post: undefined }, focal: { x: .5, y: .5, zoom: 1 } })}>Restaurar padrão do post</button>}</div>
         <div className="edpv">
           {video ? (
             <div className="pv">{e.videoUrl && <div className="rl-media reelpv">
@@ -279,7 +283,7 @@ export default function Editor() {
       </section>
 
       <section className="edsec">
-        <div className="sechead"><h3>{video ? 'Capa do reel e story' : 'Story'}</h3></div>
+        <div className="sechead"><h3>{video ? 'Capa do reel e story' : 'Story'}</h3><button className="ghost" onClick={() => patch({ look: { ...(e.look || {}), story: undefined, bg: undefined }, focalStory: { x: .5, y: .5, zoom: 1 } })}>Restaurar padrão do story</button></div>
         <div className="edpv">
           <CanvasPv w={225} h={400} sig={textSig} photo={photo} focal={e.focalStory} onFocal={f => patch({ focalStory: f })} label="" draw={c => Render.story(c, { ...base, guides: true }, photo, { guides: true })} />
           <Crop f={e.focalStory} set={f => patch({ focalStory: f })} photo={photo} w={1080} h={1920}
