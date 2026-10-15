@@ -155,6 +155,7 @@ const Render = (() => {
     if (!last) chip(ctx, 'ARRASTE →', 1008, 1219, 28, { right: true });
   }
   const up = s => String(s || '').toUpperCase();
+  const G = 20; // respiro padrão entre blocos de texto nos posts (o story usa 22, como o Foto em cima + painel)
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
   const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100 }, uh: { bg: C.tealE, acc: C.turq } };
   const UH_PRESETS = [['Verde petróleo', C.tealE, C.turq], ['Amarelo', '#735400', '#fabd0d'], ['Azul marinho', C.navy, C.turq], ['Teal', C.tealM, C.verde], ['Preto', C.preto, '#fabd0d']];
@@ -179,12 +180,12 @@ const Render = (() => {
       ctx.save(); ctx.globalAlpha = 0.92; vgrad(ctx, 700, 650, rgba(bgc, 0), bgc); ctx.restore();
       await logo(ctx, false, 72, 72, 298.7);
       ctx.fillStyle = acc; ctx.fillRect(0, 1334, 1080, 16);
-      const ti = block(ctx, d.title, 900, 66, 78, 936, 4), de = d.description ? block(ctx, d.description, 400, 30, 42, 936, 3) : null;
+      const ti = block(ctx, d.title, 900, 66, 72, 936, 4), de = d.description ? block(ctx, d.description, 400, 30, 39, 936, 3) : null;
       const chipH = lineH(36) + 24, hh = lineH(30);
-      let y = 1350 - 96 - hh - 24 - (de ? de.h + 24 : 0) - ti.h - 24 - chipH;
-      chip(ctx, up(d.chip || 'Última hora'), 72, y, 36, { bg: acc, color: lum(acc) > 0.35 ? C.navy : C.branco }); y += chipH + 24;
-      y = draw(ctx, ti, 72, y, C.branco) + 24;
-      if (de) y = draw(ctx, de, 72, y, C.branco) + 24;
+      let y = 1350 - 96 - hh - G - (de ? de.h + G : 0) - ti.h - G - chipH;
+      chip(ctx, up(d.chip || 'Última hora'), 72, y, 36, { bg: acc, color: lum(acc) > 0.35 ? C.navy : C.branco }); y += chipH + G;
+      y = draw(ctx, ti, 72, y, C.branco) + G;
+      if (de) y = draw(ctx, de, 72, y, C.branco) + G;
       font(ctx, 600, 30); ctx.fillStyle = C.branco; ctx.fillText(BRAND.handle, 72, y);
       credit(ctx, d.credit, 790);
     } else if (t === 'p03') {
@@ -202,11 +203,11 @@ const Render = (() => {
       } // sem recorte: fica só a foto, sem caixa nem aviso
       vgrad(ctx, 650, 700, 'rgba(15,23,42,0)', 'rgba(15,23,42,0.92)');
       await logo(ctx, false, 72, 72, 298.7);
-      const ti = block(ctx, d.title, 800, 46, 56, 936, 2), hh = lineH(30) + 24;
-      let y = 1350 - 96 - hh - ti.h - 24 - 8 - 24 - lineH(36);
-      font(ctx, 700, 36, 2); ctx.fillStyle = C.verde; ctx.fillText(up(d.category || 'Notícia'), 72, y, 936); y += lineH(36) + 24;
-      rrect(ctx, 72, y, 300, 8, 4); ctx.fill(); y += 8 + 24;
-      y = draw(ctx, ti, 72, y, C.branco) + 24;
+      const ti = block(ctx, d.title, 800, 46, 52, 936, 2), hh = lineH(30) + G;
+      let y = 1350 - 96 - hh - ti.h - G - 8 - G - lineH(36);
+      font(ctx, 700, 36, 2); ctx.fillStyle = C.verde; ctx.fillText(up(d.category || 'Notícia'), 72, y, 936); y += lineH(36) + G;
+      rrect(ctx, 72, y, 300, 8, 4); ctx.fill(); y += 8 + G;
+      y = draw(ctx, ti, 72, y, C.branco) + G;
       font(ctx, 600, 30); ctx.fillStyle = C.branco; ctx.fillText(BRAND.handle, 72, y);
       credit(ctx, d.credit, 1249);
     } else if (t === 'p04') {
@@ -215,14 +216,14 @@ const Render = (() => {
       symbol(ctx, 880, 628, 105.6);
       let y = 728;
       font(ctx, 700, 32, 2); ctx.fillStyle = C.tealM; ctx.fillText(up(d.category || 'Notícia'), 72, y, 936); y += lineH(32) + 20;
-      y = draw(ctx, block(ctx, d.title, 900, 56, 66, 936, 4), 72, y, C.preto) + 20;
-      if (d.description) y = draw(ctx, block(ctx, d.description, 400, 30, 42, 936, 3), 72, y, C.preto) + 20;
+      y = draw(ctx, block(ctx, d.title, 900, 56, 62, 936, 4), 72, y, C.preto) + G;
+      if (d.description) y = draw(ctx, block(ctx, d.description, 400, 30, 39, 936, 3), 72, y, C.preto) + G;
       if (d.source) { font(ctx, 400, 26); ctx.fillStyle = 'rgba(29,29,27,.6)'; ctx.fillText('Fonte: ' + d.source, 72, y); }
       await logo(ctx, true, 72, 1228, 186.7);
       font(ctx, 700, 28); ctx.fillStyle = C.tealM; ctx.textAlign = 'right'; ctx.fillText(BRAND.site, 1008, 1234); ctx.textAlign = 'left';
       credit(ctx, d.credit, 640);
     } else {
-      await coverA(ctx, d, img, 64, 76, 96, true);
+      await coverA(ctx, d, img, 64, 70, 96, true);
     }
   }
   // capa com foto inteira (Post 01, A1 e B1)
@@ -232,13 +233,13 @@ const Render = (() => {
     vgrad(ctx, 450, 900, 'rgba(15,23,42,0)', 'rgba(15,23,42,0.92)');
     vgrad(ctx, 0, 300, 'rgba(15,23,42,0.55)', 'rgba(15,23,42,0)');
     await logo(ctx, false, 72, 72, 298.7);
-    const ti = block(ctx, d.title, 900, size, lh, 936, withHandle ? 4 : 5), hh = withHandle ? lineH(30) + 24 : 0;
-    let y = 1350 - pb - hh - ti.h - 24 - 8 - 24 - lineH(40);
+    const ti = block(ctx, d.title, 900, size, lh, 936, withHandle ? 4 : 5), hh = withHandle ? lineH(30) + G : 0;
+    let y = 1350 - pb - hh - ti.h - G - 8 - G - lineH(40);
     const lp = look(d).post, tc = panelInk(lp), dk = darkInk(tc);
-    panel(ctx, lp, y - 36, lineH(40) + 24 + 8 + 24 + ti.h + (withHandle ? 24 + lineH(30) : 0) + 72);
-    font(ctx, 700, 40, 2); ctx.fillStyle = dk ? C.tealE : C.verde; ctx.fillText(up(d.category || 'Notícia'), 72, y, 936); y += lineH(40) + 24;
-    rrect(ctx, 72, y, 300, 8, 4); ctx.fill(); y += 8 + 24;
-    y = draw(ctx, ti, 72, y, tc) + 24;
+    panel(ctx, lp, y - 36, lineH(40) + G + 8 + G + ti.h + (withHandle ? G + lineH(30) : 0) + 72);
+    font(ctx, 700, 40, 2); ctx.fillStyle = dk ? C.tealE : C.verde; ctx.fillText(up(d.category || 'Notícia'), 72, y, 936); y += lineH(40) + G;
+    rrect(ctx, 72, y, 300, 8, 4); ctx.fill(); y += 8 + G;
+    y = draw(ctx, ti, 72, y, tc) + G;
     if (withHandle) { font(ctx, 600, 30); ctx.fillStyle = tc; ctx.fillText(BRAND.handle, 72, y); credit(ctx, d.credit, 1278); }
   }
 
@@ -249,7 +250,7 @@ const Render = (() => {
   async function slide(canvas, d, img, idx) {
     await ensureFonts();
     const ctx = setup(canvas, 1080, 1350), set = d.tpl.carousel || 'A', list = slidesOf(d), n = list.length + 2;
-    if (idx === 0) { await coverA(ctx, d, img, 72, 84, 190, false); return footer(ctx, false); }
+    if (idx === 0) { await coverA(ctx, d, img, 72, 79, 190, false); return footer(ctx, false); }
     if (idx === n - 1) return cta(ctx, set, n);
     const s = list[idx - 1], types = SLIDE_TYPES[set].map(x => x.id);
     let type = types.includes(s.type) ? s.type : types[0];
@@ -366,12 +367,12 @@ const Render = (() => {
       ctx.fillStyle = bg.color; ctx.fillRect(0, 0, 1080, 1920);
       symbol(ctx, 560, 1240, 700, dk ? 0.12 : 0.2);
       await logo(ctx, dk, 72, 262, 248.9);
-      const ti = block(ctx, d.title, 900, 64, 76, 936, 4), de = d.description ? block(ctx, d.description, 400, 32, 44, 936, 3) : null, chipH = lineH(30) + 24;
-      const textH = chipH + 24 + ti.h + (de ? 22 + de.h : 0), cardH = Math.max(560, Math.min(860, 1920 - 400 - textH - 48 - 110 - 300));
+      const ti = block(ctx, d.title, 900, 62, 72, 936, 4), de = d.description ? block(ctx, d.description, 400, 32, 44, 936, 3) : null, chipH = lineH(30) + 24;
+      const textH = chipH + 22 + ti.h + (de ? 22 + de.h : 0), cardH = Math.max(560, Math.min(860, 1920 - 400 - textH - 48 - 110 - 300));
       ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 20; rrect(ctx, 72, 400, 936, cardH, 40); ctx.fillStyle = C.navy; ctx.fill(); ctx.restore();
       ctx.save(); rrect(ctx, 72, 400, 936, cardH, 40); ctx.clip(); photo(ctx, img, 72, 400, 936, cardH, (d.focalStory || d.focal)); ctx.restore();
       let y = 400 + cardH + 48;
-      chip(ctx, up(d.category || 'Notícia'), 72, y, 30); y += chipH + 24;
+      chip(ctx, up(d.category || 'Notícia'), 72, y, 30); y += chipH + 22;
       y = draw(ctx, ti, 72, y, tc);
       if (de) y = draw(ctx, de, 72, y + 22, tc);
       zone = { x: 72, y: y + 36, w: 936, h: 110 };
@@ -381,12 +382,12 @@ const Render = (() => {
       vgrad(ctx, 820, 1100, 'rgba(15,23,42,0)', 'rgba(15,23,42,0.95)');
       vgrad(ctx, 0, 420, 'rgba(15,23,42,0.55)', 'rgba(15,23,42,0)');
       await logo(ctx, false, 72, 262, 248.9);
-      const ti = block(ctx, d.title, 900, 76, 90, 908, 5), chipH = lineH(32) + 24;
-      let y = 1920 - 480 - 120 - 24 - ti.h - 24 - chipH;
+      const ti = block(ctx, d.title, 900, 62, 72, 908, 5), chipH = lineH(30) + 24;
+      let y = 1920 - 480 - 120 - 22 - ti.h - 22 - chipH;
       const ls = look(d).story;
-      panel(ctx, ls, y - 36, chipH + 24 + ti.h + 72);
-      chip(ctx, up(d.category || 'Notícia'), 72, y, 32); y += chipH + 24;
-      y = draw(ctx, ti, 72, y, panelInk(ls)) + 24;
+      panel(ctx, ls, y - 36, chipH + 22 + ti.h + 72);
+      chip(ctx, up(d.category || 'Notícia'), 72, y, 30); y += chipH + 22;
+      y = draw(ctx, ti, 72, y, panelInk(ls)) + 22;
       zone = { x: 72, y, w: 760, h: 120 };
     }
     if (opts.guides) {
