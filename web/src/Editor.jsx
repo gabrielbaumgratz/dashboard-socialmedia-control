@@ -204,7 +204,8 @@ export default function Editor() {
   async function sendFile(file, slot) {
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     if (!['jpg', 'jpeg', 'png', 'svg', 'mp4'].includes(ext)) { toast('Formato não aceito. Use JPG, PNG, SVG ou MP4.', true); return null; }
-    return uploadMedia(e.id, file, slot, cfg.cloud);
+    let last = -1;
+    return uploadMedia(e.id, file, slot, cfg.cloud, p => { const r = Math.floor(p / 5) * 5; if (r !== last) { last = r; toast(`Enviando ${file.name.slice(0, 24)}… ${r}%`); } });
   }
   async function replaceMain(file, slot) {
     const saved = await sendFile(file, slot); if (!saved) return;

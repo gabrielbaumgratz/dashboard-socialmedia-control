@@ -16,6 +16,22 @@ function Section({ title, hint, pill, wide, children }) {
   );
 }
 
+// horários preferidos como relógio (igual alarme): um campo de hora por horário, + pra adicionar
+function Slots({ value, onChange }) {
+  const list = String(value).split(/[,;\s]+/).filter(t => /^\d{1,2}:\d{2}$/.test(t)).map(t => t.padStart(5, '0'));
+  const put = l => onChange([...new Set(l.filter(Boolean))].sort().join(', '));
+  return (
+    <div className="slots"><span>Horários preferidos</span>
+      <div className="slotlist">
+        {list.map((t, i) => <span key={t + i} className="slot"><input type="time" value={t} onChange={e => put(list.map((x, k) => (k === i ? e.target.value : x)))} />
+          <button type="button" className="ghost mini" aria-label={'Tirar ' + t} onClick={() => put(list.filter((_, k) => k !== i))}>×</button></span>)}
+        <button type="button" className="ghost mini" onClick={() => put([...list, ['12:00', '18:00', '09:00', '15:00', '21:00', '07:00'].find(t => !list.includes(t)) || '12:00'])}>+ Horário</button>
+      </div>
+      <p className="hint">Marca e legenda (@, bio, chamada, hashtags) agora ficam na engrenagem do Feed.</p>
+    </div>
+  );
+}
+
 export default function Settings() {
   const { cfg, loadCfg, engine, refreshEngine, toast } = useApp();
   const [models, setModels] = useState([]);
@@ -75,16 +91,8 @@ export default function Settings() {
           <label>Endereço do site<input value={form.wpUrl || ''} onChange={set('wpUrl')} /></label>
         </Section>
 
-        <Section title="Marca e legenda">
-          <label>@ do Instagram<input value={form.instagram || ''} onChange={set('instagram')} /></label>
-          <label>Localização no post<input value={form.location || ''} onChange={set('location')} /></label>
-          <label>Bio no perfil do simulador<textarea rows={3} value={form.bio || ''} onChange={set('bio')} /></label>
-          <label>Chamada padrão no fim da legenda<input value={form.ctaText || ''} onChange={set('ctaText')} /></label>
-          <label>Hashtags fixas da região (separe por espaço)<input value={form.fixedTags || ''} onChange={set('fixedTags')} /></label>
-        </Section>
-
         <Section title="Horários e metas">
-          <label>Horários preferidos (ex.: 11:30, 18:00)<input placeholder="11:30, 18:00" value={form.slots || ''} onChange={set('slots')} /></label>
+          <Slots value={form.slots || ''} onChange={v => setForm(f => ({ ...f, slots: v }))} />
           <div className="row2">
             <label>Meta de posts / semana<input type="number" min="0" value={form.metaPosts ?? ''} onChange={set('metaPosts')} /></label>
             <label>Meta de reels / semana<input type="number" min="0" value={form.metaVideos ?? ''} onChange={set('metaVideos')} /></label>

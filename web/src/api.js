@@ -12,11 +12,11 @@ export async function api(path, opts = {}) {
 
 // Na nuvem (Vercel) a função aceita no máximo 4,5 MB, então a foto/vídeo vai direto do navegador pro Blob
 // e depois só avisamos o servidor. Local: corpo cru como sempre.
-export async function uploadMedia(itemId, file, slot, cloud) {
+export async function uploadMedia(itemId, file, slot, cloud, onProgress) {
   const ext = '.' + (file.name.split('.').pop() || '').toLowerCase().replace('jpeg', 'jpg');
   if (!cloud) return api(`/api/items/${itemId}/media?name=${encodeURIComponent(file.name)}${slot ? '&slot=' + slot : ''}`, { method: 'POST', raw: file });
   const base = slot === 'cutout' ? 'media-cutout' : slot === 'add' ? 'media-add-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) : ext === '.mp4' ? 'media-video' : 'media-photo';
   const { uploadPresigned: upload } = await import('@vercel/blob/client');
-  await upload(`images/${itemId}/${base}${ext}`, file, { access: 'private', handleUploadUrl: '/api/blob-upload', multipart: file.size > 50e6 });
+  await upload(`images/${itemId}/${base}${ext}`, file, { access: 'private', handleUploadUrl: '/api/blob-upload', multipart: file.size > 8e6, onUploadProgress: onProgress && (p => onProgress(p.percentage)) }); // multipart: manda em pedaços paralelos
   return api(`/api/items/${itemId}/media-ref`, { method: 'POST', body: { file: base + ext, slot } });
 }

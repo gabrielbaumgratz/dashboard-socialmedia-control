@@ -15,7 +15,7 @@ import Editor from './Editor.jsx';
 const NAV = [['news', 'news', 'Notícias do site'], ['week', 'cal', 'Calendário'], ['queue', 'inbox', 'Fila'], ['history', 'clock', 'Histórico'], ['feed', 'grid', 'Feed']];
 const TABS = { news: News, week: Calendar, queue: Queue, history: History, feed: Feed, settings: Settings };
 
-function Sidebar() {
+function Sidebar({ hide }) {
   const { tab, setTab, items, cfg } = useApp();
   const [dark, setDark] = useState(document.documentElement.dataset.theme !== 'light');
   const [logo, setLogo] = useState(false);
@@ -39,6 +39,7 @@ function Sidebar() {
         ))}
       </nav>
       <div className="sidefoot">
+        <button onClick={hide} title="Esconder a barra lateral"><Icon name="back" /><span>Esconder barra</span></button>
         <div className="goal" title="Meta da semana (segunda a domingo)">
           Meta da semana
           <div className="goalrow"><b>{g.posts}/{g.mp}</b> posts <b>{g.videos}/{g.mv}</b> reels</div>
@@ -53,12 +54,14 @@ function Sidebar() {
 
 export default function App() {
   const { tab, ready, postId, editorId, toastMsg } = useApp();
+  const [noside, setNoside] = useState(() => { try { return localStorage.getItem('noside') === '1'; } catch { return false; } });
+  const side = v => { setNoside(v); try { localStorage.setItem('noside', v ? '1' : '0'); } catch {} };
   const [seen, setSeen] = useState({ news: true });
   useEffect(() => setSeen(s => (s[tab] ? s : { ...s, [tab]: true })), [tab]);
   return (
-    <div className="app">
+    <div className={'app' + (noside ? ' noside' : '')}>
       <div className="bg" aria-hidden="true"><i /><i /><i /></div>
-      <Sidebar />
+      {noside ? <button className="sideopen glass-dark" onClick={() => side(false)} aria-label="Mostrar a barra lateral" title="Mostrar a barra lateral"><Icon name="grid" /></button> : <Sidebar hide={() => side(true)} />}
       <main>
         {!ready && <p className="hint">Carregando…</p>}
         {ready && Object.entries(TABS).map(([id, C]) => seen[id] && (

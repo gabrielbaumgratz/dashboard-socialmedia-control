@@ -6,6 +6,7 @@ import { IgPost, useSet } from '../previews.jsx';
 import { storyUrl } from '../art.js';
 import { handleOf, itemDate, typeOf } from '../util.js';
 import Render from '../render.js';
+import BrandForm from './BrandForm.jsx';
 
 function StoryThumb({ it, className = '' }) {
   const [u, setU] = useState(null);
@@ -21,6 +22,7 @@ function LineItem({ it }) {
 
 export default function Feed() {
   const { items, cfg, openPost } = useApp();
+  const [brand, setBrand] = useState(false);
   const [mode, setMode] = useState('grid'), [sub, setSub] = useState('posts'), [drafts, setDrafts] = useState(false);
   const [avatar, setAvatar] = useState(null);
   useEffect(() => { // foto de perfil igual à real: símbolo da marca em círculo branco
@@ -37,13 +39,15 @@ export default function Feed() {
       <PageHead title="Simulador do feed">
         <label className="check"><input type="checkbox" checked={drafts} onChange={e => setDrafts(e.target.checked)} /> incluir rascunhos</label>
         <ViewToggle value={mode} onChange={setMode} alt="line" />
+        <button className="ghost iconbtn" aria-label="Marca e legenda" title="Marca e legenda" onClick={() => setBrand(b => !b)}><Icon name="gear" /></button>
       </PageHead>
+      {brand && <BrandForm onClose={() => setBrand(false)} />}
       {mode === 'grid' ? (
         <div className="igprofile">
           <div className="igp-head">
             <div className="igp-av">{avatar ? <img src={avatar} alt="" /> : <span>R</span>}</div>
             <div className="igp-info">
-              <div className="igp-row"><b>{handleOf(cfg)}</b><span className="igp-btn">Editar perfil</span><span className="igp-btn">Ver arquivo</span></div>
+              <div className="igp-row"><b>{handleOf(cfg)}</b><button type="button" className="igp-btn" onClick={() => setBrand(true)}>Editar perfil</button><span className="igp-btn">Ver arquivo</span></div>
               <div className="igp-row stats"><span><b>{list.length}</b> publicações</span></div>
               <div className="igp-bio"><b>Reconstruções</b><div className="mutline">Empresa de mídia/notícias</div><div className="bio">{cfg.bio}</div><a href={cfg.wpUrl} target="_blank" rel="noopener noreferrer">{site}</a></div>
             </div>
