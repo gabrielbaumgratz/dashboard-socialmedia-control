@@ -600,9 +600,8 @@ input[type=range]:focus{box-shadow:none}
 .preset i{width:14px;height:14px;border-radius:50%;display:inline-block;border:1px solid var(--line)}
 .preset.on{border-color:var(--accent);background:var(--accent-soft)}
 
-.app.noside{grid-template-columns:1fr}
-.sideopen{position:fixed;top:18px;left:18px;z-index:30;width:44px;height:44px;padding:0;border-radius:14px;display:grid;place-items:center;color:#e8fbfb;border:0}
-.app.noside main{padding-left:76px}
+.sideopen{position:fixed;top:22px;left:18px;z-index:30;width:34px;height:34px;padding:0;border-radius:10px;display:grid;place-items:center;color:#e8fbfb;border:0;opacity:.7;transition:opacity .2s}.sideopen:hover{opacity:1}.sideopen .ico{width:18px;height:18px}
+
 .slots{display:grid;gap:6px}.slots>span{font-size:13px;font-weight:700}
 .slotlist{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .slot{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--line2);border-radius:12px;padding:2px 4px 2px 2px}
@@ -612,3 +611,10 @@ input[type=range]:focus{box-shadow:none}
 .brandform h3{margin:0}
 .iconbtn{width:40px;height:40px;padding:0;display:grid;place-items:center}
 button.igp-btn{font:inherit;font-weight:600;cursor:pointer;border:0;color:inherit}
+
+.brandrow{display:flex;align-items:flex-start;justify-content:space-between;gap:4px}
+.side .sidetoggle{width:30px;height:30px;flex:none;padding:0;justify-content:center;border-radius:9px;color:rgba(232,251,251,.55)}
+.side .sidetoggle:hover{color:#fff}
+.side .sidetoggle .ico{width:17px;height:17px}
+@media(min-width:1001px){.app.noside{grid-template-columns:1fr}.app.noside .side{display:none}.app.noside main{padding-left:64px}}
+@media(max-width:1000px){.side .sidetoggle,.sideopen{display:none}}

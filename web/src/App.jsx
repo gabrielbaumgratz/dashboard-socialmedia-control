@@ -28,7 +28,8 @@ function Sidebar({ hide }) {
   };
   return (
     <aside className={'side glass-dark'}>
-      <div className="brand">{logo ? <img src="/assets/logo-branco.png" alt="Reconstruções" /> : 'Reconstruções'}</div>
+      <div className="brandrow"><div className="brand">{logo ? <img src="/assets/logo-branco.png" alt="Reconstruções" /> : 'Reconstruções'}</div>
+        <button className="sidetoggle" onClick={hide} aria-label="Esconder a barra lateral" title="Esconder a barra lateral"><Icon name="sidebar" /></button></div>
       <nav>
         {NAV.map(([id, icon, label]) => (
           <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)} aria-current={tab === id ? 'page' : undefined}>
@@ -39,7 +40,6 @@ function Sidebar({ hide }) {
         ))}
       </nav>
       <div className="sidefoot">
-        <button onClick={hide} title="Esconder a barra lateral"><Icon name="back" /><span>Esconder barra</span></button>
         <div className="goal" title="Meta da semana (segunda a domingo)">
           Meta da semana
           <div className="goalrow"><b>{g.posts}/{g.mp}</b> posts <b>{g.videos}/{g.mv}</b> reels</div>
@@ -61,7 +61,8 @@ export default function App() {
   return (
     <div className={'app' + (noside ? ' noside' : '')}>
       <div className="bg" aria-hidden="true"><i /><i /><i /></div>
-      {noside ? <button className="sideopen glass-dark" onClick={() => side(false)} aria-label="Mostrar a barra lateral" title="Mostrar a barra lateral"><Icon name="grid" /></button> : <Sidebar hide={() => side(true)} />}
+      <Sidebar hide={() => side(true)} />
+      {noside && <button className="sideopen glass-dark" onClick={() => side(false)} aria-label="Mostrar a barra lateral" title="Mostrar a barra lateral"><Icon name="sidebar" /></button>}
       <main>
         {!ready && <p className="hint">Carregando…</p>}
         {ready && Object.entries(TABS).map(([id, C]) => seen[id] && (
