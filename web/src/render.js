@@ -167,7 +167,7 @@ const Render = (() => {
   }
   const up = s => String(s || '').toUpperCase();
   const catOf = d => String(d.category || '').trim(); // categoria em branco = sem texto (fica só o tracinho)
-  const G = 20; // respiro padrão entre blocos de texto nos posts (o story usa 22, como o Foto em cima + painel)
+  const G = 18; // respiro padrão entre blocos de texto nos posts (o story usa 22, como o Foto em cima + painel)
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
   const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100 }, uh: { bg: C.tealE, acc: C.turq, fade: 100, bar: '' }, tag: { on: true, bg: C.turq }, pbar: { bar: '' }, cut: { bg: C.navy, fade: 100, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
   const UH_PRESETS = [['Verde petróleo', C.tealE, C.turq], ['Amarelo', '#735400', '#fabd0d'], ['Azul marinho', C.navy, C.turq], ['Teal', C.tealM, C.verde], ['Preto', C.preto, '#fabd0d']];
@@ -366,8 +366,9 @@ const Render = (() => {
       zone = { x: 140, y: 1470, w: 800, h: 110 };
     } else if (t === 's03') {
       const bg = look(d).bg, fh = 20 + 240 * bg.fade / 100; // degradê da foto pro painel: mais baixo = foto aparece mais
-      const ti = block(ctx, d.title, 900, 62, 72, 908, 4), de = d.description ? block(ctx, d.description, 400, 32, 44, 908, 3) : null, chipH = scat ? SCH : -22;
-      const need = 70 + chipH + 22 + ti.h + 22 + (de ? de.h + 22 : 0) + 110 + 80; // altura que o texto e o adesivo precisam embaixo
+      const GS = 18, M = 108, TW = 1080 - 2 * M; // margem lateral maior: texto mais pro meio
+      const ti = block(ctx, d.title, 900, 62, 66, TW, 4), de = d.description ? block(ctx, d.description, 400, 32, 40, TW, 3) : null, chipH = scat ? SCH : -GS;
+      const need = 70 + chipH + GS + ti.h + GS + (de ? de.h + GS : 0) + 110 + 80; // altura que o texto e o adesivo precisam embaixo
       const ph = Math.round(Math.max(400, Math.min(bg.ph, 1920 - need))); // onde a foto termina e o painel começa
       const a = bg.op / 100; // opacidade do fundo: abaixo de 100 a foto aparece por trás do painel inteiro
       ctx.fillStyle = bg.color; ctx.fillRect(0, 0, 1080, 1920);
@@ -376,15 +377,14 @@ const Render = (() => {
       ctx.fillStyle = rgba(bg.color, a); ctx.fillRect(0, ph, 1080, 1920 - ph);
       vgrad(ctx, ph - fh, fh, rgba(bg.color, 0), rgba(bg.color, a));
       vgrad(ctx, 0, 360, 'rgba(15,23,42,0.5)', 'rgba(15,23,42,0)');
-      await logo(ctx, false, 72, 262, 248.9);
-      symbol(ctx, 860, ph - 52, 105.6);
+      await logo(ctx, false, M, 262, 248.9);
       credit(ctx, d.credit, ph - 40);
       let y = ph + 70;
-      if (scat) y += stag(ctx, d, up(scat), 72, y).h + 22;
+      if (scat) y += stag(ctx, d, up(scat), M, y).h + GS;
       const tc = ink(bg, bg.color, bg.op >= 45);
-      y = draw(ctx, ti, 72, y, tc) + 22;
-      if (de) y = draw(ctx, de, 72, y, tc) + 22;
-      zone = { x: 72, y, w: 908, h: 110 };
+      y = draw(ctx, ti, M, y, tc) + GS;
+      if (de) y = draw(ctx, de, M, y, tc) + GS;
+      zone = { x: M, y, w: TW, h: 110 };
     } else if (t === 's04') { // foto num card arredondado sobre a cor da marca
       const bg = look(d).bg, tc = ink(bg, bg.color, true), dk = darkInk(tc);
       ctx.fillStyle = bg.color; ctx.fillRect(0, 0, 1080, 1920);
