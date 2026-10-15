@@ -147,7 +147,8 @@ function LookCtl({ e, patch, k, tpl }) {
         {tpl !== 's04' && <Rng label="Degradê" value={cur.fade} unit="%" min={0} max={100} onChange={fade => set({ fade })} />}
         {tpl === 's03' && <Rng label="Opacidade do fundo" value={cur.op} unit="%" min={0} max={100} onChange={op => set({ op })} />}
       </div>
-      <TextColor value={cur.tc} onChange={tc => set({ tc })} /></div>);
+      <TextColor value={cur.tc} onChange={tc => set({ tc })} />
+      {tpl === 's03' && <div className="txtcolor tagrow"><label className="chk"><input type="checkbox" checked={!!cur.sym} onChange={ev => set({ sym: ev.target.checked })} />Símbolo no fim da foto</label></div>}</div>);
   return (
     <div className="lookbox"><div className="lookhead"><label className="chk"><input type="checkbox" checked={cur.on} onChange={ev => set({ on: ev.target.checked })} />Fundo atrás do texto</label>{reset}</div>
       {cur.on && <>
