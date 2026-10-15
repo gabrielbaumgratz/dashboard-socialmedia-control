@@ -30,7 +30,7 @@ const Render = (() => {
   const imgs = {};
   function loadImage(url) {
     return new Promise((resolve, reject) => {
-      const img = new Image();
+      const img = new Image(); img.crossOrigin = 'anonymous'; // fotos do R2 (outro domínio) sem travar o canvas
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error('Não consegui carregar a imagem'));
       img.src = /^https?:/i.test(url) ? '/api/img?url=' + encodeURIComponent(url) : url;

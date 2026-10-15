@@ -69,6 +69,7 @@ export function storyUrl(it) {
 // reel pronto: vídeo + texto animado do template, gravado no navegador (MP4 no Chrome novo, senão WebM)
 export async function exportReel(it, onProgress = () => {}) {
   const d = artData(it), v = document.createElement('video');
+  v.crossOrigin = 'anonymous'; // o vídeo pode vir do R2: sem isso o canvas fica bloqueado
   v.src = it.videoUrl; v.playsInline = true; v.preload = 'auto';
   await new Promise((ok, no) => { v.onloadedmetadata = ok; v.onerror = () => no(new Error('Não consegui abrir o vídeo.')); });
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1920; const ctx = c.getContext('2d');

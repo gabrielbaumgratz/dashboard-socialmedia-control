@@ -1,12 +1,11 @@
 // Ao programar/postar: renderiza a arte no navegador e manda pro servidor (JPEG ou MP4), que a Meta vai baixar na hora.
-import { api } from './api.js';
+import { api, cloudPut } from './api.js';
 import { exportReel, renderSet } from './art.js';
 import { typeOf } from './util.js';
 
 async function send(id, name, blob, cloud) {
   if (!cloud) return api(`/api/items/${id}/export?name=${name}`, { method: 'POST', raw: blob });
-  const { uploadPresigned: upload } = await import('@vercel/blob/client');
-  await upload(`images/${id}/${name}`, blob, { access: 'private', handleUploadUrl: '/api/blob-upload', contentType: blob.type, multipart: blob.size > 50e6 });
+  await cloudPut(`images/${id}/${name}`, blob);
 }
 
 export async function prepareExport(it, cloud, onStep = () => {}) {

@@ -45,14 +45,16 @@ async function refreshConfig(force) {
 }
 const loadConfig = () => CFG;
 async function saveConfig(patch) {
-  let file = {}; try { file = JSON.parse(await store.readText('config.json')) || {}; } catch {}
+  const raw = await store.readText('config.json'); // erro de leitura sobe: nunca regravar a config em cima de uma leitura falha
+  let file = {}; try { file = JSON.parse(raw) || {}; } catch {}
   await store.writeText('config.json', JSON.stringify({ ...file, ...patch }, null, 2));
   await refreshConfig(true);
 }
 
 // ================= banco (db.json no disco ou no Blob) =================
 async function loadDb() {
-  let db; try { db = JSON.parse(await store.readText('db.json')); } catch { db = null; }
+  const raw = await store.readText('db.json'); // erro de leitura sobe: senão o próximo save apagaria tudo
+  let db; try { db = JSON.parse(raw); } catch { db = null; }
   db ||= {}; db.items ||= []; db.seenNews ||= []; db.engine ||= {};
   return db;
 }
@@ -364,6 +366,7 @@ const pubKey = () => (PASS || 'local') + (process.env.CRON_SECRET || '') + 'pub'
 const pubSig = (rel, exp) => crypto.createHmac('sha256', pubKey()).update(rel + '.' + exp).digest('hex').slice(0, 32);
 function pubUrl(base, id, name) { // link temporário (12h) que a Meta usa pra baixar a arte; só vale pra esse arquivo
   const rel = `${id}/${name}`, exp = Date.now() + 12 * 3600e3;
+  if (store.R2) return store.fileUrl(rel, 12 * 3600); // R2: a Meta baixa direto do armazenamento
   return `${base}/pub/${rel}?e=${exp}&s=${pubSig(rel, exp)}`;
 }
 
@@ -448,6 +451,13 @@ async function handleApi(req, res, url) {
     const published = await publishDue(baseUrl(req)).catch(e => ({ error: e.message }));
     await maybeRefreshToken().catch(e => console.log('[instagram] renovar token:', e.message));
     return send(res, 200, { ok: true, published });
+  }
+  if (p === '/api/upload-url' && m === 'POST') { // R2: o navegador sobe o arquivo direto, com link assinado de 1h
+    if (!authed(req)) return send(res, 401, { error: 'faça login' });
+    if (!store.R2) return send(res, 200, { legacy: true });
+    const { path: pth } = await readJson(req), mt = /^images\/([\w-]+)\/([\w.-]+)$/.exec(String(pth || ''));
+    if (!mt || !MEDIA_TYPES[path.extname(mt[2]).toLowerCase()]) return send(res, 400, { error: 'caminho inválido' });
+    return send(res, 200, { url: store.uploadUrl(`${mt[1]}/${mt[2]}`) });
   }
   if (p === '/api/blob-upload' && m === 'POST') { // upload direto navegador -> Blob (arquivos grandes)
     const body = await readJson(req);
@@ -651,6 +661,7 @@ async function handleApi(req, res, url) {
 async function serveUpload(req, res, rel, signed) {
   if (!signed && !authed(req)) return send(res, 401, 'faça login');
   if (!CLOUD) { const f = store.localPath(rel); return f ? serveFile(req, res, f) : send(res, 403, 'negado'); }
+  if (store.R2) { res.writeHead(302, { Location: store.fileUrl(rel, 3600), 'Cache-Control': 'private, max-age=600' }); return res.end(); }
   const r = await (await store.blob()).get('images/' + rel, { access: 'private' });
   if (!r || r.statusCode !== 200) return send(res, 404, 'Não encontrado');
   res.writeHead(200, { 'Content-Type': r.blob.contentType, ...(r.blob.size ? { 'Content-Length': r.blob.size } : {}), 'Cache-Control': 'private, no-cache', 'X-Content-Type-Options': 'nosniff' });
