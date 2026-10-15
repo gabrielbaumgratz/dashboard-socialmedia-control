@@ -169,12 +169,13 @@ const Render = (() => {
   const catOf = d => String(d.category || '').trim(); // categoria em branco = sem texto (fica só o tracinho)
   const G = 18; // respiro padrão entre blocos de texto nos posts (o story usa 22, como o Foto em cima + painel)
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
-  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100, sym: false }, uh: { bg: C.tealE, acc: C.turq, fade: 100, bar: '' }, tag: { on: true, bg: C.turq }, pbar: { bar: '' }, cut: { bg: C.navy, fade: 100, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
+  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100, sym: false }, uh: { bg: C.tealE, acc: C.turq, fade: 100, bar: '' }, tag: { on: true, bg: C.turq, tc: C.navy }, pbar: { bar: '' }, cut: { bg: C.navy, fade: 100, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
   const UH_PRESETS = [['Verde petróleo', C.tealE, C.turq], ['Amarelo', '#735400', '#fabd0d'], ['Azul marinho', C.navy, C.turq], ['Teal', C.tealM, C.verde], ['Preto', C.preto, '#fabd0d']];
   const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) }, uh: { ...LOOK.uh, ...(d.tpl && d.tpl.post === 'p05' ? { bg: '#735400', acc: '#fabd0d' } : {}), ...((d.look || {}).uh) }, cut: { ...LOOK.cut, ...((d.look || {}).cut) }, tag: { ...LOOK.tag, ...((d.look || {}).tag) }, pbar: { ...LOOK.pbar, ...((d.look || {}).pbar) } });
   // selo do story: mesmo desenho do selo original (cantos 10), só mais baixo; cor e visibilidade editáveis
   const SCH = lineH(28) + 16;
-  const stag = (ctx, d, text, x, y, o = {}) => { const bg = look(d).tag.bg; return chip(ctx, text, x, y, 28, { bg, color: lum(bg) > 0.35 ? C.navy : C.branco, h: SCH, pad: 21, r: 10, ...o }); };
+  const stag = (ctx, d, text, x, y, o = {}) => { const { bg, tc } = look(d).tag; return chip(ctx, text, x, y, 28, { bg, color: tc === 'auto' ? (lum(bg) > 0.35 ? C.navy : C.branco) : tc, h: SCH, pad: 21, r: 10, ...o }); };
+  const SCG = 10; // respiro extra entre o selo e o título no story
   const rgba = (hex, a) => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
   const lum = hex => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16), f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(n >> 16) + .7152 * f((n >> 8) & 255) + .0722 * f(n & 255); };
   // cor do texto: a escolhida, ou automática (escura quando o fundo atrás do texto é claro)
@@ -367,7 +368,7 @@ const Render = (() => {
     } else if (t === 's03') {
       const bg = look(d).bg, fh = 20 + 240 * bg.fade / 100; // degradê da foto pro painel: mais baixo = foto aparece mais
       const GS = 18, M = 108, TW = 1080 - 2 * M; // margem lateral maior: texto mais pro meio
-      const ti = block(ctx, d.title, 900, 62, 66, TW, 4), de = d.description ? block(ctx, d.description, 400, 32, 40, TW, 3) : null, chipH = scat ? SCH : -GS;
+      const ti = block(ctx, d.title, 900, 62, 66, TW, 4), de = d.description ? block(ctx, d.description, 400, 32, 40, TW, 3) : null, chipH = scat ? SCH + SCG : -GS;
       const need = 70 + chipH + GS + ti.h + GS + (de ? de.h + GS : 0) + 110 + 80; // altura que o texto e o adesivo precisam embaixo
       const ph = Math.round(Math.max(400, Math.min(bg.ph, 1920 - need))); // onde a foto termina e o painel começa
       const a = bg.op / 100; // opacidade do fundo: abaixo de 100 a foto aparece por trás do painel inteiro
@@ -381,7 +382,7 @@ const Render = (() => {
       if (bg.sym) symbol(ctx, 1080 - M - 105.6, ph - 52, 105.6); // símbolo no fim da foto: opcional
       credit(ctx, d.credit, ph - 40);
       let y = ph + 70;
-      if (scat) y += stag(ctx, d, up(scat), M, y).h + GS;
+      if (scat) { stag(ctx, d, up(scat), M, y); y += SCH + SCG + GS; }
       const tc = ink(bg, bg.color, bg.op >= 45);
       y = draw(ctx, ti, M, y, tc) + GS;
       if (de) y = draw(ctx, de, M, y, tc) + GS;
@@ -391,7 +392,7 @@ const Render = (() => {
       ctx.fillStyle = bg.color; ctx.fillRect(0, 0, 1080, 1920);
       symbol(ctx, 560, 1240, 700, dk ? 0.12 : 0.2);
       await logo(ctx, dk, 72, 262, 248.9);
-      const ti = block(ctx, d.title, 900, 62, 72, 936, 4), de = d.description ? block(ctx, d.description, 400, 32, 44, 936, 3) : null, chipH = scat ? SCH : -22;
+      const ti = block(ctx, d.title, 900, 62, 72, 936, 4), de = d.description ? block(ctx, d.description, 400, 32, 44, 936, 3) : null, chipH = scat ? SCH + SCG : -22;
       const textH = chipH + 22 + ti.h + (de ? 22 + de.h : 0), cardH = Math.max(560, Math.min(860, 1920 - 400 - textH - 48 - 110 - 300));
       ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 20; rrect(ctx, 72, 400, 936, cardH, 40); ctx.fillStyle = C.navy; ctx.fill(); ctx.restore();
       ctx.save(); rrect(ctx, 72, 400, 936, cardH, 40); ctx.clip(); photo(ctx, img, 72, 400, 936, cardH, (d.focalStory || d.focal)); ctx.restore();
@@ -408,7 +409,7 @@ const Render = (() => {
       vgrad(ctx, 820, 1100, 'rgba(15,23,42,0)', 'rgba(15,23,42,0.95)');
       vgrad(ctx, 0, 420, 'rgba(15,23,42,0.55)', 'rgba(15,23,42,0)');
       await logo(ctx, false, 72, 262, 248.9);
-      const ti = block(ctx, d.title, 900, 62, 72, 908, 5), chipH = scat ? SCH : -22;
+      const ti = block(ctx, d.title, 900, 62, 72, 908, 5), chipH = scat ? SCH + SCG : -22;
       let y = 1920 - 480 - 120 - 22 - ti.h - 22 - chipH;
       const ls = look(d).story;
       panel(ctx, ls, y - 36, chipH + 22 + ti.h + 72);
