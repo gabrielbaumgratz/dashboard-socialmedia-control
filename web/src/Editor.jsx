@@ -138,6 +138,7 @@ function LookCtl({ e, patch, k, tpl }) {
       <div className="rng2">
         {tpl === 's03' && <Rng label="Altura da foto" value={Math.round(cur.ph / 19.2)} unit="%" min={21} max={78} onChange={v => set({ ph: Math.round(v * 19.2) })} />}
         <Rng label="Degradê" value={cur.fade} unit="%" min={0} max={100} onChange={fade => set({ fade })} />
+        {tpl === 's03' && <Rng label="Opacidade do fundo" value={cur.op} unit="%" min={0} max={100} onChange={op => set({ op })} />}
       </div>
       <TextColor value={cur.tc} onChange={tc => set({ tc })} /></div>);
   return (

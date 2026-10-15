@@ -156,7 +156,7 @@ const Render = (() => {
   }
   const up = s => String(s || '').toUpperCase();
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
-  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto' } };
+  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100 } };
   const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) } });
   const rgba = (hex, a) => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
   const lum = hex => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16), f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(n >> 16) + .7152 * f((n >> 8) & 255) + .0722 * f(n & 255); };
@@ -345,15 +345,18 @@ const Render = (() => {
       const ti = block(ctx, d.title, 900, 62, 72, 908, 4), de = d.description ? block(ctx, d.description, 400, 32, 44, 908, 3) : null, chipH = lineH(30) + 24;
       const need = 70 + chipH + 22 + ti.h + 22 + (de ? de.h + 22 : 0) + 110 + 80; // altura que o texto e o adesivo precisam embaixo
       const ph = Math.round(Math.max(400, Math.min(bg.ph, 1920 - need))); // onde a foto termina e o painel começa
+      const a = bg.op / 100; // opacidade do fundo: abaixo de 100 a foto aparece por trás do painel inteiro
       ctx.fillStyle = bg.color; ctx.fillRect(0, 0, 1080, 1920);
+      if (a < 1) photo(ctx, img, 0, 0, 1080, 1920, (d.focalStory || d.focal));
       photo(ctx, img, 0, 0, 1080, ph, (d.focalStory || d.focal));
-      vgrad(ctx, ph - fh, fh, rgba(bg.color, 0), bg.color);
+      ctx.fillStyle = rgba(bg.color, a); ctx.fillRect(0, ph, 1080, 1920 - ph);
+      vgrad(ctx, ph - fh, fh, rgba(bg.color, 0), rgba(bg.color, a));
       vgrad(ctx, 0, 360, 'rgba(15,23,42,0.5)', 'rgba(15,23,42,0)');
       await logo(ctx, false, 72, 262, 248.9);
       symbol(ctx, 860, ph - 52, 105.6);
       let y = ph + 70;
       y += chip(ctx, up(d.category || 'Notícia'), 72, y, 30).h + 22;
-      const tc = ink(bg, bg.color, true);
+      const tc = ink(bg, bg.color, bg.op >= 45);
       y = draw(ctx, ti, 72, y, tc) + 22;
       if (de) y = draw(ctx, de, 72, y, tc) + 22;
       zone = { x: 72, y, w: 908, h: 110 };
