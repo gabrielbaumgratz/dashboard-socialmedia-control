@@ -307,7 +307,7 @@ async function syncSheet(item, status) {
   const cfg = loadConfig();
   if (!cfg.sheetsUrl) return { ok: false, skipped: true, msg: 'Planilha não configurada' };
   const body = {
-    id: item.id, status: status || item.status, scheduledAt: item.scheduledAt, postedAt: item.postedAt, title: item.title || item.origTitle, category: item.category || '',
+    id: item.id, status: status || item.status, createdAt: item.createdAt, scheduledAt: item.scheduledAt, postedAt: item.postedAt, title: item.title || item.origTitle, category: item.category || '',
     type: item.mediaType === 'video' ? 'video' : item.format,
     postUrl: item.postUrl || '', newsUrl: item.link || '',
     metaPosts: +cfg.metaPosts || 3, metaVideos: +cfg.metaVideos || 2

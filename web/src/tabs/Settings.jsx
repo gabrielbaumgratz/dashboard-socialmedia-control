@@ -89,7 +89,6 @@ export default function Settings() {
           <ol className="steps">
             <li>Abra a planilha compartilhada, vá em <b>Extensões &gt; Apps Script</b>.</li>
             <li>Apague o que tiver lá e cole o código de <a href="/apps-script.gs" target="_blank">apps-script.gs</a> (também está na pasta <code>planilha</code>).</li>
-            <li>Rode a função <b>configurar</b> uma vez (botão Executar) e autorize. Ela monta as abas Posts e Painel.</li>
             <li>Clique em <b>Implantar &gt; Nova implantação &gt; App da Web</b>, executar como você, acesso "Qualquer pessoa", e autorize.</li>
             <li>Copie a URL do App da Web e cole aqui embaixo.</li>
           </ol>
