@@ -4,7 +4,7 @@ cd /d "%~dp0"
 if not exist _lixo mkdir _lixo
 if not exist _lixo\dist-assets mkdir _lixo\dist-assets
 for %%F in (dist\assets\*.js dist\assets\*.css) do (
-  if /I not "%%~nxF"=="index-DCJdz-tw.js" if /I not "%%~nxF"=="client-Bf0HWwD3.js" if /I not "%%~nxF"=="index-DLAY84qb.css" move "%%F" _lixo\dist-assets\ >nul
+  if /I not "%%~nxF"=="index-CK3gIfYL.js" if /I not "%%~nxF"=="client-Bf0HWwD3.js" if /I not "%%~nxF"=="index-xXMoZAbK.css" move "%%F" _lixo\dist-assets\ >nul
 )
 rem versao antiga sem React, editor livre e barra 3D, que sairam do projeto
 if exist public move public _lixo\public-versao-antiga >nul

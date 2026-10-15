@@ -9,8 +9,7 @@ const Render = (() => {
     { id: 'p01', name: 'Foto + título' },
     { id: 'p02', name: 'Última hora' },
     { id: 'p03', name: 'Recorte PNG' },
-    { id: 'p04', name: 'Notícia com descrição' },
-    { id: 'p05', name: 'Última hora (amarelo)' }
+    { id: 'p04', name: 'Notícia com descrição' }
   ];
   const CAROUSELS = [
     { id: 'A', name: 'Carrossel A (texto e dados)' },
@@ -19,7 +18,8 @@ const Render = (() => {
   const STORIES = [
     { id: 's02', name: 'Foto + título + link' },
     { id: 's03', name: 'Foto em cima + painel' },
-    { id: 's01', name: 'Compartilhar post do feed' }
+    { id: 's01', name: 'Compartilhar post do feed' },
+    { id: 's04', name: 'Foto em card' }
   ];
   const SLIDE_TYPES = {
     A: [{ id: 'foto', name: 'Só foto (enviada)' }, { id: 'contexto', name: 'Contexto (título + texto)' }, { id: 'dado', name: 'Dado (número grande)' }, { id: 'resumo', name: 'Resumo (3 itens)' }],
@@ -156,8 +156,9 @@ const Render = (() => {
   }
   const up = s => String(s || '').toUpperCase();
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
-  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100 } };
-  const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) } });
+  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100 }, uh: { bg: C.tealE, acc: C.turq } };
+  const UH_PRESETS = [['Verde petróleo', C.tealE, C.turq], ['Amarelo', '#735400', '#fabd0d'], ['Azul marinho', C.navy, C.turq], ['Teal', C.tealM, C.verde], ['Preto', C.preto, '#fabd0d']];
+  const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) }, uh: { ...(d.tpl && d.tpl.post === 'p05' ? { bg: '#735400', acc: '#fabd0d' } : LOOK.uh), ...((d.look || {}).uh) } });
   const rgba = (hex, a) => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
   const lum = hex => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16), f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(n >> 16) + .7152 * f((n >> 8) & 255) + .0722 * f(n & 255); };
   // cor do texto: a escolhida, ou automática (escura quando o fundo atrás do texto é claro)
@@ -172,16 +173,16 @@ const Render = (() => {
     await ensureFonts();
     const ctx = setup(canvas, 1080, 1350), t = d.tpl.post || 'p01';
     if (t === 'p02' || t === 'p05') {
-      const Y = t === 'p05', bgc = Y ? '#735400' : C.tealE, acc = Y ? '#fabd0d' : C.turq; // p05 = versão amarela
+      const uh = look(d).uh, bgc = uh.bg, acc = uh.acc; // cores escolhidas (p05 antigo = amarelo)
       ctx.fillStyle = bgc; ctx.fillRect(0, 0, 1080, 1350);
       photo(ctx, img, 0, 0, 1080, 1350, d.focal); // foto ocupa tudo, cor só embaixo do texto
-      ctx.save(); ctx.globalAlpha = 0.92; vgrad(ctx, 700, 650, Y ? 'rgba(115,84,0,0)' : 'rgba(0,97,115,0)', bgc); ctx.restore();
+      ctx.save(); ctx.globalAlpha = 0.92; vgrad(ctx, 700, 650, rgba(bgc, 0), bgc); ctx.restore();
       await logo(ctx, false, 72, 72, 298.7);
       ctx.fillStyle = acc; ctx.fillRect(0, 1334, 1080, 16);
       const ti = block(ctx, d.title, 900, 66, 78, 936, 4), de = d.description ? block(ctx, d.description, 400, 30, 42, 936, 3) : null;
       const chipH = lineH(36) + 24, hh = lineH(30);
       let y = 1350 - 96 - hh - 24 - (de ? de.h + 24 : 0) - ti.h - 24 - chipH;
-      chip(ctx, up(d.chip || 'Última hora'), 72, y, 36, { bg: acc }); y += chipH + 24;
+      chip(ctx, up(d.chip || 'Última hora'), 72, y, 36, { bg: acc, color: lum(acc) > 0.35 ? C.navy : C.branco }); y += chipH + 24;
       y = draw(ctx, ti, 72, y, C.branco) + 24;
       if (de) y = draw(ctx, de, 72, y, C.branco) + 24;
       font(ctx, 600, 30); ctx.fillStyle = C.branco; ctx.fillText(BRAND.handle, 72, y);
@@ -328,7 +329,7 @@ const Render = (() => {
     if (t === 's01') {
       const bg = look(d).bg;
       ctx.fillStyle = bg.color; ctx.fillRect(0, 0, 1080, 1920);
-      symbol(ctx, 420, 1000, 792, 0.08);
+      symbol(ctx, 420, 1000, 792, 0.2);
       vgrad(ctx, 1020, 900, 'rgba(15,23,42,0)', `rgba(15,23,42,${0.55 * bg.fade / 100})`);
       const tc = ink(bg, bg.color, true), dk = darkInk(tc);
       await logo(ctx, dk, 72, 262, 248.9);
@@ -360,6 +361,20 @@ const Render = (() => {
       y = draw(ctx, ti, 72, y, tc) + 22;
       if (de) y = draw(ctx, de, 72, y, tc) + 22;
       zone = { x: 72, y, w: 908, h: 110 };
+    } else if (t === 's04') { // foto num card arredondado sobre a cor da marca
+      const bg = look(d).bg, tc = ink(bg, bg.color, true), dk = darkInk(tc);
+      ctx.fillStyle = bg.color; ctx.fillRect(0, 0, 1080, 1920);
+      symbol(ctx, 560, 1240, 700, dk ? 0.12 : 0.2);
+      await logo(ctx, dk, 72, 262, 248.9);
+      const ti = block(ctx, d.title, 900, 64, 76, 936, 4), de = d.description ? block(ctx, d.description, 400, 32, 44, 936, 3) : null, chipH = lineH(30) + 24;
+      const textH = chipH + 24 + ti.h + (de ? 22 + de.h : 0), cardH = Math.max(560, Math.min(860, 1920 - 400 - textH - 48 - 110 - 300));
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 20; rrect(ctx, 72, 400, 936, cardH, 40); ctx.fillStyle = C.navy; ctx.fill(); ctx.restore();
+      ctx.save(); rrect(ctx, 72, 400, 936, cardH, 40); ctx.clip(); photo(ctx, img, 72, 400, 936, cardH, (d.focalStory || d.focal)); ctx.restore();
+      let y = 400 + cardH + 48;
+      chip(ctx, up(d.category || 'Notícia'), 72, y, 30); y += chipH + 24;
+      y = draw(ctx, ti, 72, y, tc);
+      if (de) y = draw(ctx, de, 72, y + 22, tc);
+      zone = { x: 72, y: y + 36, w: 936, h: 110 };
     } else {
       ctx.fillStyle = C.navy; ctx.fillRect(0, 0, 1080, 1920);
       photo(ctx, img, 0, 0, 1080, 1920, (d.focalStory || d.focal));
@@ -430,7 +445,7 @@ const Render = (() => {
     setScale(s) { S = s || 1; },
     // capa: a primeira imagem do post (post único ou capa do carrossel)
     cover: (canvas, d, img) => d.format === 'carrossel' ? slide(canvas, d, img, 0) : post(canvas, d, img),
-    post, slide, story, symbol, LOOK,
+    post, slide, story, symbol, LOOK, UH_PRESETS,
     // só a foto enquadrada (usada pra mandar pro editor livre)
     crop(canvas, img, w, h, focal) { const ctx = setup(canvas, w, h); photo(ctx, img, 0, 0, w, h, focal); }
   };

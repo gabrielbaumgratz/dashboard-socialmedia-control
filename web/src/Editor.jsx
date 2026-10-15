@@ -20,7 +20,7 @@ const SLIDE_FIELDS = {
 const POST_USES = { p01: ['title', 'category', 'credit'], p02: ['title', 'chip', 'description', 'credit'], p03: ['title', 'category', 'bigTitle', 'cutout', 'credit'], p04: ['title', 'category', 'description', 'source', 'credit'], p05: ['title', 'chip', 'description', 'credit'] };
 const CAR_USES = ['title', 'category'];
 const REEL_USES = { r00: [], r01: ['title', 'category'], r02: ['title', 'dateline', 'legendas'] };
-const STORY_USES = { s02: ['title', 'category'], s03: ['title', 'category', 'description'], s01: [] };
+const STORY_USES = { s02: ['title', 'category'], s03: ['title', 'category', 'description'], s01: [], s04: ['title', 'category', 'description'] };
 const KIND = { post: 'Post único', carrossel: 'Carrossel', video: 'Reel' };
 
 function useDebounced(v, ms) { const [x, setX] = useState(v); useEffect(() => { const t = setTimeout(() => setX(v), ms); return () => clearTimeout(t); }, [v, ms]); return x; }
@@ -137,7 +137,7 @@ function LookCtl({ e, patch, k, tpl }) {
       <ColorPick value={cur.color} onChange={color => set({ color })} />
       <div className="rng2">
         {tpl === 's03' && <Rng label="Altura da foto" value={Math.round(cur.ph / 19.2)} unit="%" min={21} max={78} onChange={v => set({ ph: Math.round(v * 19.2) })} />}
-        <Rng label="Degradê" value={cur.fade} unit="%" min={0} max={100} onChange={fade => set({ fade })} />
+        {tpl !== 's04' && <Rng label="Degradê" value={cur.fade} unit="%" min={0} max={100} onChange={fade => set({ fade })} />}
         {tpl === 's03' && <Rng label="Opacidade do fundo" value={cur.op} unit="%" min={0} max={100} onChange={op => set({ op })} />}
       </div>
       <TextColor value={cur.tc} onChange={tc => set({ tc })} /></div>);
@@ -155,6 +155,16 @@ function LookCtl({ e, patch, k, tpl }) {
         <TextColor value={cur.tc} onChange={tc => set({ tc })} /></>}</div>);
 }
 
+// cores do template Última hora: combinações da marca ou cores livres
+function UhCtl({ e, patch }) {
+  const cur = { ...Render.LOOK.uh, ...((e.look || {}).uh) }, set = p => patch({ look: { ...(e.look || {}), uh: { ...cur, ...p } } });
+  return (
+    <div className="lookbox"><div className="lookhead"><b>Cores</b>{(e.look || {}).uh && <button type="button" className="ghost mini" onClick={() => patch({ look: { ...(e.look || {}), uh: undefined } })}>Voltar ao padrão</button>}</div>
+      <div className="presets">{Render.UH_PRESETS.map(([n, b, a]) => <button type="button" key={n} className={'preset' + (cur.bg === b && cur.acc === a ? ' on' : '')} onClick={() => set({ bg: b, acc: a })}><i style={{ background: b }} /><i style={{ background: a }} />{n}</button>)}</div>
+      <div className="rng2"><div className="txtcolor"><span>Fundo</span><input type="color" aria-label="Cor do fundo" value={cur.bg} onChange={ev => set({ bg: ev.target.value })} /></div>
+        <div className="txtcolor"><span>Destaque</span><input type="color" aria-label="Cor do destaque" value={cur.acc} onChange={ev => set({ acc: ev.target.value })} /></div></div></div>);
+}
+
 function Field({ label, k, e, patch, ph, multi }) {
   const p = { value: e[k] || '', placeholder: ph, onChange: ev => patch({ [k]: ev.target.value }) };
   return <label>{label}{multi ? <textarea rows={1} {...p} /> : <input {...p} />}</label>;
@@ -163,7 +173,7 @@ function Field({ label, k, e, patch, ph, multi }) {
 export default function Editor() {
   const { editorId, setEditorId, byId, saveItem, replace, toast, cfg } = useApp();
   const [src] = useState(() => byId(editorId));
-  const [e, setE] = useState(() => ({ ...JSON.parse(JSON.stringify(src)), focal: src.focal || { x: .5, y: .5, zoom: 1 }, focalStory: src.focalStory || src.focal || { x: .5, y: .5, zoom: 1 }, tpl: { ...DEF_TPL, ...(src.tpl || {}) }, slides: Render.slidesOf(src) }));
+  const [e, setE] = useState(() => ({ ...JSON.parse(JSON.stringify(src)), ...(src.tpl && src.tpl.post === 'p05' ? { look: { ...(src.look || {}), uh: { bg: '#735400', acc: '#fabd0d', ...((src.look || {}).uh) } } } : {}), focal: src.focal || { x: .5, y: .5, zoom: 1 }, focalStory: src.focalStory || src.focal || { x: .5, y: .5, zoom: 1 }, tpl: { ...DEF_TPL, ...(src.tpl || {}), ...(src.tpl && src.tpl.post === 'p05' ? { post: 'p02' } : {}) }, slides: Render.slidesOf(src) }));
   const [photo, setPhoto] = useState(null), [cut, setCut] = useState(null), [imgs, setImgs] = useState({}), [over, setOver] = useState(false), [up, setUp] = useState(false), [dbusy, setDbusy] = useState(false);
   const [cur, setCur] = useState(0), [vr, setVr] = useState(null), [vp, setVp] = useState(false), vref = useRef(null);
   const kind = typeOf(e), car = kind === 'carrossel', video = kind === 'video';
@@ -295,6 +305,7 @@ export default function Editor() {
           {video && <Seg value={e.tpl.reel || 'r01'} onChange={id => setE(x => ({ ...x, tpl: { ...x.tpl, reel: id } }))} options={Render.REELS.map(r => [r.id, r.name])} />}
           {(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses).map(k => FIELDS[k]())}
           {!video && (car || e.tpl.post === 'p01') && <LookCtl e={e} patch={patch} k="post" />}
+          {!video && !car && e.tpl.post === 'p02' && <UhCtl e={e} patch={patch} />}
           {midSlide && <SlideRow s={types.some(t => t.id === e.slides[slideIdx].type) ? e.slides[slideIdx] : { ...e.slides[slideIdx], type: types[0].id }} i={slideIdx} types={types} set={v => slideSet(slideIdx, v)}
             remove={() => { setE(x => ({ ...x, slides: x.slides.filter((_, k) => k !== slideIdx) })); setCur(at - 1); }}
             up={() => { setE(x => { const a = [...x.slides]; [a[slideIdx - 1], a[slideIdx]] = [a[slideIdx], a[slideIdx - 1]]; return { ...x, slides: a }; }); setCur(at - 1); }} />}
@@ -314,7 +325,7 @@ export default function Editor() {
             draw={(c, id) => Render.story(c, dd({ story: id }, false), photo)} />
           {storyOnly.map(k => FIELDS[k]())}
           {e.tpl.story === 's02' && <LookCtl e={e} patch={patch} k="story" />}
-          {(e.tpl.story === 's01' || e.tpl.story === 's03') && <LookCtl e={e} patch={patch} k="bg" tpl={e.tpl.story} />}
+          {['s01', 's03', 's04'].includes(e.tpl.story) && <LookCtl e={e} patch={patch} k="bg" tpl={e.tpl.story} />}
         </div>
       </section>
     </div>
