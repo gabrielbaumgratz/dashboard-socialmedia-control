@@ -191,12 +191,11 @@ function PBarCtl({ e, patch }) {
   return <div className="lookbox"><BarPick value={v} same sameLabel="Padrão" onChange={bar => patch({ look: { ...(e.look || {}), pbar: { bar } } })} /></div>;
 }
 // selo do story (categoria / NOVA NOTÍCIA): mostrar ou não, e a cor
-function TagCtl({ e, patch }) {
+function TagCtl({ e, patch, label = 'Destaque' }) {
   const cur = { ...Render.LOOK.tag, ...((e.look || {}).tag) }, set = p => patch({ look: { ...(e.look || {}), tag: { ...cur, ...p } } });
-  return <div className="lookbox"><div className="lookhead"><label className="chk"><input type="checkbox" checked={cur.on} onChange={ev => set({ on: ev.target.checked })} />Destaque</label>
-    {(e.look || {}).tag && <button type="button" className="ghost mini" onClick={() => patch({ look: { ...(e.look || {}), tag: undefined } })}>Voltar ao padrão</button>}</div>
-    {cur.on && <div className="txtcolor"><span>Cor</span>{[...BAR_SW, ['#0f172a', 'Azul marinho']].map(([c, n]) => <button type="button" key={c} title={n} aria-label={n} className={'sw' + (cur.bg.toLowerCase() === c ? ' on' : '')} style={{ background: c }} onClick={() => set({ bg: c })} />)}
-      <input type="color" aria-label="Outra cor do destaque" value={cur.bg} onChange={ev => set({ bg: ev.target.value })} /></div>}</div>;
+  return <div className="txtcolor tagrow"><label className="chk"><input type="checkbox" checked={cur.on} onChange={ev => set({ on: ev.target.checked })} />{label}</label>
+    {cur.on && <>{[...BAR_SW, ['#0f172a', 'Azul marinho']].map(([c, n]) => <button type="button" key={c} title={n} aria-label={n} className={'sw' + (cur.bg.toLowerCase() === c ? ' on' : '')} style={{ background: c }} onClick={() => set({ bg: c })} />)}
+      <input type="color" aria-label="Outra cor do destaque" value={cur.bg} onChange={ev => set({ bg: ev.target.value })} /></>}</div>;
 }
 // campo do story que segue o do post até ser editado
 function StoryField({ label, k, from, e, patch, multi }) {
@@ -367,9 +366,9 @@ export default function Editor() {
             draw={(c, id) => Render.story(c, dd({ story: id }, false), photo)} />
           {e.tpl.story !== 's01' && <>
             <StoryField label="Título" k="storyTitle" from="title" multi e={e} patch={patch} />
-            <StoryField label="Categoria" k="storyCategory" from="category" e={e} patch={patch} /></>}
+            <div className="catgroup"><StoryField label="Categoria" k="storyCategory" from="category" e={e} patch={patch} /><TagCtl e={e} patch={patch} label="Destaque da categoria" /></div></>}
+          {e.tpl.story === 's01' && <div className="lookbox"><TagCtl e={e} patch={patch} label="Selo NOVA NOTÍCIA" /></div>}
           {storyOnly.map(k => FIELDS[k]())}
-          <TagCtl e={e} patch={patch} />
           {e.tpl.story === 's02' && <LookCtl e={e} patch={patch} k="story" />}
           {['s01', 's03', 's04'].includes(e.tpl.story) && <LookCtl e={e} patch={patch} k="bg" tpl={e.tpl.story} />}
         </div>

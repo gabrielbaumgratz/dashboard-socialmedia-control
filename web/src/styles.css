@@ -621,3 +621,9 @@ button.igp-btn{font:inherit;font-weight:600;cursor:pointer;border:0;color:inheri
 @media(max-width:1000px){.side .sidetoggle,.sideopen{display:none}}
 main{min-width:0}
 .lblrow{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px}
+/* botões secundários do editor: mesmo tamanho */
+.crop-actions button,.savepng,.descbox button,.edform>button.ghost{font-size:13px;padding:7px 12px;min-height:34px}
+.lookhead b,.lookbox label.chk{font-size:14px;font-weight:800;color:var(--txt)}
+.catgroup{display:grid;gap:8px}
+.tagrow label.chk{display:inline-flex;flex-direction:row;align-items:center;gap:8px;margin-right:6px;font-size:12.5px;font-weight:700;color:var(--mut)}
+.tagrow label.chk input{width:16px;height:16px;flex:none;padding:0}

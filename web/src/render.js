@@ -172,9 +172,9 @@ const Render = (() => {
   const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100 }, uh: { bg: C.tealE, acc: C.turq, fade: 100, bar: '' }, tag: { on: true, bg: C.turq }, pbar: { bar: '' }, cut: { bg: C.navy, fade: 100, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
   const UH_PRESETS = [['Verde petróleo', C.tealE, C.turq], ['Amarelo', '#735400', '#fabd0d'], ['Azul marinho', C.navy, C.turq], ['Teal', C.tealM, C.verde], ['Preto', C.preto, '#fabd0d']];
   const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) }, uh: { ...LOOK.uh, ...(d.tpl && d.tpl.post === 'p05' ? { bg: '#735400', acc: '#fabd0d' } : {}), ...((d.look || {}).uh) }, cut: { ...LOOK.cut, ...((d.look || {}).cut) }, tag: { ...LOOK.tag, ...((d.look || {}).tag) }, pbar: { ...LOOK.pbar, ...((d.look || {}).pbar) } });
-  // selo do story: fino, em pílula, cor e visibilidade editáveis
-  const SCH = lineH(26) + 14;
-  const stag = (ctx, d, text, x, y, o = {}) => { const bg = look(d).tag.bg; return chip(ctx, text, x, y, 26, { bg, color: lum(bg) > 0.35 ? C.navy : C.branco, h: SCH, pad: 20, r: SCH / 2, weight: 800, sp: 2, ...o }); };
+  // selo do story: mesmo desenho do selo original (cantos 10), só mais baixo; cor e visibilidade editáveis
+  const SCH = lineH(28) + 16;
+  const stag = (ctx, d, text, x, y, o = {}) => { const bg = look(d).tag.bg; return chip(ctx, text, x, y, 28, { bg, color: lum(bg) > 0.35 ? C.navy : C.branco, h: SCH, pad: 21, r: 10, ...o }); };
   const rgba = (hex, a) => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
   const lum = hex => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16), f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(n >> 16) + .7152 * f((n >> 8) & 255) + .0722 * f(n & 255); };
   // cor do texto: a escolhida, ou automática (escura quando o fundo atrás do texto é claro)
