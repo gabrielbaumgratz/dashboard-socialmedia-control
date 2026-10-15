@@ -156,11 +156,11 @@ const Render = (() => {
   }
   const up = s => String(s || '').toUpperCase();
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
-  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60 }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60 }, bg: { color: C.tealE, fade: 100 } };
+  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28 }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28 }, bg: { color: C.tealE, fade: 100, ph: 760 } };
   const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) } });
   const rgba = (hex, a) => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
-  function panel(ctx, p, y, h) { if (!p.on) return; ctx.fillStyle = rgba(p.color, p.opacity / 100); rrect(ctx, 36, y, 1008, h, 28); ctx.fill();
-    if (p.bw > 0) { ctx.strokeStyle = rgba(p.bc, p.bo / 100); ctx.lineWidth = p.bw; rrect(ctx, 36 + p.bw / 2, y + p.bw / 2, 1008 - p.bw, h - p.bw, 28); ctx.stroke(); } }
+  function panel(ctx, p, y, h) { if (!p.on) return; ctx.fillStyle = rgba(p.color, p.opacity / 100); rrect(ctx, 36, y, 1008, h, p.r); ctx.fill();
+    if (p.bw > 0) { ctx.strokeStyle = rgba(p.bc, p.bo / 100); ctx.lineWidth = p.bw; rrect(ctx, 36 + p.bw / 2, y + p.bw / 2, 1008 - p.bw, h - p.bw, Math.max(0, p.r - p.bw / 2)); ctx.stroke(); } }
 
   // ---------- posts ----------
   async function post(canvas, d, img) {
@@ -335,16 +335,19 @@ const Render = (() => {
       zone = { x: 140, y: 1470, w: 800, h: 110 };
     } else if (t === 's03') {
       const bg = look(d).bg, fh = 20 + 240 * bg.fade / 100; // degradê da foto pro painel: mais baixo = foto aparece mais
+      const ti = block(ctx, d.title, 900, 62, 72, 908, 4), de = d.description ? block(ctx, d.description, 400, 32, 44, 908, 3) : null, chipH = lineH(30) + 24;
+      const need = 70 + chipH + 22 + ti.h + 22 + (de ? de.h + 22 : 0) + 110 + 80; // altura que o texto e o adesivo precisam embaixo
+      const ph = Math.round(Math.max(400, Math.min(bg.ph, 1920 - need))); // onde a foto termina e o painel começa
       ctx.fillStyle = bg.color; ctx.fillRect(0, 0, 1080, 1920);
-      photo(ctx, img, 0, 0, 1080, 760, (d.focalStory || d.focal));
-      vgrad(ctx, 760 - fh, fh, rgba(bg.color, 0), bg.color);
+      photo(ctx, img, 0, 0, 1080, ph, (d.focalStory || d.focal));
+      vgrad(ctx, ph - fh, fh, rgba(bg.color, 0), bg.color);
       vgrad(ctx, 0, 360, 'rgba(15,23,42,0.5)', 'rgba(15,23,42,0)');
       await logo(ctx, false, 72, 262, 248.9);
-      symbol(ctx, 860, 708, 105.6);
-      let y = 830;
+      symbol(ctx, 860, ph - 52, 105.6);
+      let y = ph + 70;
       y += chip(ctx, up(d.category || 'Notícia'), 72, y, 30).h + 22;
-      y = draw(ctx, block(ctx, d.title, 900, 62, 72, 908, 4), 72, y, C.branco) + 22;
-      if (d.description) y = draw(ctx, block(ctx, d.description, 400, 32, 44, 908, 3), 72, y, C.branco) + 22;
+      y = draw(ctx, ti, 72, y, C.branco) + 22;
+      if (de) y = draw(ctx, de, 72, y, C.branco) + 22;
       zone = { x: 72, y, w: 908, h: 110 };
     } else {
       ctx.fillStyle = C.navy; ctx.fillRect(0, 0, 1080, 1920);

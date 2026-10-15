@@ -117,22 +117,31 @@ function ColorPick({ value, onChange }) {
   return <div className="swatches">{SWATCHES.map(([c, n]) => <button type="button" key={c} title={n} aria-label={n} className={'sw' + (value.toLowerCase() === c ? ' on' : '')} style={{ background: c }} onClick={() => onChange(c)} />)}
     <input type="color" aria-label="Outra cor" value={value} onChange={ev => onChange(ev.target.value)} /></div>;
 }
-// controles de aparência: k = 'post' | 'story' (painel atrás do texto) ou 'bg' (cor e degradê do fundo)
-function LookCtl({ e, patch, k }) {
+function Rng({ label, value, unit = '', min, max, onChange }) {
+  return <label className="rng"><span>{label}<b>{value}{unit}</b></span><input type="range" min={min} max={max} value={value} onChange={ev => onChange(+ev.target.value)} /></label>;
+}
+// controles de aparência: k = 'post' | 'story' (painel atrás do texto) ou 'bg' (fundo do story: cor, altura da foto, degradê)
+function LookCtl({ e, patch, k, tpl }) {
   const base = Render.LOOK[k], cur = { ...base, ...((e.look || {})[k]) }, set = p => patch({ look: { ...(e.look || {}), [k]: { ...cur, ...p } } });
+  const reset = (e.look || {})[k] && <button type="button" className="ghost mini" onClick={() => patch({ look: { ...(e.look || {}), [k]: undefined } })}>Voltar ao padrão</button>;
   if (k === 'bg') return (
-    <div className="lookbox"><b>Fundo do story</b>
+    <div className="lookbox"><div className="lookhead"><b>Fundo do story</b>{reset}</div>
       <ColorPick value={cur.color} onChange={color => set({ color })} />
-      <label>Degradê com a foto: {cur.fade}%<input type="range" min="0" max="100" value={cur.fade} onChange={ev => set({ fade: +ev.target.value })} /></label>
-      {(e.look || {}).bg && <button type="button" className="ghost" onClick={() => patch({ look: { ...(e.look || {}), bg: undefined } })}>Voltar ao padrão</button>}</div>);
+      <div className="rng2">
+        {tpl === 's03' && <Rng label="Altura da foto" value={cur.ph} min={400} max={1500} onChange={ph => set({ ph })} />}
+        <Rng label="Degradê" value={cur.fade} unit="%" min={0} max={100} onChange={fade => set({ fade })} />
+      </div></div>);
   return (
-    <div className="lookbox"><label className="chk"><input type="checkbox" checked={cur.on} onChange={ev => set({ on: ev.target.checked })} />Fundo atrás do texto</label>
-      {cur.on && <><ColorPick value={cur.color} onChange={color => set({ color })} />
-        <label>Opacidade: {cur.opacity}%<input type="range" min="10" max="100" value={cur.opacity} onChange={ev => set({ opacity: +ev.target.value })} /></label>
-        <label>Contorno: {cur.bw ? cur.bw + ' px' : 'sem'}<input type="range" min="0" max="12" value={cur.bw} onChange={ev => set({ bw: +ev.target.value })} /></label>
-        {cur.bw > 0 && <><ColorPick value={cur.bc} onChange={bc => set({ bc })} />
-          <label>Opacidade do contorno: {cur.bo}%<input type="range" min="10" max="100" value={cur.bo} onChange={ev => set({ bo: +ev.target.value })} /></label></>}</>}
-      {(e.look || {})[k] && <button type="button" className="ghost" onClick={() => patch({ look: { ...(e.look || {}), [k]: undefined } })}>Voltar ao padrão</button>}</div>);
+    <div className="lookbox"><div className="lookhead"><label className="chk"><input type="checkbox" checked={cur.on} onChange={ev => set({ on: ev.target.checked })} />Fundo atrás do texto</label>{reset}</div>
+      {cur.on && <>
+        <ColorPick value={cur.color} onChange={color => set({ color })} />
+        <div className="rng2">
+          <Rng label="Opacidade" value={cur.opacity} unit="%" min={10} max={100} onChange={opacity => set({ opacity })} />
+          <Rng label="Arredondar borda" value={cur.r} unit=" px" min={0} max={60} onChange={r => set({ r })} />
+          <Rng label="Contorno" value={cur.bw} unit=" px" min={0} max={12} onChange={bw => set({ bw })} />
+          {cur.bw > 0 && <Rng label="Opacidade do contorno" value={cur.bo} unit="%" min={10} max={100} onChange={bo => set({ bo })} />}
+        </div>
+        {cur.bw > 0 && <ColorPick value={cur.bc} onChange={bc => set({ bc })} />}</>}</div>);
 }
 
 function Field({ label, k, e, patch, ph, multi }) {
@@ -294,7 +303,7 @@ export default function Editor() {
             draw={(c, id) => Render.story(c, dd({ story: id }, false), photo)} />
           {storyOnly.map(k => FIELDS[k]())}
           {e.tpl.story === 's02' && <LookCtl e={e} patch={patch} k="story" />}
-          {(e.tpl.story === 's01' || e.tpl.story === 's03') && <LookCtl e={e} patch={patch} k="bg" />}
+          {(e.tpl.story === 's01' || e.tpl.story === 's03') && <LookCtl e={e} patch={patch} k="bg" tpl={e.tpl.story} />}
         </div>
       </section>
     </div>

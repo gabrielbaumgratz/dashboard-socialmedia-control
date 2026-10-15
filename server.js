@@ -301,17 +301,19 @@ function scheduleEngine() {
 }
 
 // ================= planilha (Google Apps Script) =================
-async function syncSheet(item) {
+const SHEET_FIELDS = ['status', 'scheduledAt', 'postedAt', 'title', 'category', 'mediaType', 'postUrl'];
+// manda (ou atualiza) a linha do post na planilha. status 'deleted' marca como Excluído.
+async function syncSheet(item, status) {
   const cfg = loadConfig();
   if (!cfg.sheetsUrl) return { ok: false, skipped: true, msg: 'Planilha não configurada' };
   const body = {
-    postedAt: item.postedAt, title: item.title || item.origTitle,
+    id: item.id, status: status || item.status, scheduledAt: item.scheduledAt, postedAt: item.postedAt, title: item.title || item.origTitle, category: item.category || '',
     type: item.mediaType === 'video' ? 'video' : item.format,
     postUrl: item.postUrl || '', newsUrl: item.link || '',
     metaPosts: +cfg.metaPosts || 3, metaVideos: +cfg.metaVideos || 2
   };
   try {
-    const r = await fetch(cfg.sheetsUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' });
+    const r = await fetch(cfg.sheetsUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow', signal: AbortSignal.timeout(15000) });
     const t = await r.text();
     if (!r.ok) return { ok: false, msg: `Planilha respondeu ${r.status}` };
     return { ok: true, msg: t.slice(0, 200) };
@@ -488,7 +490,7 @@ async function handleApi(req, res, url) {
     return send(res, 200, db.items);
   }
   mm0 = p.match(/^\/api\/items\/([\w-]+)\/restore$/);
-  if (mm0 && m === 'POST') { const db = await loadDb(), it = findItem(db, mm0[1]); if (!it) return send(res, 404, { error: 'item não existe' }); delete it.deletedAt; await saveDb(db); return send(res, 200, it); }
+  if (mm0 && m === 'POST') { const db = await loadDb(), it = findItem(db, mm0[1]); if (!it) return send(res, 404, { error: 'item não existe' }); delete it.deletedAt; await saveDb(db); await syncSheet(it); return send(res, 200, it); }
   if (p === '/api/models' && m === 'GET') { // modelos que a chave do Gemini enxerga
     const k = loadConfig().geminiKey; if (!k) return send(res, 200, []);
     try { const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + encodeURIComponent(k)); const j = await r.json();
@@ -498,6 +500,7 @@ async function handleApi(req, res, url) {
   if (p === '/api/items' && m === 'POST') {
     const db = await loadDb(), item = newItem(await readJson(req));
     db.items.push(item); await saveDb(db);
+    await syncSheet(item);
     return send(res, 200, item);
   }
   let mm = p.match(/^\/api\/items\/([\w-]+)$/);
@@ -511,9 +514,12 @@ async function handleApi(req, res, url) {
       if (b.resetPublish) { next.publishTries = 0; next.publishError = ''; delete next.ig; delete next.resetPublish; }
       // mudou algo que aparece na arte: a exportação antiga não vale mais
       if (old.export && ART_KEYS.some(k => JSON.stringify(old[k]) !== JSON.stringify(next[k]))) next.export = null;
-      db.items[idx] = next; await saveDb(db); return send(res, 200, next);
+      db.items[idx] = next; await saveDb(db);
+      if (SHEET_FIELDS.some(k => JSON.stringify(old[k]) !== JSON.stringify(next[k]))) await syncSheet(next);
+      return send(res, 200, next);
     }
     if (m === 'DELETE') {
+      const was = db.items[idx];
       if (url.searchParams.get('forever') || db.items[idx].deletedAt) { await store.delFiles(mm[1]); db.items.splice(idx, 1); }
       else db.items[idx].deletedAt = new Date().toISOString(); // vai pra lixeira (7 dias)
       await saveDb(db);
@@ -522,6 +528,7 @@ async function handleApi(req, res, url) {
         if (!chk || chk.deletedAt || url.searchParams.get('forever')) break;
         const d2 = await loadDb(), x = findItem(d2, mm[1]); if (x) { x.deletedAt = new Date().toISOString(); await saveDb(d2); }
       }
+      if (was.status !== 'posted') await syncSheet(was, 'deleted'); // postado fica no histórico da planilha
       return send(res, 200, { ok: true });
     }
   }

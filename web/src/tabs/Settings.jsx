@@ -52,7 +52,8 @@ export default function Settings() {
             <select value={form.geminiModel === 'gemini-3.8-flash' ? '' : form.geminiModel || ''} onChange={set('geminiModel')}>
               <option value="">Automático (o Flash mais novo da sua chave)</option>
               {models.map(m => <option key={m} value={m}>{m}</option>)}
-            </select></label>
+            </select>
+            {!models.length && <span className="hint">{cfg.hasKey ? 'Não consegui listar os modelos agora. Recarregue a página.' : 'Salve a chave do Gemini aqui em cima pra listar os modelos da sua conta.'}</span>}</label>
           <label className="check"><input type="checkbox" checked={!!form.autoAi} onChange={set('autoAi')} /> Gerar legendas sozinho quando chegar notícia nova</label>
         </Section>
 
@@ -84,10 +85,11 @@ export default function Settings() {
           </div>
         </Section>
 
-        <Section wide title="Planilha da cliente (Google Sheets)" hint='Cada post marcado como publicado vira uma linha, e a aba "Resumo semanal" soma a meta.' pill={<Pill on={!!cfg.sheetsUrl}>{cfg.sheetsUrl ? 'Ligada' : 'Desligada'}</Pill>}>
+        <Section wide title="Planilha da cliente (Google Sheets)" hint='Cada post vira uma linha na aba Posts (rascunho, programado, postado), com filtro por dia, semana e mês, e a aba Painel soma tudo.' pill={<Pill on={!!cfg.sheetsUrl}>{cfg.sheetsUrl ? 'Ligada' : 'Desligada'}</Pill>}>
           <ol className="steps">
             <li>Abra a planilha compartilhada, vá em <b>Extensões &gt; Apps Script</b>.</li>
             <li>Apague o que tiver lá e cole o código de <a href="/apps-script.gs" target="_blank">apps-script.gs</a> (também está na pasta <code>planilha</code>).</li>
+            <li>Rode a função <b>configurar</b> uma vez (botão Executar) e autorize. Ela monta as abas Posts e Painel.</li>
             <li>Clique em <b>Implantar &gt; Nova implantação &gt; App da Web</b>, executar como você, acesso "Qualquer pessoa", e autorize.</li>
             <li>Copie a URL do App da Web e cole aqui embaixo.</li>
           </ol>
