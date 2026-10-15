@@ -13,7 +13,7 @@ export function artData(it) {
   return {
     title: it.title || it.origTitle || 'Título da notícia', category: it.category, focal: it.focal, focalStory: it.focalStory || it.focal, format: typeOf(it) === 'carrossel' ? 'carrossel' : 'post',
     slides: it.slides || [], tpl: { ...DEF_TPL, ...(it.tpl || {}) }, description: it.description || '', chip: it.chip || '',
-    source: it.source || '', credit: it.credit || '', bigTitle: it.bigTitle || '', look: it.look || {}, cutoutImg: null, imgs: {},
+    source: it.source || '', credit: it.credit || '', bigTitle: it.bigTitle || '', look: it.look || {}, storyTitle: it.storyTitle || '', storyCategory: it.storyCategory ?? null, cutoutImg: null, imgs: {},
     legendas: it.legendas || '', dateline: it.dateline || [String(Render.BRAND.location || '').split(',')[0], it.newsDate ? new Date(it.newsDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' }) : ''].filter(Boolean).join(' · ')
   };
 }
@@ -23,7 +23,7 @@ export async function prep(it) {
   for (const s of d.slides) if (s && s.photoUrl) d.imgs[s.photoUrl] = await getImg(s.photoUrl);
   return [d, await getImg(it.photoUrl)];
 }
-const coverKey = it => JSON.stringify([it.id, it.focalStory, it.mediaType, it.title, it.category, it.photoUrl, it.focal, it.tpl, it.slides, it.description, it.chip, it.credit, it.source, it.bigTitle, it.cutoutUrl, it.look]);
+const coverKey = it => JSON.stringify([it.id, it.focalStory, it.mediaType, it.title, it.category, it.photoUrl, it.focal, it.tpl, it.slides, it.description, it.chip, it.credit, it.source, it.bigTitle, it.cutoutUrl, it.look, it.storyTitle, it.storyCategory]);
 export function coverUrl(it) {
   const key = coverKey(it);
   if (!coverCache.has(key)) {

@@ -124,13 +124,13 @@ const Render = (() => {
   const lineH = size => size * 1.364; // "leading normal" da Nunito
   // selo com o texto centrado de verdade (mede a caixa real das letras, não a altura da linha)
   function chip(ctx, text, x, y, size, opts = {}) {
-    const sp = 1; font(ctx, 900, size, sp); ctx.textBaseline = 'alphabetic';
+    const sp = opts.sp ?? 1; font(ctx, opts.weight || 900, size, sp); ctx.textBaseline = 'alphabetic';
     const m = ctx.measureText(text), tw = m.width + ('letterSpacing' in ctx ? 0 : sp * text.length);
     const asc = m.actualBoundingBoxAscent || size * 0.72, desc = m.actualBoundingBoxDescent || 0;
-    const padX = Math.round(size * 0.75);
-    const w = Math.ceil(tw - sp) + padX * 2, h = lineH(size) + 24; // altura fixa: o layout dos templates conta com ela
+    const padX = opts.pad ?? Math.round(size * 0.75);
+    const w = Math.ceil(tw - sp) + padX * 2, h = opts.h ?? lineH(size) + 24; // altura fixa: o layout dos templates conta com ela
     const ax = opts.right ? x - w : opts.center ? x - w / 2 : x;
-    ctx.fillStyle = opts.bg || C.turq; rrect(ctx, ax, y, w, h, Math.round(size * 0.33)); ctx.fill();
+    ctx.fillStyle = opts.bg || C.turq; rrect(ctx, ax, y, w, h, opts.r ?? Math.round(size * 0.33)); ctx.fill();
     ctx.fillStyle = opts.color || C.navy;
     ctx.fillText(text, ax + padX, y + (h + asc - desc) / 2); ctx.textBaseline = 'top';
     return { w, h };
@@ -169,9 +169,12 @@ const Render = (() => {
   const catOf = d => String(d.category || '').trim(); // categoria em branco = sem texto (fica só o tracinho)
   const G = 20; // respiro padrão entre blocos de texto nos posts (o story usa 22, como o Foto em cima + painel)
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
-  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100 }, uh: { bg: C.tealE, acc: C.turq, fade: 100, bar: '' }, cut: { bg: C.navy, fade: 100, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
+  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100 }, uh: { bg: C.tealE, acc: C.turq, fade: 100, bar: '' }, tag: { on: true, bg: C.turq }, pbar: { bar: '' }, cut: { bg: C.navy, fade: 100, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
   const UH_PRESETS = [['Verde petróleo', C.tealE, C.turq], ['Amarelo', '#735400', '#fabd0d'], ['Azul marinho', C.navy, C.turq], ['Teal', C.tealM, C.verde], ['Preto', C.preto, '#fabd0d']];
-  const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) }, uh: { ...LOOK.uh, ...(d.tpl && d.tpl.post === 'p05' ? { bg: '#735400', acc: '#fabd0d' } : {}), ...((d.look || {}).uh) }, cut: { ...LOOK.cut, ...((d.look || {}).cut) } });
+  const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) }, uh: { ...LOOK.uh, ...(d.tpl && d.tpl.post === 'p05' ? { bg: '#735400', acc: '#fabd0d' } : {}), ...((d.look || {}).uh) }, cut: { ...LOOK.cut, ...((d.look || {}).cut) }, tag: { ...LOOK.tag, ...((d.look || {}).tag) }, pbar: { ...LOOK.pbar, ...((d.look || {}).pbar) } });
+  // selo do story: fino, em pílula, cor e visibilidade editáveis
+  const SCH = lineH(26) + 14;
+  const stag = (ctx, d, text, x, y, o = {}) => { const bg = look(d).tag.bg; return chip(ctx, text, x, y, 26, { bg, color: lum(bg) > 0.35 ? C.navy : C.branco, h: SCH, pad: 20, r: SCH / 2, weight: 800, sp: 2, ...o }); };
   const rgba = (hex, a) => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
   const lum = hex => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16), f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(n >> 16) + .7152 * f((n >> 8) & 255) + .0722 * f(n & 255); };
   // cor do texto: a escolhida, ou automática (escura quando o fundo atrás do texto é claro)
@@ -249,13 +252,13 @@ const Render = (() => {
     vgrad(ctx, 0, 300, 'rgba(15,23,42,0.55)', 'rgba(15,23,42,0)');
     await logo(ctx, false, 72, 72, 298.7);
     const ti = block(ctx, d.title, 900, size, lh, 936, withHandle ? 4 : 5), hh = withHandle ? lineH(30) + G : 0;
-    const cat = catOf(d), catH = cat ? lineH(40) + G : 0;
-    let y = 1350 - pb - hh - ti.h - G - 8 - catH;
+    const cat = catOf(d), catH = cat ? lineH(40) + G : 0, pbar = look(d).pbar.bar, barH = pbar === 'none' ? 0 : 8 + G;
+    let y = 1350 - pb - hh - ti.h - barH - catH;
     const lp = look(d).post, tc = panelInk(lp), dk = darkInk(tc);
-    panel(ctx, lp, y - 36, catH + 8 + G + ti.h + (withHandle ? G + lineH(30) : 0) + 72);
+    panel(ctx, lp, y - 36, catH + barH + ti.h + (withHandle ? G + lineH(30) : 0) + 72);
     ctx.fillStyle = dk ? C.tealE : C.verde;
     if (cat) { font(ctx, 700, 40, 2); ctx.fillText(up(cat), 72, y, 936); y += catH; }
-    rrect(ctx, 72, y, 300, 8, 4); ctx.fill(); y += 8 + G;
+    if (barH) { if (pbar) ctx.fillStyle = pbar; rrect(ctx, 72, y, 300, 8, 4); ctx.fill(); y += barH; }
     y = draw(ctx, ti, 72, y, tc) + G;
     if (withHandle) { font(ctx, 600, 30); ctx.fillStyle = tc; ctx.fillText(BRAND.handle, 72, y); credit(ctx, d.credit, 1278); }
   }
@@ -342,7 +345,9 @@ const Render = (() => {
   // ---------- stories (retorna a área do adesivo de link) ----------
   async function story(canvas, d, img, opts = {}) {
     await ensureFonts();
+    const d0 = d; d = { ...d, title: d.storyTitle || d.title, category: d.storyCategory ?? d.category }; // story pode ter título e categoria próprios
     const ctx = setup(canvas, 1080, 1920), t = d.tpl.story || 's02';
+    const scat = look(d).tag.on ? catOf(d) : '';
     let zone;
     if (t === 's01') {
       const bg = look(d).bg;
@@ -351,9 +356,9 @@ const Render = (() => {
       vgrad(ctx, 1020, 900, 'rgba(15,23,42,0)', `rgba(15,23,42,${0.55 * bg.fade / 100})`);
       const tc = ink(bg, bg.color, true), dk = darkInk(tc);
       await logo(ctx, dk, 72, 262, 248.9);
-      chip(ctx, 'NOVA NOTÍCIA', 980, 262.5, 30, { right: true });
+      if (look(d).tag.on) stag(ctx, d, 'NOVA NOTÍCIA', 980, 262.5 + (lineH(30) + 24 - SCH) / 2, { right: true });
       // card com o próprio post do feed dentro
-      const pc = document.createElement('canvas'); await post(pc, d, img);
+      const pc = document.createElement('canvas'); await post(pc, d0, img);
       ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 24;
       rrect(ctx, 140, 380, 800, 1000, 36); ctx.fillStyle = C.navy; ctx.fill(); ctx.restore();
       ctx.save(); rrect(ctx, 140, 380, 800, 1000, 36); ctx.clip(); ctx.drawImage(pc, 140, 380, 800, 1000); ctx.restore();
@@ -361,7 +366,7 @@ const Render = (() => {
       zone = { x: 140, y: 1470, w: 800, h: 110 };
     } else if (t === 's03') {
       const bg = look(d).bg, fh = 20 + 240 * bg.fade / 100; // degradê da foto pro painel: mais baixo = foto aparece mais
-      const ti = block(ctx, d.title, 900, 62, 72, 908, 4), de = d.description ? block(ctx, d.description, 400, 32, 44, 908, 3) : null, chipH = catOf(d) ? lineH(30) + 24 : -22;
+      const ti = block(ctx, d.title, 900, 62, 72, 908, 4), de = d.description ? block(ctx, d.description, 400, 32, 44, 908, 3) : null, chipH = scat ? SCH : -22;
       const need = 70 + chipH + 22 + ti.h + 22 + (de ? de.h + 22 : 0) + 110 + 80; // altura que o texto e o adesivo precisam embaixo
       const ph = Math.round(Math.max(400, Math.min(bg.ph, 1920 - need))); // onde a foto termina e o painel começa
       const a = bg.op / 100; // opacidade do fundo: abaixo de 100 a foto aparece por trás do painel inteiro
@@ -375,7 +380,7 @@ const Render = (() => {
       symbol(ctx, 860, ph - 52, 105.6);
       credit(ctx, d.credit, ph - 40);
       let y = ph + 70;
-      if (catOf(d)) y += chip(ctx, up(catOf(d)), 72, y, 30).h + 22;
+      if (scat) y += stag(ctx, d, up(scat), 72, y).h + 22;
       const tc = ink(bg, bg.color, bg.op >= 45);
       y = draw(ctx, ti, 72, y, tc) + 22;
       if (de) y = draw(ctx, de, 72, y, tc) + 22;
@@ -385,13 +390,13 @@ const Render = (() => {
       ctx.fillStyle = bg.color; ctx.fillRect(0, 0, 1080, 1920);
       symbol(ctx, 560, 1240, 700, dk ? 0.12 : 0.2);
       await logo(ctx, dk, 72, 262, 248.9);
-      const ti = block(ctx, d.title, 900, 62, 72, 936, 4), de = d.description ? block(ctx, d.description, 400, 32, 44, 936, 3) : null, chipH = catOf(d) ? lineH(30) + 24 : -22;
+      const ti = block(ctx, d.title, 900, 62, 72, 936, 4), de = d.description ? block(ctx, d.description, 400, 32, 44, 936, 3) : null, chipH = scat ? SCH : -22;
       const textH = chipH + 22 + ti.h + (de ? 22 + de.h : 0), cardH = Math.max(560, Math.min(860, 1920 - 400 - textH - 48 - 110 - 300));
       ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 20; rrect(ctx, 72, 400, 936, cardH, 40); ctx.fillStyle = C.navy; ctx.fill(); ctx.restore();
       ctx.save(); rrect(ctx, 72, 400, 936, cardH, 40); ctx.clip(); photo(ctx, img, 72, 400, 936, cardH, (d.focalStory || d.focal)); ctx.restore();
       credit(ctx, d.credit, 400 + cardH - 36, 990);
       let y = 400 + cardH + 48;
-      if (catOf(d)) chip(ctx, up(catOf(d)), 72, y, 30);
+      if (scat) stag(ctx, d, up(scat), 72, y);
       y += chipH + 22;
       y = draw(ctx, ti, 72, y, tc);
       if (de) y = draw(ctx, de, 72, y + 22, tc);
@@ -402,12 +407,12 @@ const Render = (() => {
       vgrad(ctx, 820, 1100, 'rgba(15,23,42,0)', 'rgba(15,23,42,0.95)');
       vgrad(ctx, 0, 420, 'rgba(15,23,42,0.55)', 'rgba(15,23,42,0)');
       await logo(ctx, false, 72, 262, 248.9);
-      const ti = block(ctx, d.title, 900, 62, 72, 908, 5), chipH = catOf(d) ? lineH(30) + 24 : -22;
+      const ti = block(ctx, d.title, 900, 62, 72, 908, 5), chipH = scat ? SCH : -22;
       let y = 1920 - 480 - 120 - 22 - ti.h - 22 - chipH;
       const ls = look(d).story;
       panel(ctx, ls, y - 36, chipH + 22 + ti.h + 72);
       credit(ctx, d.credit, y - 36 - 30);
-      if (catOf(d)) chip(ctx, up(catOf(d)), 72, y, 30);
+      if (scat) stag(ctx, d, up(scat), 72, y);
       y += chipH + 22;
       y = draw(ctx, ti, 72, y, panelInk(ls)) + 22;
       zone = { x: 72, y, w: 760, h: 120 };

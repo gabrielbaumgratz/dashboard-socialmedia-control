@@ -371,7 +371,7 @@ function authed(req) {
 }
 
 // ================= publicação no Instagram =================
-const ART_KEYS = ['slides', 'focal', 'focalStory', 'tpl', 'title', 'bigTitle', 'chip', 'source', 'credit', 'description', 'photoUrl', 'videoUrl', 'cutoutUrl', 'customArt', 'mediaType', 'category', 'look'];
+const ART_KEYS = ['slides', 'focal', 'focalStory', 'tpl', 'title', 'bigTitle', 'chip', 'source', 'credit', 'description', 'photoUrl', 'videoUrl', 'cutoutUrl', 'customArt', 'mediaType', 'category', 'look', 'storyTitle', 'storyCategory'];
 const baseUrl = req => (process.env.SITE_URL || `https://${req.headers['x-forwarded-host'] || req.headers.host}`).replace(/\/$/, '');
 const pubKey = () => (PASS || 'local') + (process.env.CRON_SECRET || '') + 'pub';
 const pubSig = (rel, exp) => crypto.createHmac('sha256', pubKey()).update(rel + '.' + exp).digest('hex').slice(0, 32);

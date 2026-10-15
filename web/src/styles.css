@@ -620,3 +620,4 @@ button.igp-btn{font:inherit;font-weight:600;cursor:pointer;border:0;color:inheri
 @media(min-width:1001px){.app.noside{grid-template-columns:1fr}.app.noside .side{display:none}.app.noside main{padding-left:64px}}
 @media(max-width:1000px){.side .sidetoggle,.sideopen{display:none}}
 main{min-width:0}
+.lblrow{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px}

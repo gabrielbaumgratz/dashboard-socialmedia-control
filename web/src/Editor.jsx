@@ -165,10 +165,10 @@ function LookCtl({ e, patch, k, tpl }) {
 // cores do template Última hora: combinações da marca ou cores livres
 const BAR_SW = [['#5cbba4', 'Verde'], ['#00b0ac', 'Turquesa'], ['#fabd0d', 'Amarelo'], ['#006173', 'Verde petróleo'], ['#ffffff', 'Branco']];
 // barra: same = opção "igual ao destaque" (só no última hora)
-function BarPick({ value, same, onChange }) {
+function BarPick({ value, same, onChange, sameLabel = 'Igual ao destaque' }) {
   const v = value || '', hex = /^#/.test(v) ? v : '#5cbba4';
   return <div className="txtcolor"><span>Barra</span>
-    {same && <button type="button" className={'chipbtn' + (!v ? ' on' : '')} onClick={() => onChange('')}>Igual ao destaque</button>}
+    {same && <button type="button" className={'chipbtn' + (!v ? ' on' : '')} onClick={() => onChange('')}>{sameLabel}</button>}
     <button type="button" className={'chipbtn' + (v === 'none' ? ' on' : '')} onClick={() => onChange('none')}>Sem barra</button>
     {BAR_SW.map(([c, n]) => <button type="button" key={c} title={n} aria-label={n} className={'sw' + (v.toLowerCase() === c ? ' on' : '')} style={{ background: c }} onClick={() => onChange(c)} />)}
     <input type="color" aria-label="Outra cor da barra" value={hex} onChange={ev => onChange(ev.target.value)} /></div>;
@@ -185,6 +185,24 @@ function UhCtl({ e, patch, k = 'uh' }) {
       <BarPick value={cur.bar} same={uh} onChange={v => set({ bar: v })} /></div>);
 }
 
+// tracinho embaixo da categoria no post (p01 e capa do carrossel)
+function PBarCtl({ e, patch }) {
+  const v = ((e.look || {}).pbar || {}).bar || '';
+  return <div className="lookbox"><BarPick value={v} same sameLabel="Padrão" onChange={bar => patch({ look: { ...(e.look || {}), pbar: { bar } } })} /></div>;
+}
+// selo do story (categoria / NOVA NOTÍCIA): mostrar ou não, e a cor
+function TagCtl({ e, patch }) {
+  const cur = { ...Render.LOOK.tag, ...((e.look || {}).tag) }, set = p => patch({ look: { ...(e.look || {}), tag: { ...cur, ...p } } });
+  return <div className="lookbox"><div className="lookhead"><label className="chk"><input type="checkbox" checked={cur.on} onChange={ev => set({ on: ev.target.checked })} />Destaque</label>
+    {(e.look || {}).tag && <button type="button" className="ghost mini" onClick={() => patch({ look: { ...(e.look || {}), tag: undefined } })}>Voltar ao padrão</button>}</div>
+    {cur.on && <div className="txtcolor"><span>Cor</span>{[...BAR_SW, ['#0f172a', 'Azul marinho']].map(([c, n]) => <button type="button" key={c} title={n} aria-label={n} className={'sw' + (cur.bg.toLowerCase() === c ? ' on' : '')} style={{ background: c }} onClick={() => set({ bg: c })} />)}
+      <input type="color" aria-label="Outra cor do destaque" value={cur.bg} onChange={ev => set({ bg: ev.target.value })} /></div>}</div>;
+}
+// campo do story que segue o do post até ser editado
+function StoryField({ label, k, from, e, patch, multi }) {
+  const own = e[k] != null, p = { value: own ? e[k] : (e[from] || ''), onChange: ev => patch({ [k]: ev.target.value }) };
+  return <label><span className="lblrow">{label}{own && <button type="button" className="ghost mini" onClick={() => patch({ [k]: null })}>Igual ao post</button>}</span>{multi ? <textarea rows={1} {...p} /> : <input {...p} />}</label>;
+}
 function Field({ label, k, e, patch, ph, multi }) {
   const p = { value: e[k] || '', placeholder: ph, onChange: ev => patch({ [k]: ev.target.value }) };
   return <label>{label}{multi ? <textarea rows={1} {...p} /> : <input {...p} />}</label>;
@@ -211,11 +229,11 @@ export default function Editor() {
   useEffect(() => { if (first.current) { first.current = false; return; } dirty.current = true; }, [e]);
   useEffect(() => { const h = ev => { if (dirty.current) { ev.preventDefault(); ev.returnValue = ''; } }; window.addEventListener('beforeunload', h); return () => window.removeEventListener('beforeunload', h); }, []);
   const base = useMemo(() => ({ ...artData(e), cutoutImg: cut, imgs }), [e, cut, imgs]);
-  const textSig = JSON.stringify([e.title, e.category, e.chip, e.description, e.source, e.credit, e.bigTitle, e.look, e.slides, e.tpl, e.focal, e.focalStory, e.photoUrl, e.cutoutUrl, kind, !!photo, !!cut, Object.keys(imgs).length, cur]);
-  const thumbSig = JSON.stringify([e.title, e.category, e.chip, e.description, e.source, e.credit, e.bigTitle, e.look, e.slides, e.focal, e.photoUrl, e.cutoutUrl, kind, !!photo, !!cut]);
+  const textSig = JSON.stringify([e.title, e.storyTitle, e.storyCategory, e.category, e.chip, e.description, e.source, e.credit, e.bigTitle, e.look, e.slides, e.tpl, e.focal, e.focalStory, e.photoUrl, e.cutoutUrl, kind, !!photo, !!cut, Object.keys(imgs).length, cur]);
+  const thumbSig = JSON.stringify([e.title, e.storyTitle, e.storyCategory, e.category, e.chip, e.description, e.source, e.credit, e.bigTitle, e.look, e.slides, e.focal, e.photoUrl, e.cutoutUrl, kind, !!photo, !!cut]);
   const n = car ? Render.count(base) : 1, at = Math.min(cur, n - 1);
   const postUses = car ? CAR_USES : POST_USES[e.tpl.post] || [];
-  const storyOnly = (STORY_USES[e.tpl.story] || []).filter(k => !(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses).includes(k));
+  const storyOnly = (STORY_USES[e.tpl.story] || []).filter(k => !['title', 'category'].includes(k) && !(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses).includes(k));
   const types = Render.SLIDE_TYPES[e.tpl.carousel] || Render.SLIDE_TYPES.A;
   const frame = car ? 'carousel' : 'post';
   const dd = (tplPatch, guides) => ({ ...base, tpl: { ...base.tpl, ...tplPatch }, guides });
@@ -257,14 +275,14 @@ export default function Editor() {
   }
   async function save(leave) {
     try {
-      await saveItem(byId(e.id), { title: e.title.trim(), category: e.category.trim(), mediaType: e.mediaType, videoUrl: e.videoUrl, slides: e.slides, focal: e.focal, focalStory: e.focalStory, tpl: e.tpl, description: e.description.trim(), chip: e.chip.trim(), legendas: e.legendas || '', dateline: e.dateline || '', source: e.source.trim(), credit: e.credit.trim(), bigTitle: e.bigTitle.trim(), look: e.look || {} });
+      await saveItem(byId(e.id), { title: e.title.trim(), category: e.category.trim(), mediaType: e.mediaType, videoUrl: e.videoUrl, slides: e.slides, focal: e.focal, focalStory: e.focalStory, tpl: e.tpl, description: e.description.trim(), chip: e.chip.trim(), legendas: e.legendas || '', dateline: e.dateline || '', source: e.source.trim(), credit: e.credit.trim(), bigTitle: e.bigTitle.trim(), look: e.look || {}, storyTitle: e.storyTitle == null ? null : e.storyTitle.trim(), storyCategory: e.storyCategory == null ? null : e.storyCategory.trim() });
       dirty.current = false; toast('Arte salva.'); if (leave) close();
     } catch (err) { toast(err.message, true); }
   }
   const field = (k, label, ph, multi) => <Field key={k} k={k} label={label} ph={ph} multi={multi} e={e} patch={patch} />;
   const FIELDS = {
     title: () => field('title', 'Título', '', 1),
-    category: () => field('category', 'Categoria', 'em branco = sem categoria na arte'),
+    category: () => field('category', 'Categoria', ''),
     chip: () => field('chip', 'Selo', 'ÚLTIMA HORA'),
     bigTitle: () => field('bigTitle', 'Título grande atrás do recorte', 'as 2 primeiras palavras do título'),
     description: () => <div key="description" className="descbox">{field('description', 'Descrição curta', 'sem descrição', 1)}<button type="button" className="ghost" onClick={genDesc} disabled={dbusy || !cfg.hasKey}>{dbusy ? 'Gerando…' : 'Gerar descrição com IA'}</button></div>,
@@ -326,7 +344,7 @@ export default function Editor() {
             draw={(c, id) => car ? Render.slide(c, dd({ carousel: id }, false), photo, 0) : Render.post(c, dd({ post: id }, false), photo)} />}
           {video && <Seg value={e.tpl.reel || 'r01'} onChange={id => setE(x => ({ ...x, tpl: { ...x.tpl, reel: id } }))} options={Render.REELS.map(r => [r.id, r.name])} />}
           {(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses).map(k => FIELDS[k]())}
-          {!video && (car || e.tpl.post === 'p01') && <LookCtl e={e} patch={patch} k="post" />}
+          {!video && (car || e.tpl.post === 'p01') && <><LookCtl e={e} patch={patch} k="post" /><PBarCtl e={e} patch={patch} /></>}
           {!video && !car && e.tpl.post === 'p02' && <UhCtl e={e} patch={patch} />}
           {!video && !car && e.tpl.post === 'p03' && <UhCtl e={e} patch={patch} k="cut" />}
           {midSlide && <SlideRow s={types.some(t => t.id === e.slides[slideIdx].type) ? e.slides[slideIdx] : { ...e.slides[slideIdx], type: types[0].id }} i={slideIdx} types={types} set={v => slideSet(slideIdx, v)}
@@ -347,7 +365,11 @@ export default function Editor() {
         <div className="edform">
           <TplRow list={Render.STORIES} kname="story" e={e} sig={thumbSig} w={62} h={110} story onPick={id => setE(x => ({ ...x, tpl: { ...x.tpl, story: id } }))}
             draw={(c, id) => Render.story(c, dd({ story: id }, false), photo)} />
+          {e.tpl.story !== 's01' && <>
+            <StoryField label="Título" k="storyTitle" from="title" multi e={e} patch={patch} />
+            <StoryField label="Categoria" k="storyCategory" from="category" e={e} patch={patch} /></>}
           {storyOnly.map(k => FIELDS[k]())}
+          <TagCtl e={e} patch={patch} />
           {e.tpl.story === 's02' && <LookCtl e={e} patch={patch} k="story" />}
           {['s01', 's03', 's04'].includes(e.tpl.story) && <LookCtl e={e} patch={patch} k="bg" tpl={e.tpl.story} />}
         </div>
