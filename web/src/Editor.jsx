@@ -163,13 +163,26 @@ function LookCtl({ e, patch, k, tpl }) {
 }
 
 // cores do template Última hora: combinações da marca ou cores livres
-function UhCtl({ e, patch }) {
-  const cur = { ...Render.LOOK.uh, ...((e.look || {}).uh) }, set = p => patch({ look: { ...(e.look || {}), uh: { ...cur, ...p } } });
+const BAR_SW = [['#5cbba4', 'Verde'], ['#00b0ac', 'Turquesa'], ['#fabd0d', 'Amarelo'], ['#006173', 'Verde petróleo'], ['#ffffff', 'Branco']];
+// barra: same = opção "igual ao destaque" (só no última hora)
+function BarPick({ value, same, onChange }) {
+  const v = value || '', hex = /^#/.test(v) ? v : '#5cbba4';
+  return <div className="txtcolor"><span>Barra</span>
+    {same && <button type="button" className={'chipbtn' + (!v ? ' on' : '')} onClick={() => onChange('')}>Igual ao destaque</button>}
+    <button type="button" className={'chipbtn' + (v === 'none' ? ' on' : '')} onClick={() => onChange('none')}>Sem barra</button>
+    {BAR_SW.map(([c, n]) => <button type="button" key={c} title={n} aria-label={n} className={'sw' + (v.toLowerCase() === c ? ' on' : '')} style={{ background: c }} onClick={() => onChange(c)} />)}
+    <input type="color" aria-label="Outra cor da barra" value={hex} onChange={ev => onChange(ev.target.value)} /></div>;
+}
+// k = 'uh' (última hora: fundo + destaque + barra) ou 'cut' (recorte PNG: degradê + barra)
+function UhCtl({ e, patch, k = 'uh' }) {
+  const cur = { ...Render.LOOK[k], ...((e.look || {})[k]) }, set = p => patch({ look: { ...(e.look || {}), [k]: { ...cur, ...p } } }), uh = k === 'uh';
   return (
-    <div className="lookbox"><div className="lookhead"><b>Cores</b>{(e.look || {}).uh && <button type="button" className="ghost mini" onClick={() => patch({ look: { ...(e.look || {}), uh: undefined } })}>Voltar ao padrão</button>}</div>
-      <div className="presets">{Render.UH_PRESETS.map(([n, b, a]) => <button type="button" key={n} className={'preset' + (cur.bg === b && cur.acc === a ? ' on' : '')} onClick={() => set({ bg: b, acc: a })}><i style={{ background: b }} /><i style={{ background: a }} />{n}</button>)}</div>
-      <div className="rng2"><div className="txtcolor"><span>Fundo</span><input type="color" aria-label="Cor do fundo" value={cur.bg} onChange={ev => set({ bg: ev.target.value })} /></div>
-        <div className="txtcolor"><span>Destaque</span><input type="color" aria-label="Cor do destaque" value={cur.acc} onChange={ev => set({ acc: ev.target.value })} /></div></div></div>);
+    <div className="lookbox"><div className="lookhead"><b>{uh ? 'Cores' : 'Degradê e barra'}</b>{(e.look || {})[k] && <button type="button" className="ghost mini" onClick={() => patch({ look: { ...(e.look || {}), [k]: undefined } })}>Voltar ao padrão</button>}</div>
+      {uh && <div className="presets">{Render.UH_PRESETS.map(([n, b, a]) => <button type="button" key={n} className={'preset' + (cur.bg === b && cur.acc === a ? ' on' : '')} onClick={() => set({ bg: b, acc: a })}><i style={{ background: b }} /><i style={{ background: a }} />{n}</button>)}</div>}
+      <div className="txtcolor"><span>Degradê</span><ColorPick value={cur.bg} onChange={c => set({ bg: c })} /></div>
+      <Rng label="Tamanho do degradê" value={cur.fade} unit="%" min={30} max={200} step={5} onChange={v => set({ fade: v })} />
+      {uh && <div className="txtcolor"><span>Destaque</span>{BAR_SW.map(([c, n]) => <button type="button" key={c} title={n} aria-label={n} className={'sw' + (cur.acc.toLowerCase() === c ? ' on' : '')} style={{ background: c }} onClick={() => set({ acc: c })} />)}<input type="color" aria-label="Outra cor de destaque" value={cur.acc} onChange={ev => set({ acc: ev.target.value })} /></div>}
+      <BarPick value={cur.bar} same={uh} onChange={v => set({ bar: v })} /></div>);
 }
 
 function Field({ label, k, e, patch, ph, multi }) {
@@ -315,6 +328,7 @@ export default function Editor() {
           {(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses).map(k => FIELDS[k]())}
           {!video && (car || e.tpl.post === 'p01') && <LookCtl e={e} patch={patch} k="post" />}
           {!video && !car && e.tpl.post === 'p02' && <UhCtl e={e} patch={patch} />}
+          {!video && !car && e.tpl.post === 'p03' && <UhCtl e={e} patch={patch} k="cut" />}
           {midSlide && <SlideRow s={types.some(t => t.id === e.slides[slideIdx].type) ? e.slides[slideIdx] : { ...e.slides[slideIdx], type: types[0].id }} i={slideIdx} types={types} set={v => slideSet(slideIdx, v)}
             remove={() => { setE(x => ({ ...x, slides: x.slides.filter((_, k) => k !== slideIdx) })); setCur(at - 1); }}
             up={() => { setE(x => { const a = [...x.slides]; [a[slideIdx - 1], a[slideIdx]] = [a[slideIdx], a[slideIdx - 1]]; return { ...x, slides: a }; }); setCur(at - 1); }} />}

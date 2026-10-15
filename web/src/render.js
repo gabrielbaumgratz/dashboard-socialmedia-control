@@ -169,9 +169,9 @@ const Render = (() => {
   const catOf = d => String(d.category || '').trim(); // categoria em branco = sem texto (fica só o tracinho)
   const G = 20; // respiro padrão entre blocos de texto nos posts (o story usa 22, como o Foto em cima + painel)
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
-  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100 }, uh: { bg: C.tealE, acc: C.turq } };
+  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100 }, uh: { bg: C.tealE, acc: C.turq, fade: 100, bar: '' }, cut: { bg: C.navy, fade: 100, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
   const UH_PRESETS = [['Verde petróleo', C.tealE, C.turq], ['Amarelo', '#735400', '#fabd0d'], ['Azul marinho', C.navy, C.turq], ['Teal', C.tealM, C.verde], ['Preto', C.preto, '#fabd0d']];
-  const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) }, uh: { ...(d.tpl && d.tpl.post === 'p05' ? { bg: '#735400', acc: '#fabd0d' } : LOOK.uh), ...((d.look || {}).uh) } });
+  const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) }, uh: { ...LOOK.uh, ...(d.tpl && d.tpl.post === 'p05' ? { bg: '#735400', acc: '#fabd0d' } : {}), ...((d.look || {}).uh) }, cut: { ...LOOK.cut, ...((d.look || {}).cut) } });
   const rgba = (hex, a) => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
   const lum = hex => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16), f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(n >> 16) + .7152 * f((n >> 8) & 255) + .0722 * f(n & 255); };
   // cor do texto: a escolhida, ou automática (escura quando o fundo atrás do texto é claro)
@@ -189,9 +189,10 @@ const Render = (() => {
       const uh = look(d).uh, bgc = uh.bg, acc = uh.acc; // cores escolhidas (p05 antigo = amarelo)
       ctx.fillStyle = bgc; ctx.fillRect(0, 0, 1080, 1350);
       photo(ctx, img, 0, 0, 1080, 1350, d.focal); // foto ocupa tudo, cor só embaixo do texto
-      ctx.save(); ctx.globalAlpha = 0.92; vgrad(ctx, 700, 650, rgba(bgc, 0), bgc); ctx.restore();
+      const gh = Math.min(1350, 650 * uh.fade / 100); // tamanho do degradê
+      ctx.save(); ctx.globalAlpha = 0.92; vgrad(ctx, 1350 - gh, gh, rgba(bgc, 0), bgc); ctx.restore();
       await logo(ctx, false, 72, 72, 298.7);
-      ctx.fillStyle = acc; ctx.fillRect(0, 1334, 1080, 16);
+      if (uh.bar !== 'none') { ctx.fillStyle = uh.bar || acc; ctx.fillRect(0, 1334, 1080, 16); }
       const ti = block(ctx, d.title, 900, 66, 72, 936, 4), de = d.description ? block(ctx, d.description, 400, 30, 39, 936, 3) : null;
       const chipH = lineH(36) + 24, hh = lineH(30);
       let y = 1350 - 96 - hh - G - (de ? de.h + G : 0) - ti.h - G - chipH;
@@ -213,14 +214,14 @@ const Render = (() => {
         const c = d.cutoutImg, k = Math.min(620 / c.width, 900 / c.height), w = c.width * k, h = c.height * k;
         ctx.drawImage(c, 230 + (620 - w) / 2, 300 + 900 - h, w, h);
       } // sem recorte: fica só a foto, sem caixa nem aviso
-      vgrad(ctx, 650, 700, 'rgba(15,23,42,0)', 'rgba(15,23,42,0.92)');
+      const cu = look(d).cut, gh = Math.min(1350, 700 * cu.fade / 100), barH = cu.bar === 'none' ? 0 : 8 + G;
+      vgrad(ctx, 1350 - gh, gh, rgba(cu.bg, 0), rgba(cu.bg, 0.92));
       await logo(ctx, false, 72, 72, 298.7);
       const ti = block(ctx, d.title, 800, 46, 52, 936, 2), hh = lineH(30) + G;
       const cat = catOf(d);
-      let y = 1350 - 96 - hh - ti.h - G - 8 - (cat ? G + lineH(36) : 0);
-      ctx.fillStyle = C.verde;
-      if (cat) { font(ctx, 700, 36, 2); ctx.fillText(up(cat), 72, y, 936); y += lineH(36) + G; }
-      rrect(ctx, 72, y, 300, 8, 4); ctx.fill(); y += 8 + G;
+      let y = 1350 - 96 - hh - ti.h - barH - (cat ? G + lineH(36) : 0);
+      if (cat) { font(ctx, 700, 36, 2); ctx.fillStyle = C.verde; ctx.fillText(up(cat), 72, y, 936); y += lineH(36) + G; }
+      if (barH) { ctx.fillStyle = cu.bar; rrect(ctx, 72, y, 300, 8, 4); ctx.fill(); y += barH; }
       y = draw(ctx, ti, 72, y, C.branco) + G;
       font(ctx, 600, 30); ctx.fillStyle = C.branco; ctx.fillText(BRAND.handle, 72, y);
       credit(ctx, d.credit, 1249);
