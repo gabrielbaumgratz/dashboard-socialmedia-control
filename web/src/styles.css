@@ -617,7 +617,16 @@ button.igp-btn{font:inherit;font-weight:600;cursor:pointer;border:0;color:inheri
 .side .sidetoggle{width:30px;height:30px;flex:none;padding:0;justify-content:center;border-radius:9px;color:rgba(232,251,251,.55)}
 .side .sidetoggle:hover{color:#fff}
 .side .sidetoggle .ico{width:17px;height:17px}
-@media(min-width:1001px){.app.noside{grid-template-columns:1fr}.app.noside .side{display:none}.app.noside main{padding-left:64px}}
+/* barra recolhida = trilho só com ícones (mesmo layout do tablet); o botão fica no mesmo lugar e centralizado */
+@media(min-width:1001px){
+  .app.noside{grid-template-columns:76px 1fr}
+  .app.noside .side{width:62px;margin:14px 0 14px 10px;padding:18px 7px 12px;align-items:center}
+  .app.noside .side button{justify-content:center;padding:11px}
+  .app.noside .side button span,.app.noside .side .brand,.app.noside .side .goal{display:none}
+  .app.noside .side nav,.app.noside .sidefoot{width:100%}
+  .app.noside .side .badge{position:absolute;top:2px;right:2px}
+  .app.noside .brandrow{justify-content:center;width:100%;min-height:48px}
+}
 @media(max-width:1000px){.side .sidetoggle,.sideopen{display:none}}
 main{min-width:0}
 .lblrow{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px}
@@ -628,3 +637,40 @@ main{min-width:0}
 .tagrow label.chk{display:inline-flex;flex-direction:row;align-items:center;gap:8px;margin-right:6px;font-size:12.5px;font-weight:700;color:var(--mut)}
 .tagrow label.chk input{width:16px;height:16px;flex:none;padding:0}
 .tagrow .tgtxt{flex-basis:100%;display:flex;align-items:center;gap:6px;padding-left:24px}
+
+/* ===== Botões: um sistema só (vem por último pra valer sobre as regras antigas) =====
+   primário = cor da marca sólida | ghost = secundário neutro | danger = ação destrutiva | mini = pequeno */
+button:where(:not(.linklike)),.btn{
+  background:var(--accent);color:var(--accent-ink);border:1px solid transparent;border-radius:12px;
+  padding:9px 16px;font-size:14px;font-weight:700;line-height:1.2;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18);filter:none;
+  -webkit-backdrop-filter:none;backdrop-filter:none;transition:background-color .15s,border-color .15s,color .15s}
+.lg-on button:where(:not(.linklike)),.lg-on .btn{-webkit-backdrop-filter:none;backdrop-filter:none}
+button:where(:not(.linklike)):hover,.btn:hover{background:color-mix(in srgb,var(--accent) 86%,#fff);filter:none}
+button.ghost,.btn.ghost,button.aibtn.ghost{background:color-mix(in srgb,var(--txt) 6%,transparent);color:var(--txt);border-color:var(--line2);box-shadow:none}
+button.ghost:hover,.btn.ghost:hover,button.aibtn.ghost:hover{background:color-mix(in srgb,var(--txt) 11%,transparent)}
+:root[data-theme=light] button.ghost,:root[data-theme=light] .btn.ghost{background:rgba(255,255,255,.6);box-shadow:none}
+button.aibtn{background:var(--accent);color:var(--accent-ink)}
+button.danger{background:transparent;color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent);box-shadow:none}
+button.danger:hover{background:color-mix(in srgb,var(--danger) 12%,transparent)}
+button.ok{background:var(--ok);color:#06231c}
+button.mini,.btn.mini,.lookbox button.mini{padding:5px 10px;font-size:12.5px;border-radius:10px}
+button:disabled,button:disabled:hover{opacity:.45;background-image:none}
+/* chips de cor e cartões de template não são botões de ação: sem fundo da marca */
+.sw,.tpl,.preset,.chipbtn{box-shadow:none}
+.tpl,.preset{background:transparent}
+/* "+ Slide de texto" e afins: tamanho do conteúdo, não a coluna toda */
+.edform>button{justify-self:start}
+/* esconder barra lateral: alinhado ao centro da logo, área de toque decente */
+.brandrow{align-items:center}
+.side .sidetoggle{width:32px;height:32px;margin-right:4px;border-radius:10px;background:transparent;color:rgba(232,251,251,.5);border:0;box-shadow:none}
+.side .sidetoggle:hover{background:rgba(255,255,255,.1);color:#fff}
+.brandrow .brand{padding-right:0;min-width:0}.brandrow .brand img{max-width:150px}
+.side .sidetoggle{margin-right:0}
+
+/* botão de recolher: alinhado ao centro vertical da logo, ícone centralizado no próprio botão */
+.side .brandrow{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:48px}
+.side .sidetoggle{display:grid;place-items:center;width:36px;height:36px;padding:0;flex:none}
+.side .sidetoggle .ico{width:18px;height:18px;margin:0}
+@media(max-width:1000px){.side .sidetoggle{display:none}}
+.app.noside .side .sidetoggle{padding:0}

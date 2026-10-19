@@ -198,9 +198,7 @@ function TagCtl({ e, patch, label = 'Destaque' }) {
     {cur.on && <>{[...BAR_SW, ['#0f172a', 'Azul marinho']].map(([c, n]) => <button type="button" key={c} title={n} aria-label={n} className={'sw' + (cur.bg.toLowerCase() === c ? ' on' : '')} style={{ background: c }} onClick={() => set({ bg: c })} />)}
       <input type="color" aria-label="Outra cor do destaque" value={cur.bg} onChange={ev => set({ bg: ev.target.value })} />
       <span className="tgtxt"><span>Texto</span>
-      <button type="button" className={'chipbtn' + (cur.tc === 'auto' ? ' on' : '')} onClick={() => set({ tc: 'auto' })}>Auto</button>
-      {[['#0f172a', 'Azul marinho'], ['#1d1d1b', 'Preto'], ['#ffffff', 'Branco']].map(([c, n]) => <button type="button" key={c} title={n} aria-label={'Texto ' + n} className={'sw' + (cur.tc === c ? ' on' : '')} style={{ background: c }} onClick={() => set({ tc: c })} />)}
-      <input type="color" aria-label="Outra cor do texto do destaque" value={cur.tc === 'auto' ? '#0f172a' : cur.tc} onChange={ev => set({ tc: ev.target.value })} /></span></>}</div>;
+      {[['#0f172a', 'Preto'], ['#ffffff', 'Branco']].map(([c, n]) => <button type="button" key={c} className={'chipbtn' + ((cur.tc === '#ffffff') === (c === '#ffffff') ? ' on' : '')} onClick={() => set({ tc: c })}>{n}</button>)}</span></>}</div>;
 }
 // campo do story que segue o do post até ser editado
 function StoryField({ label, k, from, e, patch, multi }) {

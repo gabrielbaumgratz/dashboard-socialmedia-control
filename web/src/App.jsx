@@ -15,7 +15,7 @@ import Editor from './Editor.jsx';
 const NAV = [['news', 'news', 'Notícias do site'], ['week', 'cal', 'Calendário'], ['queue', 'inbox', 'Fila'], ['history', 'clock', 'Histórico'], ['feed', 'grid', 'Feed']];
 const TABS = { news: News, week: Calendar, queue: Queue, history: History, feed: Feed, settings: Settings };
 
-function Sidebar({ hide }) {
+function Sidebar({ mini, toggle }) {
   const { tab, setTab, items, cfg } = useApp();
   const [dark, setDark] = useState(document.documentElement.dataset.theme !== 'light');
   const [logo, setLogo] = useState(false);
@@ -29,10 +29,10 @@ function Sidebar({ hide }) {
   return (
     <aside className={'side glass-dark'}>
       <div className="brandrow"><div className="brand">{logo ? <img src="/assets/logo-branco.png" alt="Reconstruções" /> : 'Reconstruções'}</div>
-        <button className="sidetoggle" onClick={hide} aria-label="Esconder a barra lateral" title="Esconder a barra lateral"><Icon name="sidebar" /></button></div>
+        <button className="sidetoggle" onClick={toggle} aria-expanded={!mini} aria-label={mini ? 'Expandir a barra lateral' : 'Recolher a barra lateral'} title={mini ? 'Expandir a barra lateral' : 'Recolher a barra lateral'}><Icon name="sidebar" /></button></div>
       <nav>
         {NAV.map(([id, icon, label]) => (
-          <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)} aria-current={tab === id ? 'page' : undefined}>
+          <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)} aria-current={tab === id ? 'page' : undefined} title={mini ? label : undefined}>
             {tab === id && <motion.i layoutId="navpill" className="navpill" transition={{ type: 'spring', stiffness: 400, damping: 34 }} />}
             <Icon name={icon} /><span>{label}</span>
             {id === 'queue' && q > 0 && <b className="badge">{q}</b>}
@@ -45,8 +45,8 @@ function Sidebar({ hide }) {
           <div className="goalrow"><b>{g.posts}/{g.mp}</b> posts <b>{g.videos}/{g.mv}</b> reels</div>
           <div className="bar2"><i style={{ width: g.pct + '%' }} /></div>
         </div>
-        <button className={tab === 'settings' ? 'active' : ''} onClick={() => setTab('settings')}><Icon name="gear" /><span>Configurações</span></button>
-        <button onClick={flip}><Icon name={dark ? 'sun' : 'moon'} /><span>{dark ? 'Modo claro' : 'Modo escuro'}</span></button>
+        <button className={tab === 'settings' ? 'active' : ''} onClick={() => setTab('settings')} title={mini ? 'Configurações' : undefined}><Icon name="gear" /><span>Configurações</span></button>
+        <button onClick={flip} title={mini ? (dark ? 'Modo claro' : 'Modo escuro') : undefined}><Icon name={dark ? 'sun' : 'moon'} /><span>{dark ? 'Modo claro' : 'Modo escuro'}</span></button>
       </div>
     </aside>
   );
@@ -61,8 +61,7 @@ export default function App() {
   return (
     <div className={'app' + (noside ? ' noside' : '')}>
       <div className="bg" aria-hidden="true"><i /><i /><i /></div>
-      <Sidebar hide={() => side(true)} />
-      {noside && <button className="sideopen glass-dark" onClick={() => side(false)} aria-label="Mostrar a barra lateral" title="Mostrar a barra lateral"><Icon name="sidebar" /></button>}
+      <Sidebar mini={noside} toggle={() => side(!noside)} />
       <main>
         {!ready && <p className="hint">Carregando…</p>}
         {ready && Object.entries(TABS).map(([id, C]) => seen[id] && (

@@ -174,8 +174,8 @@ const Render = (() => {
   const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) }, uh: { ...LOOK.uh, ...(d.tpl && d.tpl.post === 'p05' ? { bg: '#735400', acc: '#fabd0d' } : {}), ...((d.look || {}).uh) }, cut: { ...LOOK.cut, ...((d.look || {}).cut) }, tag: { ...LOOK.tag, ...((d.look || {}).tag) }, pbar: { ...LOOK.pbar, ...((d.look || {}).pbar) } });
   // selo do story: mesmo desenho do selo original (cantos 10), só mais baixo; cor e visibilidade editáveis
   const SCH = lineH(28) + 16;
-  const stag = (ctx, d, text, x, y, o = {}) => { const { bg, tc } = look(d).tag; return chip(ctx, text, x, y, 28, { bg, color: tc === 'auto' ? (lum(bg) > 0.35 ? C.navy : C.branco) : tc, h: SCH, pad: 21, r: 10, ...o }); };
-  const SCG = 10; // respiro extra entre o selo e o título no story
+  const stag = (ctx, d, text, x, y, o = {}) => { const { bg, tc } = look(d).tag; return chip(ctx, text, x, y, 28, { bg, color: tc === C.branco ? C.branco : C.navy, h: SCH, pad: 21, r: 10, ...o }); };
+  const SCG = 26; // respiro extra entre o selo e o título no story
   const rgba = (hex, a) => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
   const lum = hex => { const n = parseInt(String(hex).replace('#', '').padEnd(6, '0').slice(0, 6), 16), f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(n >> 16) + .7152 * f((n >> 8) & 255) + .0722 * f(n & 255); };
   // cor do texto: a escolhida, ou automática (escura quando o fundo atrás do texto é claro)
