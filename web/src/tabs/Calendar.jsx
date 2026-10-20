@@ -130,7 +130,7 @@ export default function Calendar() {
   const today = () => vt(() => { setWeekStart(mondayOf(new Date())); const d = new Date(); d.setDate(1); setMonth(d); });
 
   const we = new Date(weekStart); we.setDate(weekStart.getDate() + 6);
-  const label = view === 'kan' ? 'Quadro de posts' : view === 'month' ? cap1(month.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }))
+  const label = view === 'kan' ? 'Quadro' : view === 'month' ? cap1(month.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }))
     : `Semana de ${weekStart.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} a ${we.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
   return (
@@ -138,7 +138,7 @@ export default function Calendar() {
     {menu && <Menu m={menu} close={() => setMenu(null)} />}
     <>
       <PageHead title={label}>
-        <Seg value={view} onChange={v => vt(() => setView(v))} options={[['month', 'Mês'], ['week', 'Semana'], ['kan', 'Kanban']]} />
+        <Seg value={view} onChange={v => vt(() => setView(v))} options={[['month', 'Mês'], ['week', 'Semana'], ['kan', 'Quadro']]} />
         {view !== 'kan' && <span className="inline">
           <button className="ghost glass" onClick={() => step(-1)} aria-label="Anterior">&larr;</button>
           <button className="ghost glass" onClick={today}>Hoje</button>

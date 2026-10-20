@@ -116,7 +116,7 @@ export default function Queue() {
   let last = null;
   return (
     <>
-      <PageHead title="Fila de postagem">
+      <PageHead title="Fila">
         <ViewToggle value={view} onChange={setView} />
       </PageHead>
       {banner > 0 && <div className="banner glass"><span>{banner} notícia(s) nova(s) chegaram na fila.</span><button className="ghost" onClick={() => setBanner(0)}>Ok</button></div>}

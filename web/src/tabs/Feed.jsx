@@ -36,7 +36,7 @@ export default function Feed() {
   const shown = sub === 'posts' ? posts : sub === 'reels' ? reels : list;
   return (
     <>
-      <PageHead title="Simulador do feed">
+      <PageHead title="Feed" hint="Prévia de como o perfil vai ficar">
         <label className="check"><input type="checkbox" checked={drafts} onChange={e => setDrafts(e.target.checked)} /> incluir rascunhos</label>
         <ViewToggle value={mode} onChange={setMode} alt="line" />
         <button className="ghost iconbtn" aria-label="Marca e legenda" title="Marca e legenda" onClick={() => setBrand(b => !b)}><Icon name="gear" /></button>
