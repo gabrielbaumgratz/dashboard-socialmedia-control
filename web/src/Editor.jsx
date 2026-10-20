@@ -144,7 +144,7 @@ function LookCtl({ e, patch, k, tpl }) {
       <ColorPick value={cur.color} onChange={color => set({ color })} />
       <div className="rng2">
         {tpl === 's03' && <Rng label="Altura da foto" value={Math.round(cur.ph / 19.2)} unit="%" min={21} max={78} onChange={v => set({ ph: Math.round(v * 19.2) })} />}
-        {tpl !== 's04' && <Rng label="Degradê" value={cur.fade} unit="%" min={0} max={100} onChange={fade => set({ fade })} />}
+        {['s03', 's02'].includes(tpl) && <Rng label="Transição da foto pro fundo" value={cur.fade} unit="%" min={0} max={100} onChange={fade => set({ fade })} />}
         {tpl === 's03' && <Rng label="Opacidade do fundo" value={cur.op} unit="%" min={0} max={100} onChange={op => set({ op })} />}
       </div>
       <TextColor value={cur.tc} onChange={tc => set({ tc })} />
@@ -234,7 +234,8 @@ export default function Editor() {
   const textSig = JSON.stringify([e.title, e.storyTitle, e.storyCategory, e.category, e.chip, e.description, e.source, e.credit, e.bigTitle, e.look, e.slides, e.tpl, e.focal, e.focalStory, e.photoUrl, e.cutoutUrl, kind, !!photo, !!cut, Object.keys(imgs).length, cur]);
   const thumbSig = JSON.stringify([e.title, e.storyTitle, e.storyCategory, e.category, e.chip, e.description, e.source, e.credit, e.bigTitle, e.look, e.slides, e.focal, e.photoUrl, e.cutoutUrl, kind, !!photo, !!cut]);
   const n = car ? Render.count(base) : 1, at = Math.min(cur, n - 1);
-  const postUses = car ? CAR_USES : POST_USES[e.tpl.post] || [];
+  const FORDER = ['title', 'category', 'chip', 'description', 'bigTitle', 'cutout', 'source', 'credit', 'dateline', 'legendas']; // mesma ordem em todo o editor
+  const postUses = [...(car ? CAR_USES : POST_USES[e.tpl.post] || [])].sort((a, b) => FORDER.indexOf(a) - FORDER.indexOf(b));
   const storyOnly = (STORY_USES[e.tpl.story] || []).filter(k => !['title', 'category'].includes(k) && !(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses).includes(k));
   const types = Render.SLIDE_TYPES[e.tpl.carousel] || Render.SLIDE_TYPES.A;
   const frame = car ? 'carousel' : 'post';

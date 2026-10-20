@@ -674,3 +674,24 @@ button:disabled,button:disabled:hover{opacity:.45;background-image:none}
 .side .sidetoggle .ico{width:18px;height:18px;margin:0}
 @media(max-width:1000px){.side .sidetoggle{display:none}}
 .app.noside .side .sidetoggle{padding:0}
+/* ===== celular ===== */
+@media(max-width:820px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  main{padding:14px 12px 96px}
+  .side .themebtn{display:none}                 /* modo claro fica só no computador */
+  .app.editing{padding-bottom:0}
+  .app.editing .side{display:none}             /* editando: sem barra flutuando por cima */
+  .app.editing main{padding-bottom:24px}
+  .pagebar{top:8px;gap:8px;padding:8px;border-radius:16px}
+  .pagebar h2{font-size:15px}
+  .pagebar .kindtag{display:none}
+  .edsec{padding:14px}
+  .edpv{position:static}
+  .edform{gap:10px}
+}
+.page{grid-template-columns:minmax(0,1fr)}@media(max-width:1000px){.edsec{grid-template-columns:minmax(0,1fr)}}
+/* hover discreto: nada de zoom nem pulo, só um leve realce */
+.nthumb:hover,.ncard:hover,.kcard:hover,.wcard:hover,.tpl:hover{transform:none}
+.nthumb{transition:filter .25s ease}.nthumb:hover{filter:brightness(1.05)}
+.ncard,.kcard,.wcard,.tpl{transition:border-color .25s ease,box-shadow .25s ease,filter .25s ease}
+.ncard:hover{box-shadow:0 0 0 1px var(--line2)}

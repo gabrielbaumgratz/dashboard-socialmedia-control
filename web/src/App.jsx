@@ -46,7 +46,7 @@ function Sidebar({ mini, toggle }) {
           <div className="bar2"><i style={{ width: g.pct + '%' }} /></div>
         </div>
         <button className={tab === 'settings' ? 'active' : ''} onClick={() => setTab('settings')} title={mini ? 'Configurações' : undefined}><Icon name="gear" /><span>Configurações</span></button>
-        <button onClick={flip} title={mini ? (dark ? 'Modo claro' : 'Modo escuro') : undefined}><Icon name={dark ? 'sun' : 'moon'} /><span>{dark ? 'Modo claro' : 'Modo escuro'}</span></button>
+        <button className="themebtn" onClick={flip} title={mini ? (dark ? 'Modo claro' : 'Modo escuro') : undefined}><Icon name={dark ? 'sun' : 'moon'} /><span>{dark ? 'Modo claro' : 'Modo escuro'}</span></button>
       </div>
     </aside>
   );
@@ -59,7 +59,7 @@ export default function App() {
   const [seen, setSeen] = useState({ news: true });
   useEffect(() => setSeen(s => (s[tab] ? s : { ...s, [tab]: true })), [tab]);
   return (
-    <div className={'app' + (noside ? ' noside' : '')}>
+    <div className={'app' + (noside ? ' noside' : '') + (editorId || postId ? ' editing' : '')}>
       <div className="bg" aria-hidden="true"><i /><i /><i /></div>
       <Sidebar mini={noside} toggle={() => side(!noside)} />
       <main>
