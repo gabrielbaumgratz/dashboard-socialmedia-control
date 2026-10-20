@@ -695,3 +695,26 @@ button:disabled,button:disabled:hover{opacity:.45;background-image:none}
 .nthumb{transition:filter .25s ease}.nthumb:hover{filter:brightness(1.05)}
 .ncard,.kcard,.wcard,.tpl{transition:border-color .25s ease,box-shadow .25s ease,filter .25s ease}
 .ncard:hover{box-shadow:0 0 0 1px var(--line2)}
+/* ===== ajustes do editor: linhas alinhadas e cor em menu compacto ===== */
+.lookbox{gap:6px;padding:10px 12px}
+.crow{display:grid;grid-template-columns:110px minmax(0,1fr);align-items:center;gap:10px;min-height:34px}
+.clbl{font-size:12.5px;font-weight:700;color:var(--mut)}
+.cctl{display:flex;align-items:center;gap:10px;min-width:0}
+.cctl input[type=range]{flex:1;min-width:0;max-width:260px;accent-color:var(--accent);padding:0;border:0;background:none;box-shadow:none;height:20px}
+.cval{font-size:12px;font-weight:700;color:var(--txt);min-width:42px;text-align:right;font-variant-numeric:tabular-nums}
+.cmenu{position:relative}
+button.cbtn{display:inline-flex;align-items:center;gap:8px;padding:5px 10px 5px 6px;font-size:12.5px;font-weight:700;border-radius:999px;background:color-mix(in srgb,var(--txt) 6%,transparent);color:var(--txt);border:1px solid var(--line2);box-shadow:none}
+button.cbtn:hover{background:color-mix(in srgb,var(--txt) 11%,transparent)}
+.cdot{width:18px;height:18px;border-radius:50%;border:1px solid rgba(255,255,255,.35);flex:none}
+.cdot.none{background:repeating-linear-gradient(45deg,transparent 0 3px,var(--line2) 3px 5px)}
+.cpop{position:absolute;z-index:40;top:calc(100% + 6px);left:0;display:grid;gap:8px;padding:10px;border-radius:14px;background:var(--surface,#0f1b2d);border:1px solid var(--line2);box-shadow:0 12px 30px rgba(0,0,0,.35);min-width:200px}
+.copts{display:flex;flex-wrap:wrap;gap:6px}
+.cgrid{display:grid;grid-template-columns:repeat(5,26px);gap:8px}
+.cgrid .sw{width:26px;height:26px;min-height:0;padding:0;border-radius:50%;border:2px solid var(--line)}
+.cgrid .sw.on{outline:2px solid var(--accent);outline-offset:2px}
+.ccustom{position:relative;width:26px;height:26px;border-radius:50%;border:1px dashed var(--line2);display:grid;place-items:center;font-size:15px;color:var(--mut);cursor:pointer;overflow:hidden}
+.ccustom input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;padding:0}
+.chipbtn{color:var(--txt);padding:4px 12px;min-height:0;font-size:12px;border-radius:999px;border:1px solid var(--line2);background:none;box-shadow:none}
+.chipbtn.on{background:var(--accent-soft);border-color:var(--accent)}
+.seg2{display:flex;gap:6px}
+.catgroup{gap:8px}
