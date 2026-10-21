@@ -52,6 +52,7 @@ function QueueRow({ it }) {
     if (!dl) return;
     await navigator.clipboard.writeText(caption + (tags ? '\n\n' + tags : '')).catch(() => {});
     if (dl === 'y') downloadSet(await renderSet(it), typeOf(it) === 'video');
+    if (it.status !== 'scheduled') await saveItem(it, { ...patch(), status: 'scheduled', scheduledAt: it.scheduledAt || new Date().toISOString(), isNew: false }).catch(() => {}); // vai pra Programados até clicar em Já postei
     toast(dl === 'y' ? 'Legenda copiada e artes baixadas. Poste no Instagram e depois clique em "Já postei" na prévia.' : 'Legenda copiada. Poste no Instagram e depois clique em "Já postei" na prévia.');
   };
   const t = typeOf(it);

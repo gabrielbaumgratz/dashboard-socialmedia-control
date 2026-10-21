@@ -13,7 +13,7 @@ const MenuCtx = createContext(() => {});
 const useMenu = it => { const open = useContext(MenuCtx); const fn = e => { e.preventDefault(); e.stopPropagation(); open(it, e.clientX, e.clientY); }; return { onContextMenu: fn, dots: <button className="dots" aria-label="Opções" onClick={fn}>⋯</button> }; };
 
 function Menu({ m, close }) {
-  const { openPost, setEditorId, removeItem, toast } = useApp();
+  const { openPost, setEditorId, removeItem, toast, saveItem } = useApp();
   useEffect(() => { const k = () => close(); const esc = e => e.key === 'Escape' && close(); window.addEventListener('keydown', esc); window.addEventListener('click', k); window.addEventListener('scroll', k, true); return () => { window.removeEventListener('keydown', esc); window.removeEventListener('click', k); window.removeEventListener('scroll', k, true); }; }, []);
   const it = m.it, posted = it.status === 'posted';
   const postNow = async () => {
@@ -21,6 +21,7 @@ function Menu({ m, close }) {
     if (!dl) return;
     await navigator.clipboard.writeText(fullCaption(it)).catch(() => {});
     if (dl === 'y') downloadSet(await renderSet(it), typeOf(it) === 'video');
+    if (it.status !== 'scheduled') await saveItem(it, { status: 'scheduled', scheduledAt: it.scheduledAt || new Date().toISOString(), isNew: false }).catch(() => {});
     toast(dl === 'y' ? 'Legenda copiada e artes baixadas. Poste no Instagram e depois clique em "Já postei" na prévia.' : 'Legenda copiada. Poste no Instagram e depois clique em "Já postei" na prévia.');
   };
   const del = async () => { if (confirm('Mandar este post pra lixeira? Ele fica lá 7 dias.')) { await removeItem(it.id); toast('Foi pra lixeira (7 dias).'); } };

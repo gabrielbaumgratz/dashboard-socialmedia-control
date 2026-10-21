@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { api } from './api.js';
 import { useApp, vt } from './store.jsx';
 import { IgPost, ReelPhone, StoryPhone, useSet, WhenNote } from './previews.jsx';
-import { DateTime, Seg, Spin, Status } from './ui.jsx';
+import { DateTime, Seg, Spin, Status, askChoice } from './ui.jsx';
 import { Icon } from './icons.jsx';
 import { exportReel, exportSet } from './art.js';
 import { prepareExport } from './publish.js';
@@ -74,19 +74,21 @@ export default function PostView() {
       setBusy(false); return;
     }
     if (!set) return;
-    setAskDl(a => !a); // sem API: pergunta se baixa as artes junto
+    const dl = await askChoice('Baixar as artes também?', [['n', 'Só a legenda'], ['y', 'Legenda e artes']]); // sem API: pergunta se baixa as artes junto
+    if (!dl) return;
+    await copyPost(dl === 'y');
   };
-  const [askDl, setAskDl] = useState(false);
   const copyPost = async dl => {
     await navigator.clipboard.writeText(fullCaption(live)).catch(() => {});
     if (dl) downloadSet(set, video);
-    setAskDl(false);
+    if (it.status !== 'scheduled') await saveItem(it, { caption, hashtags: parseTags(tags), status: 'scheduled', scheduledAt: it.scheduledAt || new Date().toISOString(), isNew: false }).catch(() => {});
     toast(dl ? 'Legenda copiada e artes baixadas. Poste no Instagram e depois clique em "Já postei".' : 'Legenda copiada. Poste no Instagram e depois clique em "Já postei".');
   };
-  const [askWhat, setAskWhat] = useState(false);
-  const markPosted = async what => {
+  const markPosted = async () => {
+    const what = await askChoice('O que você postou? Os arquivos enviados serão apagados.', [['feed', 'Post'], ['story', 'Story'], ['both', 'Ambos']]);
+    if (!what) return;
     try {
-      const s = await api(`/api/items/${it.id}/posted`, { method: 'POST', body: { postUrl: url.trim(), what } }); replace(s); setAskWhat(false);
+      const s = await api(`/api/items/${it.id}/posted`, { method: 'POST', body: { postUrl: url.trim(), what } }); replace(s);
       const bad = s.sheetSync && !s.sheetSync.ok && !s.sheetSync.skipped;
       toast(bad ? 'Postado, mas a planilha deu erro: ' + s.sheetSync.msg : 'Marcado como postado.', bad);
     } catch (e) { toast(e.message, true); }
@@ -148,16 +150,12 @@ export default function PostView() {
           {!posted && <>
             <DateTime value={when} onChange={setWhen} />
             <div className="row2"><button onClick={schedule} disabled={busy}>{busy ? <Spin /> : null}{it.status === 'scheduled' ? 'Salvar horário' : 'Programar'}</button><button className="ghost" onClick={postNow} disabled={!set || busy}>Postar agora</button></div>
-            {askDl && <div className="whatbox"><span>Baixar as artes também?</span>
-              <div className="row2"><button className="ghost" onClick={() => copyPost(false)}>Só a legenda</button><button onClick={() => copyPost(true)}>Legenda e artes</button></div></div>}
             {ig && it.publishError && <div className="aierr">Instagram: {it.publishError}{(it.publishTries || 0) >= 3 ? ' (parou de tentar; clique em Salvar horário pra tentar de novo)' : ''}</div>}
             {ig && it.status === 'scheduled' && !it.export && <div className="aierr">Arte desatualizada. Clique em Salvar horário pra exportar de novo.</div>}
             <div className="donebox">
               <input placeholder="Link do post no Instagram (opcional)" value={url} onChange={e => setUrl(e.target.value)} />
-              <button className="ok" onClick={() => setAskWhat(a => !a)} aria-expanded={askWhat}>Já postei</button>
+              <button className="ok" onClick={markPosted}>Já postei</button>
             </div>
-            {askWhat && <div className="whatbox"><span>O que você postou? Os arquivos enviados serão apagados.</span>
-              <div className="row3"><button className="ghost" onClick={() => markPosted('feed')}>Post</button><button className="ghost" onClick={() => markPosted('story')}>Story</button><button onClick={() => markPosted('both')}>Ambos</button></div></div>}
             <div className="exportbox">
               {video && it.videoUrl && <button className="ghost" onClick={doReel} disabled={exp}>{exp ? <><Spin /> Gravando…</> : 'Exportar reel'}</button>}
               <button className="ghost" onClick={doExport} disabled={exp}>{exp ? <><Spin /> Exportando…</> : video ? 'Capa 4K' : 'Baixar 4K'}</button>
