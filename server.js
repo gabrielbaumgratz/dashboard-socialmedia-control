@@ -347,7 +347,7 @@ async function syncSheet(item, status) {
   if (!cfg.sheetsUrl) return { ok: false, skipped: true, msg: 'Planilha não configurada' };
   const body = {
     id: item.id, status: status || item.status, createdAt: item.createdAt, scheduledAt: item.scheduledAt, postedAt: item.postedAt, title: item.title || item.origTitle, category: item.category || '',
-    type: item.mediaType === 'video' ? 'video' : item.format,
+    type: item.mediaType === 'video' ? 'video' : item.format, what: item.postedWhat || 'feed',
     postUrl: item.postUrl || '', newsUrl: item.link || '',
     metaPosts: +cfg.metaPosts || 3, metaVideos: +cfg.metaVideos || 2
   };
@@ -382,12 +382,13 @@ function pubUrl(base, id, name) { // link temporário (12h) que a Meta usa pra b
 }
 
 // fecha o item como postado (apaga arquivos, sincroniza planilha). Usado pelo "Já postei" e pela publicação automática.
-async function markPosted(id, postUrl) {
+async function markPosted(id, postUrl, what) {
   const db0 = await loadDb(), it0 = findItem(db0, id);
   if (!it0) return null;
   await store.delFiles(it0.id);           // apaga tudo: a foto original continua no WordPress
   const done = { postedAt: new Date().toISOString(), status: 'posted', isNew: false, images: [], export: null, ig: null, publishError: '', publishTries: 0 };
   if (postUrl) done.postUrl = String(postUrl).trim();
+  done.postedWhat = ['feed', 'story', 'both'].includes(what) ? what : 'feed'; // o que foi pro Instagram: post, story ou os dois
   const cut = x => (x && x.startsWith('/images/') ? '' : x);
   const tmp = { ...it0, ...done };
   tmp.sheetSync = await syncSheet(tmp);
@@ -629,7 +630,7 @@ async function handleApi(req, res, url) {
   }
   mm = p.match(/^\/api\/items\/([\w-]+)\/posted$/);
   if (mm && m === 'POST') {
-    const b = await readJson(req), it = await markPosted(mm[1], b.postUrl);
+    const b = await readJson(req), it = await markPosted(mm[1], b.postUrl, b.what);
     return it ? send(res, 200, it) : send(res, 404, { error: 'item não existe' });
   }
   mm = p.match(/^\/api\/items\/([\w-]+)\/export$/);

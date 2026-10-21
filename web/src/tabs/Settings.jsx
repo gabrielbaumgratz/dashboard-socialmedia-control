@@ -99,7 +99,7 @@ export default function Settings() {
           </div>
         </Section>
 
-        <Section wide title="Planilha da cliente (Google Sheets)" hint='Cada post vira uma linha na aba Posts (rascunho, programado, postado), com filtro por dia, semana e mês, e a aba Painel soma tudo.' pill={<Pill on={!!cfg.sheetsUrl}>{cfg.sheetsUrl ? 'Ligada' : 'Desligada'}</Pill>}>
+        <Section wide title="Planilha da cliente (Google Sheets)" hint='Cada post programado ou postado vira uma linha na aba Posts, com filtro por dia, semana e mês, e a aba Painel soma tudo.' pill={<Pill on={!!cfg.sheetsUrl}>{cfg.sheetsUrl ? 'Ligada' : 'Desligada'}</Pill>}>
           <ol className="steps">
             <li>Abra a planilha compartilhada, vá em <b>Extensões &gt; Apps Script</b>.</li>
             <li>Apague o que tiver lá e cole o código de <a href="/apps-script.gs" target="_blank">apps-script.gs</a> (também está na pasta <code>planilha</code>).</li>

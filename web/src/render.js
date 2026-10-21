@@ -126,7 +126,7 @@ const Render = (() => {
   function chip(ctx, text, x, y, size, opts = {}) {
     const sp = opts.sp ?? 1; font(ctx, opts.weight || 900, size, sp); ctx.textBaseline = 'alphabetic';
     const m = ctx.measureText(text), tw = m.width + ('letterSpacing' in ctx ? 0 : sp * text.length);
-    const asc = m.actualBoundingBoxAscent || size * 0.72, desc = m.actualBoundingBoxDescent || 0;
+    const asc = ctx.measureText('H').actualBoundingBoxAscent || size * 0.72, desc = 0; // centra pela altura das maiúsculas (acento não empurra o texto)
     const padX = opts.pad ?? Math.round(size * 0.75);
     const w = Math.ceil(tw - sp) + padX * 2, h = opts.h ?? lineH(size) + 24; // altura fixa: o layout dos templates conta com ela
     const ax = opts.right ? x - w : opts.center ? x - w / 2 : x;
@@ -169,7 +169,7 @@ const Render = (() => {
   const catOf = d => String(d.category || '').trim(); // categoria em branco = sem texto (fica só o tracinho)
   const G = 18; // respiro padrão entre blocos de texto nos posts (o story usa 22, como o Foto em cima + painel)
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
-  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100, sym: false }, uh: { bg: C.tealE, acc: C.turq, fade: 100, bar: '' }, tag: { on: true, bg: C.turq, tc: C.navy }, pbar: { bar: '' }, cut: { bg: C.navy, fade: 100, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
+  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100, sym: false }, uh: { bg: C.tealE, acc: C.turq, size: 48, bar: '', chip: '' }, tag: { on: true, bg: C.turq, tc: C.navy }, pbar: { bar: '' }, cut: { bg: C.navy, size: 52, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
   const UH_PRESETS = [['Verde petróleo', C.tealE, C.turq], ['Amarelo', '#735400', '#fabd0d'], ['Azul marinho', C.navy, C.turq], ['Teal', C.tealM, C.verde], ['Preto', C.preto, '#fabd0d']];
   const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) }, uh: { ...LOOK.uh, ...(d.tpl && d.tpl.post === 'p05' ? { bg: '#735400', acc: '#fabd0d' } : {}), ...((d.look || {}).uh) }, cut: { ...LOOK.cut, ...((d.look || {}).cut) }, tag: { ...LOOK.tag, ...((d.look || {}).tag) }, pbar: { ...LOOK.pbar, ...((d.look || {}).pbar) } });
   // selo do story: mesmo desenho do selo original (cantos 10), só mais baixo; cor e visibilidade editáveis
@@ -193,14 +193,14 @@ const Render = (() => {
       const uh = look(d).uh, bgc = uh.bg, acc = uh.acc; // cores escolhidas (p05 antigo = amarelo)
       ctx.fillStyle = bgc; ctx.fillRect(0, 0, 1080, 1350);
       photo(ctx, img, 0, 0, 1080, 1350, d.focal); // foto ocupa tudo, cor só embaixo do texto
-      const gh = Math.min(1350, 650 * uh.fade / 100); // tamanho do degradê
+      const gh = 1350 * uh.size / 100; // tamanho do degradê, 0 a 100% da altura
       ctx.save(); ctx.globalAlpha = 0.92; vgrad(ctx, 1350 - gh, gh, rgba(bgc, 0), bgc); ctx.restore();
       await logo(ctx, false, 72, 72, 298.7);
       if (uh.bar !== 'none') { ctx.fillStyle = uh.bar || acc; ctx.fillRect(0, 1334, 1080, 16); }
       const ti = block(ctx, d.title, 900, 66, 72, 936, 4), de = d.description ? block(ctx, d.description, 400, 30, 39, 936, 3) : null;
-      const chipH = lineH(36) + 24, hh = lineH(30);
+      const noChip = uh.chip === 'none', chipH = noChip ? -G : lineH(36) + 24, hh = lineH(30); // sem selo: não deixa espaço
       let y = 1350 - 96 - hh - G - (de ? de.h + G : 0) - ti.h - G - chipH;
-      chip(ctx, up(d.chip || 'Última hora'), 72, y, 36, { bg: acc, color: lum(acc) > 0.35 ? C.navy : C.branco }); y += chipH + G;
+      const cc = uh.chip || acc; if (!noChip) chip(ctx, up(d.chip || 'Última hora'), 72, y, 36, { bg: cc, color: lum(cc) > 0.35 ? C.navy : C.branco }); y += chipH + G;
       y = draw(ctx, ti, 72, y, C.branco) + G;
       if (de) y = draw(ctx, de, 72, y, C.branco) + G;
       font(ctx, 600, 30); ctx.fillStyle = C.branco; ctx.fillText(BRAND.handle, 72, y);
@@ -218,7 +218,7 @@ const Render = (() => {
         const c = d.cutoutImg, k = Math.min(620 / c.width, 900 / c.height), w = c.width * k, h = c.height * k;
         ctx.drawImage(c, 230 + (620 - w) / 2, 300 + 900 - h, w, h);
       } // sem recorte: fica só a foto, sem caixa nem aviso
-      const cu = look(d).cut, gh = Math.min(1350, 700 * cu.fade / 100), barH = cu.bar === 'none' ? 0 : 8 + G;
+      const cu = look(d).cut, gh = 1350 * cu.size / 100, barH = cu.bar === 'none' ? 0 : 8 + G;
       vgrad(ctx, 1350 - gh, gh, rgba(cu.bg, 0), rgba(cu.bg, 0.92));
       await logo(ctx, false, 72, 72, 298.7);
       const ti = block(ctx, d.title, 800, 46, 52, 936, 2), hh = lineH(30) + G;

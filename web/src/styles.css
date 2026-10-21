@@ -747,3 +747,8 @@ button.cbtn:hover{background:color-mix(in srgb,var(--txt) 11%,transparent)}
   .qrow .qside{grid-column:1/-1}
 }
 @media(max-width:820px){.qrow .qside{grid-template-columns:minmax(0,1fr)}.qrow .qside .dt{grid-template-columns:1fr 1fr}}
+.whatbox{display:grid;gap:8px;padding:10px 12px;border:1px solid var(--line2);border-radius:14px;font-size:13px;color:var(--mut)}
+.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.row3 button{padding:8px 6px;font-size:13px}
+
+.page.editor{display:flex;flex-direction:column}.page.editor>*{min-width:0}
+.savebar{display:flex;justify-content:flex-end}

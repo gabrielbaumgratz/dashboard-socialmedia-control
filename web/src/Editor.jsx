@@ -28,7 +28,6 @@ async function savePng(draw, name) {
 }
 const slug = t => (t || 'arte').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'arte';
 const SaveBtn = ({ onClick }) => <button type="button" className="ghost savepng" onClick={onClick}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" /></svg>Baixar imagem</button>;
-const KIND = { post: 'Post único', carrossel: 'Carrossel', video: 'Reel' };
 
 function useDebounced(v, ms) { const [x, setX] = useState(v); useEffect(() => { const t = setTimeout(() => setX(v), ms); return () => clearTimeout(t); }, [v, ms]); return x; }
 
@@ -159,16 +158,16 @@ function LookCtl({ e, patch, k, tpl }) {
       {tpl === 's03' && <Rng label="Transição" value={cur.fade} unit="%" min={0} max={100} onChange={fade => set({ fade })} />}
       {tpl === 's03' && <Rng label="Opacidade" value={cur.op} unit="%" min={0} max={100} onChange={op => set({ op })} />}
       <TextColor value={cur.tc} onChange={tc => set({ tc })} />
-      {tpl === 's03' && <Row label="Símbolo"><Check label="Mostrar no fim da foto" on={cur.sym} set={sym => set({ sym })} /></Row>}</div>);
+      {tpl === 's03' && <Row label="Símbolo"><Check label="" on={cur.sym} set={sym => set({ sym })} /></Row>}</div>);
   return (
     <div className="lookbox"><div className="lookhead"><Check label="Fundo atrás do texto" on={cur.on} set={on => set({ on })} />{reset}</div>
       {cur.on && <>
         <Row label="Cor"><ColorMenu value={cur.color} onChange={color => set({ color })} /></Row>
-        <Rng label="Opacidade" value={cur.opacity} unit="%" min={10} max={100} onChange={opacity => set({ opacity })} />
+        <Rng label="Opacidade" value={cur.opacity} unit="%" min={0} max={100} onChange={opacity => set({ opacity })} />
         <Rng label="Cantos" value={cur.r} unit=" px" min={0} max={60} onChange={r => set({ r })} />
         <Rng label="Contorno" value={cur.bw} unit=" px" min={0} max={12} onChange={bw => set({ bw })} />
         {cur.bw > 0 && <Row label="Cor do contorno"><ColorMenu value={cur.bc} onChange={bc => set({ bc })} /></Row>}
-        {cur.bw > 0 && <Rng label="Opac. contorno" value={cur.bo} unit="%" min={10} max={100} onChange={bo => set({ bo })} />}
+        {cur.bw > 0 && <Rng label="Opac. contorno" value={cur.bo} unit="%" min={0} max={100} onChange={bo => set({ bo })} />}
         <TextColor value={cur.tc} onChange={tc => set({ tc })} /></>}</div>);
 }
 
@@ -182,8 +181,9 @@ function UhCtl({ e, patch, k = 'uh' }) {
     <div className="lookbox"><Head title={uh ? 'Cores' : 'Degradê e barra'} reset={(e.look || {})[k] && <button type="button" className="ghost mini" onClick={() => patch({ look: { ...(e.look || {}), [k]: undefined } })}>Voltar ao padrão</button>} />
       {uh && <div className="presets">{Render.UH_PRESETS.map(([n, b, a]) => <button type="button" key={n} className={'preset' + (cur.bg === b && cur.acc === a ? ' on' : '')} onClick={() => set({ bg: b, acc: a })}><i style={{ background: b }} /><i style={{ background: a }} />{n}</button>)}</div>}
       <Row label="Degradê"><ColorMenu value={cur.bg} onChange={c => set({ bg: c })} /></Row>
-      <Rng label="Tamanho" value={cur.fade} unit="%" min={30} max={200} step={5} onChange={v => set({ fade: v })} />
+      <Rng label="Tamanho" value={cur.size} unit="%" min={0} max={100} onChange={size => set({ size })} />
       {uh && <Row label="Destaque"><ColorMenu value={cur.acc} onChange={c => set({ acc: c })} /></Row>}
+      {uh && <Row label="Selo"><ColorMenu value={cur.chip || ''} onChange={chip => set({ chip })} opts={[['', 'Igual ao destaque'], ['none', 'Sem selo']]} /></Row>}
       <BarPick value={cur.bar} same={uh} onChange={v => set({ bar: v })} /></div>);
 }
 
@@ -306,7 +306,6 @@ export default function Editor() {
       <div className="pagebar glass">
         <button className="ghost" onClick={close}><Icon name="back" />Voltar</button>
         <h2>{e.title || src.origTitle}</h2>
-        <span className="kindtag">{car ? `Carrossel · ${n}` : KIND[kind]}</span>
         <button onClick={() => save(true)}>Salvar</button>
       </div>
 
@@ -376,6 +375,7 @@ export default function Editor() {
           {['s01', 's03', 's04'].includes(e.tpl.story) && <LookCtl e={e} patch={patch} k="bg" tpl={e.tpl.story} />}
         </div>
       </section>
+      <div className="savebar"><button onClick={() => save(true)}>Salvar</button></div>
     </div>
   );
 }
