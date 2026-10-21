@@ -4,7 +4,7 @@ import { downloadSet } from '../PostView.jsx';
 import { fullCaption } from '../util.js';
 import { api } from '../api.js';
 import { useApp, vt } from '../store.jsx';
-import { Cover, ExpandableSearch, PageHead, Seg, usePref } from '../ui.jsx';
+import { Cover, ExpandableSearch, PageHead, Seg, usePref, askChoice } from '../ui.jsx';
 import { STATUS, TYPE, cap1, dayKey, itemDate, mondayOf, pad, slotsList, suggestWhen, typeOf } from '../util.js';
 
 const drag = it => e => e.dataTransfer.setData('text/plain', it.id);
@@ -17,9 +17,11 @@ function Menu({ m, close }) {
   useEffect(() => { const k = () => close(); const esc = e => e.key === 'Escape' && close(); window.addEventListener('keydown', esc); window.addEventListener('click', k); window.addEventListener('scroll', k, true); return () => { window.removeEventListener('keydown', esc); window.removeEventListener('click', k); window.removeEventListener('scroll', k, true); }; }, []);
   const it = m.it, posted = it.status === 'posted';
   const postNow = async () => {
+    const dl = await askChoice('Baixar as artes também?', [['n', 'Só a legenda'], ['y', 'Legenda e artes']]);
+    if (!dl) return;
     await navigator.clipboard.writeText(fullCaption(it)).catch(() => {});
-    downloadSet(await renderSet(it), typeOf(it) === 'video');
-    toast('Legenda copiada e artes baixadas. Poste no Instagram e depois clique em "Já postei" na prévia.');
+    if (dl === 'y') downloadSet(await renderSet(it), typeOf(it) === 'video');
+    toast(dl === 'y' ? 'Legenda copiada e artes baixadas. Poste no Instagram e depois clique em "Já postei" na prévia.' : 'Legenda copiada. Poste no Instagram e depois clique em "Já postei" na prévia.');
   };
   const del = async () => { if (confirm('Mandar este post pra lixeira? Ele fica lá 7 dias.')) { await removeItem(it.id); toast('Foi pra lixeira (7 dias).'); } };
   return (
@@ -121,8 +123,9 @@ export default function Calendar() {
     if (it.status === 'posted') return toast('Post já publicado não volta de status.', true);
     try {
       if (st === 'posted') {
-        if (!confirm('Marcar como postado? Os arquivos gerados serão apagados do computador.')) return;
-        replace(await api(`/api/items/${id}/posted`, { method: 'POST', body: {} }));
+        const what = await askChoice('O que você postou? Os arquivos gerados serão apagados.', [['feed', 'Post'], ['story', 'Story'], ['both', 'Ambos']]);
+        if (!what) return;
+        replace(await api(`/api/items/${id}/posted`, { method: 'POST', body: { what } }));
       } else await saveItem(it, { status: st, scheduledAt: st === 'scheduled' ? (it.scheduledAt || suggestWhen(items, cfg)) : it.scheduledAt });
     } catch (err) { toast(err.message, true); }
   }

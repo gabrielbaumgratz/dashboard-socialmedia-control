@@ -752,3 +752,8 @@ button.cbtn:hover{background:color-mix(in srgb,var(--txt) 11%,transparent)}
 
 .page.editor{display:flex;flex-direction:column}.page.editor>*{min-width:0}
 .savebar{display:flex;justify-content:flex-end}
+
+.choice-bg{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:rgba(3,10,20,.55);animation:fadeIn .15s ease;padding:16px}
+.choice{display:grid;gap:12px;width:min(380px,100%);padding:18px;border-radius:22px;background:var(--surface)!important}
+.choice p{margin:0;font-weight:800;font-size:15px;line-height:1.35}
+.choice .row2,.choice .row3,.choice .row1{display:grid;gap:8px}.choice .row2{grid-template-columns:1fr 1fr}.choice .row3{grid-template-columns:repeat(3,1fr)}

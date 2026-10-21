@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import { renderSet } from '../art.js';
 import { downloadSet } from '../PostView.jsx';
 import { useApp, vt } from '../store.jsx';
-import { Cover, PageHead, Seg, Status, TypeTag, Empty, Spin, usePref , DateTime , ViewToggle } from '../ui.jsx';
+import { Cover, PageHead, Seg, Status, TypeTag, Empty, Spin, usePref , DateTime , ViewToggle, askChoice } from '../ui.jsx';
 import { Icon } from '../icons.jsx';
 import { STYLE, cap1, fmtTags, parseTags, sortKey, suggestWhen, toLocalInput, typeOf } from '../util.js';
 
@@ -48,9 +48,11 @@ function QueueRow({ it }) {
   };
   const del = () => trashItem(it.id);
   const postNow = async () => {
+    const dl = await askChoice('Baixar as artes também?', [['n', 'Só a legenda'], ['y', 'Legenda e artes']]);
+    if (!dl) return;
     await navigator.clipboard.writeText(caption + (tags ? '\n\n' + tags : '')).catch(() => {});
-    downloadSet(await renderSet(it), typeOf(it) === 'video');
-    toast('Legenda copiada e artes baixadas. Poste no Instagram e depois clique em "Já postei" na prévia.');
+    if (dl === 'y') downloadSet(await renderSet(it), typeOf(it) === 'video');
+    toast(dl === 'y' ? 'Legenda copiada e artes baixadas. Poste no Instagram e depois clique em "Já postei" na prévia.' : 'Legenda copiada. Poste no Instagram e depois clique em "Já postei" na prévia.');
   };
   const t = typeOf(it);
   return (

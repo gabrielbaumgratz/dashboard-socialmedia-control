@@ -98,3 +98,20 @@ export function DateTime({ value, onChange, label = 'Quando postar' }) {
     </fieldset>
   );
 }
+
+// pergunta rápida em qualquer lugar: await askChoice('Título', [['id','Texto'], ...]) devolve o id, ou null se cancelar
+let openChoice = null;
+export const askChoice = (title, opts) => new Promise(res => (openChoice ? openChoice({ title, opts, res }) : res(null)));
+export function ChoiceHost() {
+  const [q, setQ] = useState(null);
+  useEffect(() => { openChoice = setQ; return () => { openChoice = null; }; }, []);
+  const done = v => { if (q) q.res(v); setQ(null); };
+  useEffect(() => { if (!q) return; const esc = e => e.key === 'Escape' && done(null); window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc); }, [q]);
+  if (!q) return null;
+  return <div className="choice-bg" onClick={() => done(null)}>
+    <div className="choice glass" role="dialog" aria-label={q.title} onClick={e => e.stopPropagation()}>
+      <p>{q.title}</p>
+      <div className={'row' + Math.min(q.opts.length, 3)}>{q.opts.map(([id, n], i) => <button key={id} className={i === q.opts.length - 1 ? '' : 'ghost'} onClick={() => done(id)}>{n}</button>)}</div>
+      <button className="ghost mini" onClick={() => done(null)}>Cancelar</button>
+    </div></div>;
+}

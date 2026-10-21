@@ -1,3 +1,4 @@
+import { ChoiceHost } from './ui.jsx';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useApp, weekGoal } from './store.jsx';
@@ -61,6 +62,7 @@ export default function App() {
   return (
     <div className={'app' + (noside ? ' noside' : '') + (editorId || postId ? ' editing' : '')}>
       <div className="bg" aria-hidden="true"><i /><i /><i /></div>
+      <ChoiceHost />
       <Sidebar mini={noside} toggle={() => side(!noside)} />
       <main>
         {!ready && <p className="hint">Carregando…</p>}
