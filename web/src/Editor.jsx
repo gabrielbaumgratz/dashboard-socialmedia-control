@@ -295,7 +295,7 @@ export default function Editor() {
   }
   async function save(leave) {
     try {
-      await saveItem(byId(e.id), { title: e.title.trim(), category: e.category.trim(), mediaType: e.mediaType, videoUrl: e.videoUrl, slides: e.slides, focal: e.focal, focalStory: e.focalStory, tpl: e.tpl, description: e.description.trim(), chip: e.chip.trim(), legendas: e.legendas || '', dateline: e.dateline || '', source: e.source.trim(), credit: e.credit.trim(), bigTitle: e.bigTitle.trim(), look: e.look || {}, storyTitle: e.storyTitle == null ? null : e.storyTitle.trim(), storyCategory: e.storyCategory == null ? null : e.storyCategory.trim() });
+      await saveItem(byId(e.id), { title: e.title.trim(), category: e.category.trim(), mediaType: e.mediaType, videoUrl: e.videoUrl, slides: e.slides, photoUrl: e.photoUrl, cutoutUrl: e.cutoutUrl, focal: e.focal, focalStory: e.focalStory, tpl: e.tpl, description: e.description.trim(), chip: e.chip.trim(), legendas: e.legendas || '', dateline: e.dateline || '', source: e.source.trim(), credit: e.credit.trim(), bigTitle: e.bigTitle.trim(), look: e.look || {}, storyTitle: e.storyTitle == null ? null : e.storyTitle.trim(), storyCategory: e.storyCategory == null ? null : e.storyCategory.trim() });
       dirty.current = false; toast('Arte salva.'); if (leave) close();
     } catch (err) { toast(err.message, true); }
   }
@@ -377,9 +377,13 @@ export default function Editor() {
                 <ReelOverlay it={{ ...e, tpl: e.tpl }} video={vref} playing={vp} /></div>}
               {vr && Math.abs(vr - 9 / 16) > 0.03 && <p className="warn">Vídeo em {vr.toFixed(2)}:1. O Reels usa 9:16.</p>}</div>
           ) : (<>
-            <CanvasPv w={340} h={425} sig={textSig} photo={cp} focal={cf} onFocal={setCf}
-              label="" draw={c => (car ? Render.slide(c, { ...base, guides: true }, photo, at) : Render.post(c, { ...base, guides: true }, photo))} />
-            {car && <div className="slidenav"><button className="ghost" disabled={!at} onClick={() => setCur(at - 1)} aria-label="Anterior">‹</button><span>{at === 0 ? 'Capa' : at === n - 1 ? 'Último slide' : 'Slide ' + (at + 1)} · {at + 1}/{n}</span><button className="ghost" disabled={at >= n - 1} onClick={() => setCur(at + 1)} aria-label="Próximo">›</button></div>}
+            <div className="pvwrap">
+              <CanvasPv w={340} h={425} sig={textSig} photo={cp} focal={cf} onFocal={setCf}
+                label="" draw={c => (car ? Render.slide(c, { ...base, guides: true }, photo, at) : Render.post(c, { ...base, guides: true }, photo))} />
+              {car && <><button type="button" className="pvarrow l" disabled={!at} onClick={() => setCur(at - 1)} aria-label="Slide anterior">‹</button>
+                <button type="button" className="pvarrow r" disabled={at >= n - 1} onClick={() => setCur(at + 1)} aria-label="Próximo slide">›</button></>}
+            </div>
+            {car && <div className="slidenav" aria-live="polite"><div className="pvdots">{Array.from({ length: n }, (_, k) => <button type="button" key={k} className={k === at ? 'on' : ''} onClick={() => setCur(k)} aria-label={'Ir pro slide ' + (k + 1)} />)}</div><span>{at === 0 ? 'Capa' : at === n - 1 ? 'Final' : 'Slide ' + (at + 1)} · {at + 1}/{n}</span></div>}
             <Crop f={cf} set={setCf} photo={cp} w={1080} h={1350} />
             <SaveBtn onClick={() => savePng(c => (car ? Render.slide(c, base, photo, at) : Render.post(c, base, photo)), slug(e.title) + (car ? '-slide-' + (at + 1) : '-post'))} />
           </>)}

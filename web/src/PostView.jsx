@@ -74,7 +74,7 @@ export default function PostView() {
       setBusy(false); return;
     }
     if (!set) return;
-    const dl = await askChoice('Baixar as artes também?', [['n', 'Só a legenda'], ['y', 'Legenda e artes']]); // sem API: pergunta se baixa as artes junto
+    const dl = await askChoice('A legenda já vai pra área de transferência. Quer baixar as imagens também?', [['y', 'Baixar as imagens'], ['n', 'Não baixar']]); // sem API: pergunta se baixa as artes junto
     if (!dl) return;
     await copyPost(dl === 'y');
   };

@@ -48,7 +48,7 @@ function QueueRow({ it }) {
   };
   const del = () => trashItem(it.id);
   const postNow = async () => {
-    const dl = await askChoice('Baixar as artes também?', [['n', 'Só a legenda'], ['y', 'Legenda e artes']]);
+    const dl = await askChoice('A legenda já vai pra área de transferência. Quer baixar as imagens também?', [['y', 'Baixar as imagens'], ['n', 'Não baixar']]);
     if (!dl) return;
     await navigator.clipboard.writeText(caption + (tags ? '\n\n' + tags : '')).catch(() => {});
     if (dl === 'y') downloadSet(await renderSet(it), typeOf(it) === 'video');

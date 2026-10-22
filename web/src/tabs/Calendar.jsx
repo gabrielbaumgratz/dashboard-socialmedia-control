@@ -17,7 +17,7 @@ function Menu({ m, close }) {
   useEffect(() => { const k = () => close(); const esc = e => e.key === 'Escape' && close(); window.addEventListener('keydown', esc); window.addEventListener('click', k); window.addEventListener('scroll', k, true); return () => { window.removeEventListener('keydown', esc); window.removeEventListener('click', k); window.removeEventListener('scroll', k, true); }; }, []);
   const it = m.it, posted = it.status === 'posted';
   const postNow = async () => {
-    const dl = await askChoice('Baixar as artes também?', [['n', 'Só a legenda'], ['y', 'Legenda e artes']]);
+    const dl = await askChoice('A legenda já vai pra área de transferência. Quer baixar as imagens também?', [['y', 'Baixar as imagens'], ['n', 'Não baixar']]);
     if (!dl) return;
     await navigator.clipboard.writeText(fullCaption(it)).catch(() => {});
     if (dl === 'y') downloadSet(await renderSet(it), typeOf(it) === 'video');

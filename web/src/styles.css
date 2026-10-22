@@ -467,7 +467,7 @@ textarea{field-sizing:content;resize:none;min-height:3.2em;max-height:none;overf
 
 /* editor */
 .edsec{display:grid;grid-template-columns:auto minmax(0,1fr);gap:28px;align-items:start;padding:20px;border-radius:24px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 30%,transparent)}
-.edpv{display:grid;gap:10px;justify-items:center;position:sticky;top:90px}
+.edpv{display:grid;gap:10px;justify-items:center;position:sticky;top:16px;align-self:start}
 .savepng{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:7px 12px;min-height:34px}
 .edform{display:grid;gap:12px;align-content:start;min-width:0}
 .edform h3{margin:0;font-size:16px}
@@ -767,3 +767,15 @@ button.cbtn:hover{background:color-mix(in srgb,var(--txt) 11%,transparent)}
 .mthumb.fin{border:1.5px dashed var(--line2);background:transparent;cursor:pointer}
 .mediarow .mthumb{width:72px;height:90px}
 .sl header .sp{flex:1}.sltype{display:grid;gap:4px;font-size:12px;font-weight:700;color:var(--mut)}.sltype select{padding:9px 10px;font-size:14px;color:var(--txt)}
+
+.pvwrap{position:relative;display:grid;justify-items:center}
+.pvarrow{position:absolute;top:50%;width:40px;height:40px;margin-top:-20px;padding:0;border-radius:50%;font-size:24px;line-height:1;display:grid;place-items:center;background:rgba(10,20,35,.62);color:#fff;border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,.3);transition:opacity .15s,transform .15s}
+.pvarrow.l{left:-14px}.pvarrow.r{right:-14px}
+.pvarrow:hover:not(:disabled){transform:scale(1.08)}
+.pvarrow:disabled{opacity:0;pointer-events:none}
+.slidenav{display:grid;justify-items:center;gap:6px;min-height:40px}
+.slidenav span{font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--mut)}
+.slidenav .pvdots{display:flex;gap:6px}
+.slidenav .pvdots button{flex:none;width:8px;height:8px;min-width:0;padding:0;border-radius:50%;background:color-mix(in srgb,var(--mut) 45%,transparent);border:0;box-shadow:none;transition:width .2s,background .2s}
+.slidenav .pvdots button.on{width:20px;border-radius:5px;background:var(--accent)}
+@media (prefers-reduced-motion:reduce){.pvarrow,.slidenav .pvdots button{transition:none}}
