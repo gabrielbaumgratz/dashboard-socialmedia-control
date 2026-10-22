@@ -21,9 +21,11 @@ const Render = (() => {
     { id: 's01', name: 'Compartilhar post do feed' },
     { id: 's04', name: 'Foto em card' }
   ];
+  // qualquer modelo de post também vale como slide ('p:p02' = Última hora etc.)
+  const POST_SLIDES = POSTS.map(p => ({ id: 'p:' + p.id, name: 'Post: ' + p.name }));
   const SLIDE_TYPES = {
-    A: [{ id: 'foto', name: 'Só foto (enviada)' }, { id: 'contexto', name: 'Contexto (título + texto)' }, { id: 'dado', name: 'Dado (número grande)' }, { id: 'resumo', name: 'Resumo (3 itens)' }],
-    B: [{ id: 'foto', name: 'Só foto (enviada)' }, { id: 'legenda', name: 'Foto + legenda' }, { id: 'destaque', name: 'Foto + destaque' }]
+    A: [{ id: 'foto', name: 'Só foto (enviada)' }, { id: 'contexto', name: 'Contexto (título + texto)' }, { id: 'dado', name: 'Dado (número grande)' }, { id: 'resumo', name: 'Resumo (3 itens)' }, ...POST_SLIDES],
+    B: [{ id: 'foto', name: 'Só foto (enviada)' }, { id: 'legenda', name: 'Foto + legenda' }, { id: 'destaque', name: 'Foto + destaque' }, ...POST_SLIDES]
   };
 
   // ---------- recursos ----------
@@ -271,10 +273,14 @@ const Render = (() => {
   async function slide(canvas, d, img, idx) {
     await ensureFonts();
     const ctx = setup(canvas, 1080, 1350), set = d.tpl.carousel || 'A', list = slidesOf(d), n = list.length + 2;
-    if (idx === 0) { await coverA(ctx, d, img, 72, 79, 190, false); return footer(ctx, false); }
+    if (idx === 0) return post(canvas, d, img); // capa usa o modelo de post escolhido
     if (idx === n - 1) return cta(ctx, set, n);
     const s = list[idx - 1], types = SLIDE_TYPES[set].map(x => x.id);
     let type = types.includes(s.type) ? s.type : types[0];
+    if (type.startsWith('p:')) {
+      const simg = (s.photoUrl && d.imgs && d.imgs[s.photoUrl]) || img;
+      return post(canvas, { ...d, tpl: { ...d.tpl, post: type.slice(2) }, focal: s.photoUrl ? (s.focal || { x: .5, y: .5, zoom: 1 }) : d.focal }, simg);
+    }
     if (type === 'contexto') {
       ctx.fillStyle = C.tealE; ctx.fillRect(0, 0, 1080, 1350);
       symbol(ctx, 500, 640, 660, 0.08);

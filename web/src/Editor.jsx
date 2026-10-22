@@ -88,7 +88,7 @@ function SlideRow({ s, i, types, set, remove, up }) {
         <button className="ghost" onClick={up} aria-label="Subir" disabled={!i}>&uarr;</button>
         <button className="danger" onClick={remove}>Remover</button>
       </header>
-      {s.type === 'foto' && s.photoUrl && <img className="slthumb" src={s.photoUrl} alt="" />}
+      {s.photoUrl && <img className="slthumb" src={s.photoUrl} alt="" />}
       {(SLIDE_FIELDS[s.type] || []).map(([k, label, multi]) => {
         const val = k === 'text' && s.items && !s.text ? s.items.join('\n') : (s[k] || '');
         const on = ev => { const v = ev.target.value; set({ ...s, [k]: v, ...(k === 'text' && s.type === 'resumo' ? { items: v.split('\n').filter(Boolean) } : {}) }); };
@@ -234,7 +234,9 @@ export default function Editor() {
   const thumbSig = JSON.stringify([e.title, e.storyTitle, e.storyCategory, e.category, e.chip, e.description, e.source, e.credit, e.bigTitle, e.look, e.slides, e.focal, e.photoUrl, e.cutoutUrl, kind, !!photo, !!cut]);
   const n = car ? Render.count(base) : 1, at = Math.min(cur, n - 1);
   const FORDER = ['title', 'category', 'chip', 'description', 'bigTitle', 'cutout', 'source', 'credit', 'dateline', 'legendas']; // mesma ordem em todo o editor
-  const postUses = [...(car ? CAR_USES : POST_USES[e.tpl.post] || [])].sort((a, b) => FORDER.indexOf(a) - FORDER.indexOf(b));
+  const midI = car ? at - 1 : -1, midS = midI >= 0 && midI < e.slides.length ? e.slides[midI] : null;
+  const ptpl = !car || at === 0 ? e.tpl.post : midS && String(midS.type).startsWith('p:') ? midS.type.slice(2) : null;
+  const postUses = [...(ptpl ? POST_USES[ptpl] || [] : [])].sort((a, b) => FORDER.indexOf(a) - FORDER.indexOf(b));
   const storyOnly = (STORY_USES[e.tpl.story] || []).filter(k => !['title', 'category'].includes(k) && !(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses).includes(k));
   const types = Render.SLIDE_TYPES[e.tpl.carousel] || Render.SLIDE_TYPES.A;
   const frame = car ? 'carousel' : 'post';
@@ -300,6 +302,21 @@ export default function Editor() {
   const cf = slPhoto ? sl.focal || { x: .5, y: .5, zoom: 1 } : e.focal, cp = slPhoto || photo;
   const setCf = f => (slPhoto ? slideSet(slideIdx, { ...sl, focal: f }) : patch({ focal: f }));
   const thumbs = [e.photoUrl, ...e.slides.map(s => s.photoUrl)].filter(Boolean);
+  const order = [{ u: e.photoUrl }, ...e.slides.map(s => ({ u: s.photoUrl, s }))];
+  const [drag, setDrag] = useState(null), [ovr, setOvr] = useState(null);
+  function moveItem(from, to) {
+    if (from === to) return;
+    const m = from === 0 ? { photoUrl: e.photoUrl } : e.slides[from - 1];
+    if (to === 0 && !m.photoUrl) { toast('A capa precisa ter foto.', true); return; }
+    setE(x => {
+      const items = [{ cover: true, photoUrl: x.photoUrl, focal: x.focal }, ...x.slides];
+      const [it] = items.splice(from, 1); items.splice(to, 0, it);
+      const [c, ...rest] = items;
+      const slides = rest.map(r => (r.cover ? { type: 'foto', photoUrl: r.photoUrl, focal: r.focal, text: '' } : r));
+      return c.cover ? { ...x, slides } : { ...x, slides, photoUrl: c.photoUrl, focal: c.focal || { x: .5, y: .5, zoom: 1 }, focalStory: c.focal || { x: .5, y: .5, zoom: 1 } };
+    });
+    setCur(to);
+  }
 
   return (
     <div className="page editor">
@@ -311,9 +328,20 @@ export default function Editor() {
 
       <section className={'drop' + (over ? ' over' : '')} onDragOver={ev => { ev.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={ev => { ev.preventDefault(); setOver(false); take(ev.dataTransfer.files); }}>
         <div className="mediarow">
-          {thumbs.map((u, i) => (
-            <div key={u + i} className="mthumb"><img src={u} alt="" />{i === 0 ? <span>Capa</span> : <button className="x" aria-label="Tirar foto" onClick={() => setE(x => ({ ...x, slides: x.slides.filter(s => s.photoUrl !== u) }))}>×</button>}</div>
+          {order.map((o, i) => (
+            <div key={(o.u || 'x') + i} className={'mthumb' + (car && at === i ? ' sel' : '') + (ovr === i && drag !== null && drag !== i ? ' ovr' : '')} draggable={order.length > 1}
+              onClick={() => car && setCur(i)}
+              onDragStart={ev => { ev.dataTransfer.setData('text/plain', 'ordem'); ev.dataTransfer.effectAllowed = 'move'; setDrag(i); }}
+              onDragEnd={() => { setDrag(null); setOvr(null); }}
+              onDragOver={ev => { if (drag === null) return; ev.preventDefault(); ev.stopPropagation(); setOvr(i); }}
+              onDrop={ev => { if (drag === null) return; ev.preventDefault(); ev.stopPropagation(); moveItem(drag, i); setDrag(null); setOvr(null); }}>
+              {o.u ? <img src={o.u} alt="" draggable={false} /> : <em>{(types.find(t => t.id === o.s.type) || {}).name || 'Texto'}</em>}
+              {order.length > 1 && <b className="grip" aria-hidden="true">⋮⋮</b>}
+              <span>{i === 0 ? 'Capa' : i + 1}</span>
+              {i > 0 && <button className="x" aria-label="Tirar slide" onClick={ev => { ev.stopPropagation(); setE(x => ({ ...x, slides: x.slides.filter((_, k) => k !== i - 1) })); setCur(c => Math.min(c, order.length - 2)); }}>×</button>}
+            </div>
           ))}
+          {car && <div className={'mthumb fin' + (at === n - 1 ? ' sel' : '')} onClick={() => setCur(n - 1)} title="O último slide é sempre o de chamada"><em>Final</em></div>}
           {video && <div className="mthumb vid"><Icon name="reels" /><button className="x" aria-label="Tirar vídeo" onClick={() => patch({ mediaType: 'image', videoUrl: '' })}>×</button></div>}
           <label className="mthumb add">+<input type="file" multiple accept=".jpg,.jpeg,.png,.svg,.mp4" disabled={up} onChange={ev => { take(ev.target.files, thumbs.length ? 'add' : ''); ev.target.value = ''; }} /></label>
         </div>
@@ -341,13 +369,15 @@ export default function Editor() {
           </>)}
         </div>
         <div className="edform">
-          {!video && <TplRow list={car ? Render.CAROUSELS : Render.POSTS} kname={frame} e={e} sig={thumbSig} w={84} h={105} onPick={id => setE(x => ({ ...x, tpl: { ...x.tpl, [frame]: id } }))}
-            draw={(c, id) => car ? Render.slide(c, dd({ carousel: id }, false), photo, 0) : Render.post(c, dd({ post: id }, false), photo)} />}
+          {!video && (!car || at === 0) && <TplRow list={Render.POSTS} kname="post" e={e} sig={thumbSig} w={84} h={105} onPick={id => setE(x => ({ ...x, tpl: { ...x.tpl, post: id } }))}
+            draw={(c, id) => Render.post(c, dd({ post: id }, false), photo)} />}
+          {!video && car && at > 0 && <TplRow list={Render.CAROUSELS} kname="carousel" e={e} sig={thumbSig} w={84} h={105} onPick={id => setE(x => ({ ...x, tpl: { ...x.tpl, carousel: id } }))}
+            draw={(c, id) => Render.slide(c, { ...dd({ carousel: id }, false), slides: [{ type: id === 'A' ? 'contexto' : 'legenda', title: 'Título', label: 'Contexto', text: 'Texto do slide', photoUrl: '' }] }, photo, 1)} />}
           {video && <Seg value={e.tpl.reel || 'r01'} onChange={id => setE(x => ({ ...x, tpl: { ...x.tpl, reel: id } }))} options={Render.REELS.map(r => [r.id, r.name])} />}
           {(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses).map(k => FIELDS[k]())}
-          {!video && (car || e.tpl.post === 'p01') && <><LookCtl e={e} patch={patch} k="post" /><PBarCtl e={e} patch={patch} /></>}
-          {!video && !car && e.tpl.post === 'p02' && <UhCtl e={e} patch={patch} />}
-          {!video && !car && e.tpl.post === 'p03' && <UhCtl e={e} patch={patch} k="cut" />}
+          {!video && ptpl === 'p01' && <><LookCtl e={e} patch={patch} k="post" /><PBarCtl e={e} patch={patch} /></>}
+          {!video && ptpl === 'p02' && <UhCtl e={e} patch={patch} />}
+          {!video && ptpl === 'p03' && <UhCtl e={e} patch={patch} k="cut" />}
           {midSlide && <SlideRow s={types.some(t => t.id === e.slides[slideIdx].type) ? e.slides[slideIdx] : { ...e.slides[slideIdx], type: types[0].id }} i={slideIdx} types={types} set={v => slideSet(slideIdx, v)}
             remove={() => { setE(x => ({ ...x, slides: x.slides.filter((_, k) => k !== slideIdx) })); setCur(at - 1); }}
             up={() => { setE(x => { const a = [...x.slides]; [a[slideIdx - 1], a[slideIdx]] = [a[slideIdx], a[slideIdx - 1]]; return { ...x, slides: a }; }); setCur(at - 1); }} />}
