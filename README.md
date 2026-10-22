@@ -4,7 +4,7 @@ Painel local que acompanha o site reconstrucoes.digital, prepara os posts do Ins
 Roda só no seu PC. Precisa apenas do Node.js 18 ou mais novo para usar. A tela é feita em React (Vite) e já vem compilada na pasta `dist`.
 
 ## Como abrir
-Dois cliques em `iniciar.bat`. O navegador abre em http://localhost:3000. Deixe a janela preta aberta enquanto usar.
+Rode `node server.js` na pasta do projeto. O navegador abre em http://localhost:3000. Deixe a janela preta aberta enquanto usar.
 
 ## Primeira vez
 1. Configurações: cole a chave do Gemini (Google AI Studio). Ela some depois de salva.
@@ -30,7 +30,7 @@ cd web
 npm install      (só na primeira vez)
 npm run build    (gera a pasta dist, que o servidor já usa)
 ```
-Para ver as mudanças ao vivo enquanto edita: `npm run dev` e abrir http://localhost:5173 (com o `iniciar.bat` rodando).
+Para ver as mudanças ao vivo enquanto edita: `npm run dev` e abrir http://localhost:5173 (com o `node server.js` rodando).
 Se a pasta `dist` não existir, o servidor usa a versão antiga que está em `public/`.
 
 ## Observações

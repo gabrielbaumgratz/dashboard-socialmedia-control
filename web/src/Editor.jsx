@@ -108,17 +108,17 @@ function SlideRow({ s, i, n, types, set, remove, move }) {
 // zoom mínimo = foto inteira dentro do quadro (sobra vira fundo borrado)
 const fitZoom = (photo, w, h) => (photo ? Math.min(1, Math.min(w / photo.width, h / photo.height) / Math.max(w / photo.width, h / photo.height)) : 1);
 
-function Crop({ f, set, photo, w, h, extra }) {
+function Crop({ f, set, photo, w, h, extra, pw = 340, cols = 2 }) {
   if (!photo) return null;
   const min = fitZoom(photo, w, h), r = v => Math.round(v * 100) / 100;
   return (
-    <div className="crop">
+    <div className={'crop' + (pw < 300 ? ' narrow' : '')} style={{ maxWidth: pw }}>
       <div className="rng2">
         <CropRng label="Zoom" value={Math.round(f.zoom * 100)} unit="%" min={Math.round(min * 100)} max={300} onChange={v => set({ ...f, zoom: v / 100 })} />
         <CropRng label="Horizontal" value={Math.round(f.x * 100)} unit="%" min={0} max={100} onChange={v => set({ ...f, x: v / 100 })} />
         <CropRng label="Vertical" value={Math.round(f.y * 100)} unit="%" min={0} max={100} onChange={v => set({ ...f, y: v / 100 })} />
       </div>
-      <div className="crop-btns">
+      <div className="crop-btns" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
         <button className="ghost" onClick={() => set({ x: .5, y: .5, zoom: min })}>Foto inteira</button>
         <button className="ghost" onClick={() => set({ x: .5, y: .5, zoom: 1 })}>Preencher</button>
         {extra}
@@ -154,68 +154,97 @@ const TEXT_SW = [['#ffffff', 'Branco'], ['#1d1d1b', 'Preto'], ['#006173', 'Verde
 const TextColor = ({ value, onChange }) => <Row label="Cor do texto"><ColorMenu value={value} onChange={onChange} opts={[['auto', 'Automática']]} palette={TEXT_SW} /></Row>;
 const Head = ({ title, reset }) => <div className="lookhead"><b>{title}</b>{reset}</div>;
 const Check = ({ label, on, set }) => <label className="chk"><input type="checkbox" checked={!!on} onChange={ev => set(ev.target.checked)} />{label}</label>;
-// controles de aparência: k = 'post' | 'story' (painel atrás do texto) ou 'bg' (fundo do story)
-function LookCtl({ e, patch, k, tpl, pre }) {
+// ---- cards de aparência: cada grupo de função num card; interruptor liga/desliga e as opções ficam no lugar (só apagam), sem pular o layout
+const Card = ({ title, right, off, cls = '', children }) => <div className={'lookbox ' + cls}><div className="lookhead"><b>{title}</b>{right}</div><div className={'lbody' + (off ? ' off' : '')} aria-disabled={off || undefined}>{children}</div></div>;
+const Switch = ({ on, set, label }) => <label className="swt" title={label}><input type="checkbox" role="switch" aria-label={label} checked={!!on} onChange={ev => set(ev.target.checked)} /><i aria-hidden="true" /></label>;
+const SwitchRow = ({ label, on, set }) => <Row label={label}><Switch on={on} set={set} label={label} /></Row>;
+const Pair = ({ children }) => <div className="lookpair">{children}</div>;
+const resetBtn = (e, patch, k) => (e.look || {})[k] ? <button type="button" className="ghost mini" onClick={() => patch({ look: { ...(e.look || {}), [k]: undefined } })}>Voltar ao padrão</button> : null;
+// k = 'post' | 'story' (fundo atrás do texto) ou 'bg' (fundo do story). pre = linhas extras do card de texto (ex.: barra)
+function LookCtl({ e, patch, k, tpl, pre, inline }) {
   const base = Render.LOOK[k], cur = { ...base, ...((e.look || {})[k]) }, set = p => patch({ look: { ...(e.look || {}), [k]: { ...cur, ...p } } });
-  const reset = (e.look || {})[k] && <button type="button" className="ghost mini" onClick={() => patch({ look: { ...(e.look || {}), [k]: undefined } })}>Voltar ao padrão</button>;
-  if (k === 'bg') return (
-    <div className="lookbox"><Head title="Fundo do story" reset={reset} />
+  if (k === 'bg') return <>
+    <Card title="Fundo do story" right={resetBtn(e, patch, k)}>
       <Row label="Cor do fundo"><ColorMenu value={cur.color} onChange={color => set({ color })} /></Row>
-      {tpl === 's03' && <Rng label="Altura da foto" value={Math.round(cur.ph / 19.2)} unit="%" min={21} max={78} onChange={v => set({ ph: Math.round(v * 19.2) })} />}
-      {tpl === 's03' && <Rng label="Transição" value={cur.fade} unit="%" min={0} max={100} onChange={fade => set({ fade })} />}
-      {tpl === 's03' && <Rng label="Opacidade" value={cur.op} unit="%" min={0} max={100} onChange={op => set({ op })} />}
       <TextColor value={cur.tc} onChange={tc => set({ tc })} />
-      {tpl === 's03' && <Check label="Mostrar símbolo" on={cur.sym} set={sym => set({ sym })} />}</div>);
-  return (
-    <div className="lookbox"><Head title="Aparência" reset={reset} />{pre}
-      <Check label="Fundo atrás do texto" on={cur.on} set={on => set({ on })} />
-      {cur.on && <>
-        <Row label="Cor do fundo"><ColorMenu value={cur.color} onChange={color => set({ color })} /></Row>
-        <Rng label="Opacidade do fundo" value={cur.opacity} unit="%" min={0} max={100} onChange={opacity => set({ opacity })} />
-        <Rng label="Cantos arredondados" value={cur.r} unit=" px" min={0} max={60} onChange={r => set({ r })} />
-        <Rng label="Espessura do contorno" value={cur.bw} unit=" px" min={0} max={12} onChange={bw => set({ bw })} />
-        {cur.bw > 0 && <Row label="Cor do contorno"><ColorMenu value={cur.bc} onChange={bc => set({ bc })} /></Row>}
-        {cur.bw > 0 && <Rng label="Opacidade do contorno" value={cur.bo} unit="%" min={0} max={100} onChange={bo => set({ bo })} />}
-        <TextColor value={cur.tc} onChange={tc => set({ tc })} /></>}</div>);
+      {tpl === 's03' && <SwitchRow label="Mostrar símbolo" on={cur.sym} set={sym => set({ sym })} />}
+    </Card>
+    {tpl === 's03' && <Card title="Foto do story" cls="full">
+      <Rng label="Altura da foto" value={Math.round(cur.ph / 19.2)} unit="%" min={21} max={78} onChange={v => set({ ph: Math.round(v * 19.2) })} />
+      <Rng label="Transição" value={cur.fade} unit="%" min={0} max={100} onChange={fade => set({ fade })} />
+      <Rng label="Opacidade da foto" value={cur.op} unit="%" min={0} max={100} onChange={op => set({ op })} />
+    </Card>}</>;
+  const bgCard = (
+    <Card title="Fundo atrás do texto" right={<Switch on={cur.on} set={on => set({ on })} label="Fundo atrás do texto" />} off={!cur.on}>
+      <Row label="Cor do fundo"><ColorMenu value={cur.color} onChange={color => set({ color })} /></Row>
+      <Rng label="Opacidade do fundo" value={cur.opacity} unit="%" min={0} max={100} onChange={opacity => set({ opacity })} />
+      <Rng label="Cantos arredondados" value={cur.r} unit=" px" min={0} max={60} onChange={r => set({ r })} />
+      <Rng label="Espessura do contorno" value={cur.bw} unit=" px" min={0} max={12} onChange={bw => set({ bw })} />
+      <Row label="Cor do contorno"><ColorMenu value={cur.bc} onChange={bc => set({ bc })} /></Row>
+      <Rng label="Opacidade do contorno" value={cur.bo} unit="%" min={0} max={100} onChange={bo => set({ bo })} />
+    </Card>);
+  const body = bgCard;
+  if (inline) return <>{body}<Card title="Texto" right={resetBtn(e, patch, k)}><TextColor value={cur.tc} onChange={tc => set({ tc })} /></Card></>;
+  return <Pair><Card title="Texto e barra" right={resetBtn(e, patch, k)}>{pre}<TextColor value={cur.tc} onChange={tc => set({ tc })} /></Card>{body}</Pair>;
 }
 
 // barra: same = opção "igual ao destaque"/"padrão"
 const BarPick = ({ value, same, onChange, sameLabel = 'Igual ao destaque' }) =>
   <Row label="Cor da barra"><ColorMenu value={value || ''} onChange={onChange} opts={[...(same ? [['', sameLabel]] : []), ['none', 'Sem barra']]} /></Row>;
-// k = 'uh' (última hora: fundo + destaque + barra) ou 'cut' (recorte PNG: degradê + barra)
+// combinações prontas (degradê + destaque) num menu que fica recolhido
+function PresetMenu({ cur, set }) {
+  const [open, setOpen] = useState(false), ref = useRef(null);
+  useEffect(() => { if (!open) return; const h = ev => { if (ref.current && !ref.current.contains(ev.target)) setOpen(false); }; document.addEventListener('pointerdown', h); return () => document.removeEventListener('pointerdown', h); }, [open]);
+  const name = (b, a) => cname(b) + ' e ' + cname(a), on = Render.UH_PRESETS.find(([, b, a]) => cur.bg === b && cur.acc === a);
+  const dots = (b, a) => <><i className="cdot" style={{ background: b }} /><i className="cdot" style={{ background: a, marginLeft: -6 }} /></>;
+  return <div className="cmenu" ref={ref}>
+    <button type="button" className="cbtn" aria-expanded={open} onClick={() => setOpen(o => !o)}>{on ? <>{dots(on[1], on[2])}{name(on[1], on[2])}</> : 'Personalizada'}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></button>
+    {open && <div className="cpop" role="listbox">{Render.UH_PRESETS.map(([n, b, a]) => <button type="button" key={n} role="option" aria-selected={cur.bg === b && cur.acc === a} className={'chipbtn plist' + (cur.bg === b && cur.acc === a ? ' on' : '')} onClick={() => { set({ bg: b, acc: a }); setOpen(false); }}>{dots(b, a)}{name(b, a)}</button>)}</div>}
+  </div>;
+}
+// k = 'uh' (post 3: degradê + destaque) ou 'cut' (post 4: degradê + barra)
 function UhCtl({ e, patch, k = 'uh' }) {
   const cur = { ...Render.LOOK[k], ...((e.look || {})[k]) }, set = p => patch({ look: { ...(e.look || {}), [k]: { ...cur, ...p } } }), uh = k === 'uh';
-  return (
-    <div className="lookbox"><Head title="Aparência" reset={(e.look || {})[k] && <button type="button" className="ghost mini" onClick={() => patch({ look: { ...(e.look || {}), [k]: undefined } })}>Voltar ao padrão</button>} />
-      {uh && <div className="presets">{Render.UH_PRESETS.map(([n, b, a]) => <button type="button" key={n} className={'preset' + (cur.bg === b && cur.acc === a ? ' on' : '')} onClick={() => set({ bg: b, acc: a })}><i style={{ background: b }} /><i style={{ background: a }} />{n}</button>)}</div>}
+  return <Pair>
+    <Card title="Degradê" right={resetBtn(e, patch, k)}>
+      {uh && <Row label="Combinação"><PresetMenu cur={cur} set={set} /></Row>}
       <Row label="Cor do degradê"><ColorMenu value={cur.bg} onChange={c => set({ bg: c })} /></Row>
       <Rng label="Tamanho do degradê" value={cur.size} unit="%" min={0} max={100} onChange={size => set({ size })} />
+    </Card>
+    <Card title={uh ? 'Destaque' : 'Barra'}>
       {uh && <Row label="Cor de destaque"><ColorMenu value={cur.acc} onChange={c => set({ acc: c })} /></Row>}
       {uh && <Row label="Cor do selo"><ColorMenu value={cur.chip || ''} onChange={chip => set({ chip })} opts={[['', 'Igual ao destaque'], ['none', 'Sem selo']]} /></Row>}
-      <BarPick value={cur.bar} same={uh} onChange={v => set({ bar: v })} /></div>);
+      <BarPick value={cur.bar} same={uh} onChange={v => set({ bar: v })} />
+    </Card>
+  </Pair>;
 }
 
-// notícia com descrição: altura da foto (o resto é o fundo branco) e símbolo na divisória
+// post 2: foto e divisória num card, categoria no outro
 function NdCtl({ e, patch }) {
   const cur = { ...Render.LOOK.nd, ...((e.look || {}).nd) }, set = p => patch({ look: { ...(e.look || {}), nd: { ...cur, ...p } } });
-  return (
-    <div className="lookbox"><Head title="Aparência" reset={(e.look || {}).nd && <button type="button" className="ghost mini" onClick={() => patch({ look: { ...(e.look || {}), nd: undefined } })}>Voltar ao padrão</button>} />
+  return <Pair>
+    <Card title="Foto" right={resetBtn(e, patch, 'nd')}>
       <Rng label="Altura da foto" value={Math.round(cur.ph / 13.5)} unit="%" min={30} max={75} onChange={v => set({ ph: Math.round(v * 13.5) })} />
+      <SwitchRow label="Mostrar símbolo" on={cur.sym} set={sym => set({ sym })} />
+    </Card>
+    <Card title="Categoria">
       <Row label="Cor da categoria"><ColorMenu value={cur.cat} onChange={cat => set({ cat })} /></Row>
-      <Check label="Mostrar símbolo" on={cur.sym} set={sym => set({ sym })} />
-      <Check label="Categoria com selo (fundo colorido)" on={cur.pill} set={pill => set({ pill })} /></div>);
+      <SwitchRow label="Categoria com selo" on={cur.pill} set={pill => set({ pill })} />
+    </Card>
+  </Pair>;
 }
-// tracinho embaixo da categoria no post (p01 e capa do carrossel)
+// barra embaixo da categoria no post 1 (e capa do carrossel)
 function PBarRow({ e, patch }) {
   const v = ((e.look || {}).pbar || {}).bar || '';
-  return <BarPick value={v} same sameLabel="Padrão" onChange={bar => patch({ look: { ...(e.look || {}), pbar: { bar } } })} />;
+  return <BarPick value={v} same sameLabel="Automática" onChange={bar => patch({ look: { ...(e.look || {}), pbar: { bar } } })} />;
 }
 // selo do story (categoria / NOVA NOTÍCIA): mostrar ou não, cor do fundo e do texto
-function TagCtl({ e, patch, label = 'Destaque' }) {
+function TagCtl({ e, patch, label = 'Destaque da categoria' }) {
   const cur = { ...Render.LOOK.tag, ...((e.look || {}).tag) }, set = p => patch({ look: { ...(e.look || {}), tag: { ...cur, ...p } } });
-  return <div className="lookbox"><div className="lookhead"><Check label={label} on={cur.on} set={on => set({ on })} /></div>
-    {cur.on && <><Row label="Cor do destaque"><ColorMenu value={cur.bg} onChange={bg => set({ bg })} /></Row>
-      <Row label="Cor do texto"><div className="seg2">{[['#0f172a', 'Preto'], ['#ffffff', 'Branco']].map(([c, n]) => <button type="button" key={c} className={'chipbtn' + ((cur.tc === '#ffffff') === (c === '#ffffff') ? ' on' : '')} onClick={() => set({ tc: c })}>{n}</button>)}</div></Row></>}</div>;
+  return <Card title={label} right={<Switch on={cur.on} set={on => set({ on })} label={label} />} off={!cur.on}>
+    <Row label="Cor do destaque"><ColorMenu value={cur.bg} onChange={bg => set({ bg })} /></Row>
+    <Row label="Cor do texto"><div className="seg2">{[['#0f172a', 'Preto'], ['#ffffff', 'Branco']].map(([c, n]) => <button type="button" key={c} className={'chipbtn' + ((cur.tc === '#ffffff') === (c === '#ffffff') ? ' on' : '')} onClick={() => set({ tc: c })}>{n}</button>)}</div></Row>
+  </Card>;
 }
 // campo do story que segue o do post até ser editado
 function StoryField({ label, k, from, e, patch, multi, cls }) {
@@ -420,7 +449,7 @@ export default function Editor() {
         <div className="sechead"><h3>{video ? 'Capa do reel e story' : 'Story'}</h3><button className="ghost" onClick={() => patch({ look: { ...(e.look || {}), story: undefined, bg: undefined }, focalStory: { x: .5, y: .5, zoom: 1 } })}>Restaurar padrão do story</button></div>
         <div className="edpv">
           <CanvasPv w={225} h={400} sig={textSig} photo={photo} focal={e.focalStory} onFocal={f => patch({ focalStory: f })} label="" draw={c => Render.story(c, base, photo)} />
-          <Crop f={e.focalStory} set={f => patch({ focalStory: f })} photo={photo} w={1080} h={1920}
+          <Crop f={e.focalStory} set={f => patch({ focalStory: f })} photo={photo} w={1080} h={1920} pw={225} cols={video ? 2 : 3}
             extra={<>{!video && <button className="ghost" onClick={() => patch({ focalStory: { ...e.focal } })}>Igual ao post</button>}<SaveBtn onClick={() => savePng(c => Render.story(c, base, photo), slug(e.title) + '-story')} /></>} />
         </div>
         <div className="edform">
@@ -432,7 +461,7 @@ export default function Editor() {
           {renderFields(storyOnly)}
           <div className="lookpair">
             <TagCtl e={e} patch={patch} label={e.tpl.story === 's01' ? 'Selo NOVA NOTÍCIA' : 'Destaque da categoria'} />
-            {e.tpl.story === 's02' ? <LookCtl e={e} patch={patch} k="story" /> : <LookCtl e={e} patch={patch} k="bg" tpl={e.tpl.story} />}
+            {e.tpl.story === 's02' ? <LookCtl e={e} patch={patch} k="story" inline /> : <LookCtl e={e} patch={patch} k="bg" tpl={e.tpl.story} />}
           </div>
         </div>
       </section>

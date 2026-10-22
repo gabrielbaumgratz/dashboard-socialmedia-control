@@ -806,3 +806,32 @@ button.nthumb:hover,button.nthumb:active{background-size:cover;background-positi
 @media(max-width:700px){.slbody>.w2{grid-column:1/-1}}
 .edform>.w6{grid-column:1/-1}
 .crop-btns{display:flex;flex-wrap:wrap;gap:8px}
+
+/* v3: cards de aparência */
+.lookbox{display:grid;grid-template-columns:1fr;gap:10px;align-content:start;padding:12px 14px}
+.lookbox .lbody{display:grid;gap:8px;transition:opacity .15s}
+.lookbox .lbody.off{opacity:.38;pointer-events:none;filter:saturate(.6)}
+.lookbox .lookhead{min-height:30px}
+.lookbox.full .lbody{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));column-gap:28px}
+.lookpair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch}
+.lookpair>.full{grid-column:1/-1}
+.lookpair>.lookbox{height:100%}
+.lookbox .crow{grid-template-columns:112px minmax(0,1fr)}
+.swt{position:relative;display:inline-block;width:42px;height:24px;flex:none;cursor:pointer}
+.swt input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;width:100%;height:100%}
+.swt i{position:absolute;inset:0;border-radius:999px;background:var(--line2);transition:background .18s}
+.swt i::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transition:transform .18s}
+.swt input:checked+i{background:var(--accent)}
+.swt input:checked+i::after{transform:translateX(18px)}
+.swt input:focus-visible+i{outline:2px solid var(--accent);outline-offset:2px}
+.chipbtn.plist{display:flex;align-items:center;gap:6px;width:100%;justify-content:flex-start;border-radius:10px;padding:7px 10px;font-size:13px}
+.cpop:has(.plist){display:grid;gap:4px;min-width:230px}
+.cdot+.cdot{margin-left:-6px}
+/* v3: botões e sliders do enquadramento alinhados à largura da prévia */
+.crop{margin:0 auto;width:100%}
+.crop-btns{display:grid;gap:8px}
+.crop-btns button{width:100%;justify-content:center;white-space:nowrap}
+.crop-btns .savepng{grid-column:1/-1}
+.crop.narrow .rng2{grid-template-columns:1fr;gap:6px}
+.lookbox .crow{grid-template-columns:124px minmax(0,1fr)}.cbtn{white-space:nowrap}
+.crop.narrow .crop-btns button{padding:7px 4px;font-size:12px}
