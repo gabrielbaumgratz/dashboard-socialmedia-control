@@ -267,11 +267,12 @@ export default function Editor() {
   async function replaceMain(file, slot) {
     const saved = await sendFile(file, slot); if (!saved) return;
     replace(saved);
-    patch({ photoUrl: saved.photoUrl, videoUrl: saved.videoUrl, mediaType: saved.mediaType, focal: saved.focal, focalStory: saved.focal, cutoutUrl: saved.cutoutUrl });
+    const isVid = /\.mp4$/i.test(file.name); // foto nova não pode ressuscitar um vídeo que você tirou
+    patch({ photoUrl: saved.photoUrl, ...(isVid || slot === 'cutout' ? { videoUrl: saved.videoUrl, mediaType: saved.mediaType } : {}), focal: saved.focal, focalStory: saved.focal, cutoutUrl: saved.cutoutUrl });
   }
   async function addPhotos(files) {
     const added = [];
-    for (const f of files) { const r = await sendFile(f, 'add'); if (r) added.push({ type: 'foto', photoUrl: r.addedUrl, text: '' }); }
+    for (const f of files) { const r = await sendFile(f, 'add'); if (r) added.push({ type: 'p:' + (e.tpl.post || 'p01'), photoUrl: r.addedUrl, text: '' }); }
     setE(x => ({ ...x, slides: [...x.slides, ...added] }));
   }
   // várias fotos = carrossel na hora: a 1a vira capa, o resto vira slide
@@ -328,7 +329,7 @@ export default function Editor() {
       const items = [{ cover: true, photoUrl: x.photoUrl, focal: x.focal }, ...x.slides];
       const [it] = items.splice(from, 1); items.splice(to, 0, it);
       const [c, ...rest] = items;
-      const slides = rest.map(r => (r.cover ? { type: 'foto', photoUrl: r.photoUrl, focal: r.focal, text: '' } : r));
+      const slides = rest.map(r => (r.cover ? { type: 'p:' + (x.tpl.post || 'p01'), photoUrl: r.photoUrl, focal: r.focal, text: '' } : r));
       return c.cover ? { ...x, slides } : { ...x, slides, photoUrl: c.photoUrl, focal: c.focal || { x: .5, y: .5, zoom: 1 }, focalStory: c.focal || { x: .5, y: .5, zoom: 1 } };
     });
     setCur(to);

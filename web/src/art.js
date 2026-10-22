@@ -6,7 +6,14 @@ const photoCache = new Map(), coverCache = new Map();
 export const clearCovers = () => coverCache.clear();
 export function getImg(url) {
   if (!url) return Promise.resolve(null);
-  if (!photoCache.has(url)) photoCache.set(url, Render.loadImage(url).catch(() => null));
+  if (!photoCache.has(url)) {
+    // foto recém enviada pode demorar um instante pra ficar disponível: tenta de novo e nunca guarda falha no cache
+    const p = (async () => {
+      for (let t = 0; t < 5; t++) { try { return await Render.loadImage(url); } catch { await new Promise(r => setTimeout(r, 500 * (t + 1))); } }
+      photoCache.delete(url); return null;
+    })();
+    photoCache.set(url, p);
+  }
   return photoCache.get(url);
 }
 export function artData(it) {
