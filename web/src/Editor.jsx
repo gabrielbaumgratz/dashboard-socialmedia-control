@@ -352,7 +352,7 @@ export default function Editor() {
               onDragEnd={() => { setDrag(null); setPlace(null); }}
               onDragOver={ev => { if (drag === null) return; ev.preventDefault(); ev.stopPropagation(); if (place !== p) setPlace(p); }}
               onDrop={ev => { if (drag === null) return; ev.preventDefault(); ev.stopPropagation(); moveItem(drag, place ?? p); setDrag(null); setPlace(null); }}>
-              {o.u ? <img src={o.u} alt="" draggable={false} /> : <em>{(types.find(t => t.id === o.s.type) || {}).name || 'Texto'}</em>}
+              {o.u ? <img src={o.u} alt="" crossOrigin="anonymous" draggable={false} /> : <em>{(types.find(t => t.id === o.s.type) || {}).name || 'Texto'}</em>}
               {order.length > 1 && <b className="grip" aria-hidden="true">⋮⋮</b>}
               <span>{p === 0 ? 'Capa' : p + 1}</span>
               {i > 0 && drag === null && <button className="x" aria-label="Tirar slide" onClick={ev => { ev.stopPropagation(); setE(x => ({ ...x, slides: x.slides.filter((_, k) => k !== i - 1) })); setCur(c => Math.min(c, order.length - 2)); }}>×</button>}

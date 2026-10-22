@@ -35,7 +35,8 @@ const Render = (() => {
       const img = new Image(); img.crossOrigin = 'anonymous'; // fotos do R2 (outro domínio) sem travar o canvas
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error('Não consegui carregar a imagem'));
-      img.src = /^https?:/i.test(url) ? '/api/img?url=' + encodeURIComponent(url) : url;
+      // endereço só do canvas: se o navegador reaproveitar a foto de um <img> comum (sem CORS) do R2, o canvas não consegue ler e a foto some
+      img.src = /^https?:/i.test(url) ? '/api/img?url=' + encodeURIComponent(url) : url + (url.startsWith('/images/') ? (url.includes('?') ? '&' : '?') + 'cv=1' : '');
     });
   }
   async function asset(name) {
