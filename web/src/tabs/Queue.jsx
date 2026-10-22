@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
-import { renderSet } from '../art.js';
+import { hiresSet } from '../art.js';
 import { downloadSet } from '../PostView.jsx';
 import { useApp, vt } from '../store.jsx';
 import { Cover, PageHead, Seg, Status, TypeTag, Empty, Spin, usePref , DateTime , ViewToggle, askChoice } from '../ui.jsx';
@@ -51,7 +51,7 @@ function QueueRow({ it }) {
     const dl = await askChoice('A legenda já vai pra área de transferência. Quer baixar as imagens também?', [['y', 'Baixar as imagens'], ['n', 'Não baixar']]);
     if (!dl) return;
     await navigator.clipboard.writeText(caption + (tags ? '\n\n' + tags : '')).catch(() => {});
-    if (dl === 'y') downloadSet(await renderSet(it), typeOf(it) === 'video');
+    if (dl === 'y') downloadSet(await hiresSet(it), typeOf(it) === 'video');
     if (it.status !== 'scheduled') await saveItem(it, { ...patch(), status: 'scheduled', scheduledAt: it.scheduledAt || new Date().toISOString(), isNew: false }).catch(() => {}); // vai pra Programados até clicar em Já postei
     toast(dl === 'y' ? 'Legenda copiada e artes baixadas. Poste no Instagram e depois clique em "Já postei" na prévia.' : 'Legenda copiada. Poste no Instagram e depois clique em "Já postei" na prévia.');
   };

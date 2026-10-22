@@ -51,6 +51,8 @@ export async function exportSet(it, fmt = 'png', scale = 2) {
     return [...set.slides.map((f, i) => ({ ...f, name: `post-${i + 1}.${ext}` })), { ...set.story, name: `story.${ext}` }];
   } finally { Render.setScale(1); }
 }
+// download padrão: PNG em 2x (2160 px), sem perda, no formato que o downloadSet espera
+export async function hiresSet(it) { const f = await exportSet(it, 'png', 2); return { slides: f.slice(0, -1), story: f[f.length - 1] }; }
 export async function renderSet(it, mime = 'image/jpeg') {
   const [d, photo] = await prep(it), c = document.createElement('canvas'), url = () => c.toDataURL(mime, 0.95);
   const files = [];

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { renderSet } from '../art.js';
+import { hiresSet } from '../art.js';
 import { downloadSet } from '../PostView.jsx';
 import { fullCaption } from '../util.js';
 import { api } from '../api.js';
@@ -20,7 +20,7 @@ function Menu({ m, close }) {
     const dl = await askChoice('A legenda já vai pra área de transferência. Quer baixar as imagens também?', [['y', 'Baixar as imagens'], ['n', 'Não baixar']]);
     if (!dl) return;
     await navigator.clipboard.writeText(fullCaption(it)).catch(() => {});
-    if (dl === 'y') downloadSet(await renderSet(it), typeOf(it) === 'video');
+    if (dl === 'y') downloadSet(await hiresSet(it), typeOf(it) === 'video');
     if (it.status !== 'scheduled') await saveItem(it, { status: 'scheduled', scheduledAt: it.scheduledAt || new Date().toISOString(), isNew: false }).catch(() => {});
     toast(dl === 'y' ? 'Legenda copiada e artes baixadas. Poste no Instagram e depois clique em "Já postei" na prévia.' : 'Legenda copiada. Poste no Instagram e depois clique em "Já postei" na prévia.');
   };

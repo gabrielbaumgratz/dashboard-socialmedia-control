@@ -23,7 +23,7 @@ const REEL_USES = { r00: [], r01: ['title', 'category'], r02: ['title', 'datelin
 const STORY_USES = { s02: ['title', 'category', 'credit'], s03: ['title', 'category', 'description', 'credit'], s01: [], s04: ['title', 'category', 'description', 'credit'] };
 // baixa em tamanho real, sem guias, exatamente o que está sendo editado
 async function savePng(draw, name) {
-  const c = document.createElement('canvas'); await draw(c);
+  const c = document.createElement('canvas'); Render.setScale(2); try { await draw(c); } finally { Render.setScale(1); } // 2x = 2160 px, sem perder nitidez
   c.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name + '.png'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }, 'image/png');
 }
 const slug = t => (t || 'arte').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'arte';
@@ -200,6 +200,7 @@ function NdCtl({ e, patch }) {
   return (
     <div className="lookbox"><Head title="Foto e divisória" reset={(e.look || {}).nd && <button type="button" className="ghost mini" onClick={() => patch({ look: { ...(e.look || {}), nd: undefined } })}>Voltar ao padrão</button>} />
       <Rng label="Altura da foto" value={Math.round(cur.ph / 13.5)} unit="%" min={30} max={75} onChange={v => set({ ph: Math.round(v * 13.5) })} />
+      <Row label="Cor da categoria"><ColorMenu value={cur.cat} onChange={cat => set({ cat })} /></Row>
       <Row label="Símbolo"><Check label="" on={cur.sym} set={sym => set({ sym })} /></Row></div>);
 }
 // tracinho embaixo da categoria no post (p01 e capa do carrossel)
@@ -352,7 +353,7 @@ export default function Editor() {
               onDragEnd={() => { setDrag(null); setPlace(null); }}
               onDragOver={ev => { if (drag === null) return; ev.preventDefault(); ev.stopPropagation(); if (place !== p) setPlace(p); }}
               onDrop={ev => { if (drag === null) return; ev.preventDefault(); ev.stopPropagation(); moveItem(drag, place ?? p); setDrag(null); setPlace(null); }}>
-              {o.u ? <img src={o.u + (o.u.startsWith('/images/') ? (o.u.includes('?') ? '&' : '?') + 'cv=1' : '')} alt="" crossOrigin="anonymous" draggable={false} /> : <em>{(types.find(t => t.id === o.s.type) || {}).name || 'Texto'}</em>}
+              {o.u ? (o.u.startsWith('/images/') ? <img src={o.u + (o.u.includes('?') ? '&' : '?') + 'cv=1'} alt="" crossOrigin="anonymous" draggable={false} /> : <img src={o.u} alt="" draggable={false} />) : <em>{(types.find(t => t.id === o.s.type) || {}).name || 'Texto'}</em>}
               {order.length > 1 && <b className="grip" aria-hidden="true">⋮⋮</b>}
               <span>{p === 0 ? 'Capa' : p + 1}</span>
               {i > 0 && drag === null && <button className="x" aria-label="Tirar slide" onClick={ev => { ev.stopPropagation(); setE(x => ({ ...x, slides: x.slides.filter((_, k) => k !== i - 1) })); setCur(c => Math.min(c, order.length - 2)); }}>×</button>}

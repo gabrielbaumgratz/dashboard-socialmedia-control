@@ -5,7 +5,7 @@ import { useApp, vt } from './store.jsx';
 import { IgPost, ReelPhone, StoryPhone, useSet, WhenNote } from './previews.jsx';
 import { DateTime, Seg, Spin, Status, askChoice } from './ui.jsx';
 import { Icon } from './icons.jsx';
-import { exportReel, exportSet } from './art.js';
+import { exportReel, exportSet, hiresSet } from './art.js';
 import { prepareExport } from './publish.js';
 import { STYLE, fmtTags, fullCaption, parseTags, suggestWhen, toLocalInput, typeOf } from './util.js';
 
@@ -80,7 +80,7 @@ export default function PostView() {
   };
   const copyPost = async dl => {
     await navigator.clipboard.writeText(fullCaption(live)).catch(() => {});
-    if (dl) downloadSet(set, video);
+    if (dl) downloadSet(await hiresSet(live), video);
     if (it.status !== 'scheduled') await saveItem(it, { caption, hashtags: parseTags(tags), status: 'scheduled', scheduledAt: it.scheduledAt || new Date().toISOString(), isNew: false }).catch(() => {});
     toast(dl ? 'Legenda copiada e artes baixadas. Poste no Instagram e depois clique em "Já postei".' : 'Legenda copiada. Poste no Instagram e depois clique em "Já postei".');
   };
