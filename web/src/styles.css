@@ -779,3 +779,11 @@ button.cbtn:hover{background:color-mix(in srgb,var(--txt) 11%,transparent)}
 .slidenav .pvdots button{flex:none;width:8px;height:8px;min-width:0;padding:0;border-radius:50%;background:color-mix(in srgb,var(--mut) 45%,transparent);border:0;box-shadow:none;transition:width .2s,background .2s}
 .slidenav .pvdots button.on{width:20px;border-radius:5px;background:var(--accent)}
 @media (prefers-reduced-motion:reduce){.pvarrow,.slidenav .pvdots button{transition:none}}
+
+/* editor compacto: textos curtos lado a lado (6 colunas) */
+.edform{grid-template-columns:repeat(6,minmax(0,1fr));grid-auto-flow:row dense;align-items:start}
+.edform>*{grid-column:1/-1}
+.edform>.w2{grid-column:span 2}.edform>.w3{grid-column:span 3}.edform>.w4{grid-column:span 4}
+.edform>.w3>.lookbox{height:100%}
+.edform>.w3 .crow{grid-template-columns:minmax(0,1fr);gap:4px}
+@media(max-width:700px){.edform>.w2,.edform>.w3,.edform>.w4{grid-column:1/-1}}

@@ -216,13 +216,13 @@ function TagCtl({ e, patch, label = 'Destaque' }) {
       <Row label="Texto"><div className="seg2">{[['#0f172a', 'Preto'], ['#ffffff', 'Branco']].map(([c, n]) => <button type="button" key={c} className={'chipbtn' + ((cur.tc === '#ffffff') === (c === '#ffffff') ? ' on' : '')} onClick={() => set({ tc: c })}>{n}</button>)}</div></Row></>}</div>;
 }
 // campo do story que segue o do post até ser editado
-function StoryField({ label, k, from, e, patch, multi }) {
+function StoryField({ label, k, from, e, patch, multi, cls }) {
   const own = e[k] != null, p = { value: own ? e[k] : (e[from] || ''), onChange: ev => patch({ [k]: ev.target.value }) };
-  return <label><span className="lblrow">{label}{own && <button type="button" className="ghost mini" onClick={() => patch({ [k]: null })}>Igual ao post</button>}</span>{multi ? <textarea rows={1} {...p} /> : <input {...p} />}</label>;
+  return <label className={cls}><span className="lblrow">{label}{own && <button type="button" className="ghost mini" onClick={() => patch({ [k]: null })}>Igual ao post</button>}</span>{multi ? <textarea rows={1} {...p} /> : <input {...p} />}</label>;
 }
-function Field({ label, k, e, patch, ph, multi }) {
+function Field({ label, k, e, patch, ph, multi, cls }) {
   const p = { value: e[k] || '', placeholder: ph, onChange: ev => patch({ [k]: ev.target.value }) };
-  return <label>{label}{multi ? <textarea rows={1} {...p} /> : <input {...p} />}</label>;
+  return <label className={cls}>{label}{multi ? <textarea rows={1} {...p} /> : <input {...p} />}</label>;
 }
 
 export default function Editor() {
@@ -300,16 +300,16 @@ export default function Editor() {
       dirty.current = false; toast('Arte salva.'); if (leave) close();
     } catch (err) { toast(err.message, true); }
   }
-  const field = (k, label, ph, multi) => <Field key={k} k={k} label={label} ph={ph} multi={multi} e={e} patch={patch} />;
+  const field = (k, label, ph, multi, cls) => <Field key={k} k={k} label={label} ph={ph} multi={multi} cls={cls} e={e} patch={patch} />;
   const FIELDS = {
-    title: () => field('title', 'Título', '', 1),
-    category: () => field('category', 'Categoria', ''),
-    chip: () => field('chip', 'Selo', 'ÚLTIMA HORA'),
+    title: () => field('title', 'Título', '', 1, 'w4'),
+    category: () => field('category', 'Categoria', '', 0, 'w2'),
+    chip: () => field('chip', 'Selo', 'ÚLTIMA HORA', 0, 'w3'),
     bigTitle: () => field('bigTitle', 'Título grande atrás do recorte', 'as 2 primeiras palavras do título'),
     description: () => <div key="description" className="descbox">{field('description', 'Descrição curta', 'sem descrição', 1)}<button type="button" className="ghost" onClick={genDesc} disabled={dbusy || !cfg.hasKey}>{dbusy ? 'Gerando…' : 'Gerar descrição com IA'}</button></div>,
-    source: () => field('source', 'Fonte', 'sem fonte'),
-    credit: () => field('credit', 'Crédito da foto', 'sem crédito'),
-    dateline: () => field('dateline', 'Linha de data', 'cidade · data da notícia'),
+    source: () => field('source', 'Fonte', 'sem fonte', 0, 'w3'),
+    credit: () => field('credit', 'Crédito da foto', 'sem crédito', 0, 'w3'),
+    dateline: () => field('dateline', 'Linha de data', 'cidade · data da notícia', 0, 'w3'),
     legendas: () => field('legendas', 'Legendas (uma por linha, aparecem em sequência)', 'uma frase por linha', 1),
     cutout: () => <label key="cutout">Recorte PNG sem fundo<input type="file" accept=".png" disabled={up} onChange={ev => { take(ev.target.files, 'cutout'); ev.target.value = ''; }} /></label>
   };
@@ -396,7 +396,7 @@ export default function Editor() {
             draw={(c, id) => Render.slide(c, { ...dd({ carousel: id }, false), slides: [{ type: id === 'A' ? 'contexto' : 'legenda', title: 'Título', label: 'Contexto', text: 'Texto do slide', photoUrl: '' }] }, photo, 1)} />}
           {video && <Seg value={e.tpl.reel || 'r01'} onChange={id => setE(x => ({ ...x, tpl: { ...x.tpl, reel: id } }))} options={Render.REELS.map(r => [r.id, r.name])} />}
           {(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses).map(k => FIELDS[k]())}
-          {!video && ptpl === 'p01' && <><LookCtl e={e} patch={patch} k="post" /><PBarCtl e={e} patch={patch} /></>}
+          {!video && ptpl === 'p01' && <><div className="w3"><LookCtl e={e} patch={patch} k="post" /></div><div className="w3"><PBarCtl e={e} patch={patch} /></div></>}
           {!video && ptpl === 'p04' && <NdCtl e={e} patch={patch} />}
           {!video && ptpl === 'p02' && <UhCtl e={e} patch={patch} />}
           {!video && ptpl === 'p03' && <UhCtl e={e} patch={patch} k="cut" />}
@@ -419,12 +419,13 @@ export default function Editor() {
           <TplRow list={Render.STORIES} kname="story" e={e} sig={thumbSig} w={62} h={110} story onPick={id => setE(x => ({ ...x, tpl: { ...x.tpl, story: id } }))}
             draw={(c, id) => Render.story(c, dd({ story: id }, false), photo)} />
           {e.tpl.story !== 's01' && <>
-            <StoryField label="Título" k="storyTitle" from="title" multi e={e} patch={patch} />
-            <div className="catgroup"><StoryField label="Categoria" k="storyCategory" from="category" e={e} patch={patch} /><TagCtl e={e} patch={patch} label="Destaque da categoria" /></div></>}
-          {e.tpl.story === 's01' && <TagCtl e={e} patch={patch} label="Selo NOVA NOTÍCIA" />}
+            <StoryField label="Título" k="storyTitle" from="title" multi cls="w4" e={e} patch={patch} />
+            <StoryField label="Categoria" k="storyCategory" from="category" cls="w2" e={e} patch={patch} />
+            <div className="w3"><TagCtl e={e} patch={patch} label="Destaque da categoria" /></div></>}
+          {e.tpl.story === 's01' && <div className="w3"><TagCtl e={e} patch={patch} label="Selo NOVA NOTÍCIA" /></div>}
           {storyOnly.map(k => FIELDS[k]())}
-          {e.tpl.story === 's02' && <LookCtl e={e} patch={patch} k="story" />}
-          {['s01', 's03', 's04'].includes(e.tpl.story) && <LookCtl e={e} patch={patch} k="bg" tpl={e.tpl.story} />}
+          {e.tpl.story === 's02' && <div className="w3"><LookCtl e={e} patch={patch} k="story" /></div>}
+          {['s01', 's03', 's04'].includes(e.tpl.story) && <div className="w3"><LookCtl e={e} patch={patch} k="bg" tpl={e.tpl.story} /></div>}
         </div>
       </section>
       <div className="savebar"><button onClick={() => save(true)}>Salvar</button></div>
