@@ -79,16 +79,23 @@ function TplRow({ list, kname, e, sig, draw, w, h, story, onPick }) {
   );
 }
 
-function SlideRow({ s, i, types, set, remove, up }) {
+function SlideRow({ s, i, n, types, set, remove, move }) {
+  const car = types.filter(t => !t.id.startsWith('p:')), pst = types.filter(t => t.id.startsWith('p:'));
   return (
     <div className="sl">
       <header>
-        <b>Slide {i + 2}</b>
-        <select aria-label="Tipo do slide" value={s.type} onChange={ev => set({ ...s, type: ev.target.value })}>{types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
-        <button className="ghost" onClick={up} aria-label="Subir" disabled={!i}>&uarr;</button>
-        <button className="danger" onClick={remove}>Remover</button>
+        <b>Slide {i + 2} de {n}</b>
+        <span className="sp" />
+        <button type="button" className="ghost" onClick={() => move(-1)} aria-label="Mover pra trás" disabled={!i}>&larr;</button>
+        <button type="button" className="ghost" onClick={() => move(1)} aria-label="Mover pra frente" disabled={i >= n - 3}>&rarr;</button>
+        <button type="button" className="danger" onClick={remove}>Remover</button>
       </header>
-      {s.photoUrl && <img className="slthumb" src={s.photoUrl} alt="" />}
+      <label className="sltype">Layout deste slide
+        <select aria-label="Layout do slide" value={s.type} onChange={ev => set({ ...s, type: ev.target.value })}>
+          <optgroup label="Layouts do carrossel">{car.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</optgroup>
+          <optgroup label="Modelos de post">{pst.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</optgroup>
+        </select>
+      </label>
       {(SLIDE_FIELDS[s.type] || []).map(([k, label, multi]) => {
         const val = k === 'text' && s.items && !s.text ? s.items.join('\n') : (s[k] || '');
         const on = ev => { const v = ev.target.value; set({ ...s, [k]: v, ...(k === 'text' && s.type === 'resumo' ? { items: v.split('\n').filter(Boolean) } : {}) }); };
@@ -387,9 +394,9 @@ export default function Editor() {
           {!video && ptpl === 'p04' && <NdCtl e={e} patch={patch} />}
           {!video && ptpl === 'p02' && <UhCtl e={e} patch={patch} />}
           {!video && ptpl === 'p03' && <UhCtl e={e} patch={patch} k="cut" />}
-          {midSlide && <SlideRow s={types.some(t => t.id === e.slides[slideIdx].type) ? e.slides[slideIdx] : { ...e.slides[slideIdx], type: types[0].id }} i={slideIdx} types={types} set={v => slideSet(slideIdx, v)}
+          {midSlide && <SlideRow s={types.some(t => t.id === e.slides[slideIdx].type) ? e.slides[slideIdx] : { ...e.slides[slideIdx], type: types[0].id }} i={slideIdx} n={n} types={types} set={v => slideSet(slideIdx, v)}
             remove={() => { setE(x => ({ ...x, slides: x.slides.filter((_, k) => k !== slideIdx) })); setCur(at - 1); }}
-            up={() => { setE(x => { const a = [...x.slides]; [a[slideIdx - 1], a[slideIdx]] = [a[slideIdx], a[slideIdx - 1]]; return { ...x, slides: a }; }); setCur(at - 1); }} />}
+            move={d => { const t = slideIdx + d; if (t < 0 || t >= e.slides.length) return; setE(x => { const a = [...x.slides]; [a[slideIdx], a[t]] = [a[t], a[slideIdx]]; return { ...x, slides: a }; }); setCur(at + d); }} />}
           {!video && <button className="ghost" onClick={() => { setE(x => ({ ...x, slides: [...x.slides, { type: types.find(t => t.id !== 'foto').id, text: '' }] })); setCur(e.slides.length + 1); }}>+ Slide de texto</button>}
         </div>
       </section>

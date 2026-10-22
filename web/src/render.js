@@ -22,10 +22,10 @@ const Render = (() => {
     { id: 's04', name: 'Foto em card' }
   ];
   // qualquer modelo de post também vale como slide ('p:p02' = Última hora etc.)
-  const POST_SLIDES = POSTS.map(p => ({ id: 'p:' + p.id, name: 'Post: ' + p.name }));
+  const POST_SLIDES = POSTS.map(p => ({ id: 'p:' + p.id, name: p.name }));
   const SLIDE_TYPES = {
-    A: [{ id: 'foto', name: 'Só foto (enviada)' }, { id: 'contexto', name: 'Contexto (título + texto)' }, { id: 'dado', name: 'Dado (número grande)' }, { id: 'resumo', name: 'Resumo (3 itens)' }, ...POST_SLIDES],
-    B: [{ id: 'foto', name: 'Só foto (enviada)' }, { id: 'legenda', name: 'Foto + legenda' }, { id: 'destaque', name: 'Foto + destaque' }, ...POST_SLIDES]
+    A: [{ id: 'foto', name: 'Só a foto' }, { id: 'contexto', name: 'Título e texto' }, { id: 'dado', name: 'Número grande' }, { id: 'resumo', name: 'Lista de itens' }, ...POST_SLIDES],
+    B: [{ id: 'foto', name: 'Só a foto' }, { id: 'legenda', name: 'Foto + legenda' }, { id: 'destaque', name: 'Foto + destaque' }, ...POST_SLIDES]
   };
 
   // ---------- recursos ----------
@@ -284,7 +284,8 @@ const Render = (() => {
     }
     if (type === 'contexto') {
       ctx.fillStyle = C.tealE; ctx.fillRect(0, 0, 1080, 1350);
-      symbol(ctx, 500, 640, 660, 0.08);
+      const bgi = s.photoUrl && d.imgs && d.imgs[s.photoUrl]; // se o slide tem foto, ela vira o fundo
+      if (bgi) { photo(ctx, bgi, 0, 0, 1080, 1350, s.focal || { x: .5, y: .5, zoom: 1 }); ctx.fillStyle = 'rgba(0,97,115,.68)'; ctx.fillRect(0, 0, 1080, 1350); } else symbol(ctx, 500, 640, 660, 0.08);
       await logo(ctx, false, 72, 72, 248.9); counter(ctx, idx + 1, n);
       let y = 240;
       font(ctx, 700, 36, 2); ctx.fillStyle = C.verde; ctx.fillText(up(s.label || 'Contexto'), 72, y); y += lineH(36) + 28;

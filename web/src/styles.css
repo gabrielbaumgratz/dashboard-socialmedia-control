@@ -447,7 +447,7 @@ input.mini{width:auto;padding:8px 10px;font-size:13px}
 .wcard:hover .dots,.kcard:hover .dots,.dots:focus-visible{opacity:1}
 /* páginas internas (post e editor) no lugar do modal */
 .page{display:grid;gap:22px;animation:fadeIn .2s ease}
-.pagebar{position:sticky;top:12px;z-index:10;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:20px}
+.pagebar{position:relative;z-index:10;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:20px}
 .pagebar h2{flex:1;min-width:0;margin:0;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pagebar>button:first-child{display:inline-flex;gap:6px;align-items:center}
 .kindtag{font-size:12.5px;font-weight:800;color:var(--accent)}
@@ -766,3 +766,4 @@ button.cbtn:hover{background:color-mix(in srgb,var(--txt) 11%,transparent)}
 .mthumb .grip{position:absolute;top:4px;left:4px;font-size:12px;line-height:1;letter-spacing:-2px;color:#fff;background:rgba(0,0,0,.55);border-radius:6px;padding:3px 3px 4px 5px;pointer-events:none}
 .mthumb.fin{border:1.5px dashed var(--line2);background:transparent;cursor:pointer}
 .mediarow .mthumb{width:72px;height:90px}
+.sl header .sp{flex:1}.sltype{display:grid;gap:4px;font-size:12px;font-weight:700;color:var(--mut)}.sltype select{padding:9px 10px;font-size:14px;color:var(--txt)}
