@@ -251,7 +251,7 @@ export default function Editor() {
   const FORDER = ['title', 'category', 'chip', 'description', 'bigTitle', 'cutout', 'source', 'credit', 'dateline', 'legendas']; // mesma ordem em todo o editor
   const midI = car ? at - 1 : -1, midS = midI >= 0 && midI < e.slides.length ? e.slides[midI] : null;
   const ptpl = !car || at === 0 ? e.tpl.post : midS && String(midS.type).startsWith('p:') ? midS.type.slice(2) : null;
-  const postUses = [...(ptpl ? POST_USES[ptpl] || [] : [])].sort((a, b) => FORDER.indexOf(a) - FORDER.indexOf(b));
+  const postUses = [...new Set(['category', ...(POST_USES[e.tpl.post] || []), ...(ptpl ? POST_USES[ptpl] || [] : [])])].sort((a, b) => FORDER.indexOf(a) - FORDER.indexOf(b));
   const storyOnly = (STORY_USES[e.tpl.story] || []).filter(k => !['title', 'category'].includes(k) && !(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses).includes(k));
   const types = Render.SLIDE_TYPES[e.tpl.carousel] || Render.SLIDE_TYPES.A;
   const frame = car ? 'carousel' : 'post';
@@ -272,7 +272,7 @@ export default function Editor() {
   }
   async function addPhotos(files) {
     const added = [];
-    for (const f of files) { const r = await sendFile(f, 'add'); if (r) added.push({ type: 'p:' + (e.tpl.post || 'p01'), photoUrl: r.addedUrl, text: '' }); }
+    for (const f of files) { const r = await sendFile(f, 'add'); if (r) added.push({ type: 'foto', photoUrl: r.addedUrl, text: '' }); }
     setE(x => ({ ...x, slides: [...x.slides, ...added] }));
   }
   // várias fotos = carrossel na hora: a 1a vira capa, o resto vira slide
@@ -329,7 +329,7 @@ export default function Editor() {
       const items = [{ cover: true, photoUrl: x.photoUrl, focal: x.focal }, ...x.slides];
       const [it] = items.splice(from, 1); items.splice(to, 0, it);
       const [c, ...rest] = items;
-      const slides = rest.map(r => (r.cover ? { type: 'p:' + (x.tpl.post || 'p01'), photoUrl: r.photoUrl, focal: r.focal, text: '' } : r));
+      const slides = rest.map(r => (r.cover ? { type: 'foto', photoUrl: r.photoUrl, focal: r.focal, text: '' } : r));
       return c.cover ? { ...x, slides } : { ...x, slides, photoUrl: c.photoUrl, focal: c.focal || { x: .5, y: .5, zoom: 1 }, focalStory: c.focal || { x: .5, y: .5, zoom: 1 } };
     });
     setCur(to);
@@ -352,7 +352,7 @@ export default function Editor() {
               onDragEnd={() => { setDrag(null); setPlace(null); }}
               onDragOver={ev => { if (drag === null) return; ev.preventDefault(); ev.stopPropagation(); if (place !== p) setPlace(p); }}
               onDrop={ev => { if (drag === null) return; ev.preventDefault(); ev.stopPropagation(); moveItem(drag, place ?? p); setDrag(null); setPlace(null); }}>
-              {o.u ? <img src={o.u} alt="" crossOrigin="anonymous" draggable={false} /> : <em>{(types.find(t => t.id === o.s.type) || {}).name || 'Texto'}</em>}
+              {o.u ? <img src={o.u + (o.u.startsWith('/images/') ? (o.u.includes('?') ? '&' : '?') + 'cv=1' : '')} alt="" crossOrigin="anonymous" draggable={false} /> : <em>{(types.find(t => t.id === o.s.type) || {}).name || 'Texto'}</em>}
               {order.length > 1 && <b className="grip" aria-hidden="true">⋮⋮</b>}
               <span>{p === 0 ? 'Capa' : p + 1}</span>
               {i > 0 && drag === null && <button className="x" aria-label="Tirar slide" onClick={ev => { ev.stopPropagation(); setE(x => ({ ...x, slides: x.slides.filter((_, k) => k !== i - 1) })); setCur(c => Math.min(c, order.length - 2)); }}>×</button>}
