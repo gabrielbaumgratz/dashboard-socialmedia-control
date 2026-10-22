@@ -6,20 +6,20 @@ const Render = (() => {
   const BRAND = { handle: '@reconstrucoes.observatorio', site: 'reconstrucoes.digital' };
 
   const POSTS = [
-    { id: 'p01', name: 'Foto + título' },
-    { id: 'p02', name: 'Última hora' },
-    { id: 'p03', name: 'Recorte PNG' },
-    { id: 'p04', name: 'Notícia com descrição' }
+    { id: 'p01', name: 'Post 1: Foto + título' },
+    { id: 'p04', name: 'Post 2: Notícia com descrição' },
+    { id: 'p02', name: 'Post 3: Última hora' },
+    { id: 'p03', name: 'Post 4: Recorte PNG' }
   ];
   const CAROUSELS = [
     { id: 'A', name: 'Carrossel A (texto e dados)' },
     { id: 'B', name: 'Carrossel B (fotos)' }
   ];
   const STORIES = [
-    { id: 's02', name: 'Foto + título + link' },
-    { id: 's03', name: 'Foto em cima + painel' },
-    { id: 's01', name: 'Compartilhar post do feed' },
-    { id: 's04', name: 'Foto em card' }
+    { id: 's02', name: 'Story 1: Foto + título + link' },
+    { id: 's03', name: 'Story 2: Foto em cima + painel' },
+    { id: 's01', name: 'Story 3: Post do feed' },
+    { id: 's04', name: 'Story 4: Foto em card' }
   ];
   // qualquer modelo de post também vale como slide ('p:p02' = Última hora etc.)
   const POST_SLIDES = POSTS.map(p => ({ id: 'p:' + p.id, name: p.name }));
@@ -172,7 +172,7 @@ const Render = (() => {
   const catOf = d => String(d.category || '').trim(); // categoria em branco = sem texto (fica só o tracinho)
   const G = 18; // respiro padrão entre blocos de texto nos posts (o story usa 22, como o Foto em cima + painel)
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
-  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100, sym: false }, uh: { bg: C.tealE, acc: C.turq, size: 48, bar: '', chip: '' }, tag: { on: true, bg: C.turq, tc: C.navy }, pbar: { bar: '' }, nd: { ph: 680, sym: true, cat: C.tealM }, cut: { bg: C.navy, size: 52, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
+  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100, sym: false }, uh: { bg: C.tealE, acc: C.turq, size: 48, bar: '', chip: '' }, tag: { on: true, bg: C.turq, tc: C.navy }, pbar: { bar: '' }, nd: { ph: 680, sym: true, cat: C.tealM, pill: false }, cut: { bg: C.navy, size: 52, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
   const UH_PRESETS = [['Verde petróleo', C.tealE, C.turq], ['Amarelo', '#735400', '#fabd0d'], ['Azul marinho', C.navy, C.turq], ['Teal', C.tealM, C.verde], ['Preto', C.preto, '#fabd0d']];
   const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) }, uh: { ...LOOK.uh, ...(d.tpl && d.tpl.post === 'p05' ? { bg: '#735400', acc: '#fabd0d' } : {}), ...((d.look || {}).uh) }, cut: { ...LOOK.cut, ...((d.look || {}).cut) }, tag: { ...LOOK.tag, ...((d.look || {}).tag) }, pbar: { ...LOOK.pbar, ...((d.look || {}).pbar) }, nd: { ...LOOK.nd, ...((d.look || {}).nd) } });
   // selo do story: mesmo desenho do selo original (cantos 10), só mais baixo; cor e visibilidade editáveis
@@ -238,7 +238,8 @@ const Render = (() => {
       photo(ctx, img, 0, 0, 1080, ph, d.focal);
       if (nd.sym) symbol(ctx, 880, ph - 52, 105.6);
       let y = ph + 48;
-      if (catOf(d)) { font(ctx, 700, 32, 2); ctx.fillStyle = nd.cat; ctx.fillText(up(catOf(d)), 72, y, 936); y += lineH(32) + 20; }
+      if (catOf(d) && nd.pill) { chip(ctx, up(catOf(d)), 72, ph + 40, 32, { bg: nd.cat, color: lum(nd.cat) > 0.35 ? C.navy : C.branco, sp: 2 }); y = ph + 40 + lineH(32) + 24 + 44; }
+      else if (catOf(d)) { font(ctx, 700, 32, 2); ctx.fillStyle = nd.cat; ctx.fillText(up(catOf(d)), 72, y, 936); y += lineH(32) + 20; }
       y = draw(ctx, block(ctx, d.title, 900, 56, 62, 936, 4), 72, y, C.preto) + G;
       if (d.description) y = draw(ctx, block(ctx, d.description, 400, 30, 39, 936, 3), 72, y, C.preto) + G;
       if (d.source) { font(ctx, 400, 26); ctx.fillStyle = 'rgba(29,29,27,.6)'; ctx.fillText('Fonte: ' + d.source, 72, y); }

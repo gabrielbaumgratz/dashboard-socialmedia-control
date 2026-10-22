@@ -166,6 +166,7 @@ export default function PostView() {
           {posted && <>
             <button className="ghost" onClick={async () => { await navigator.clipboard.writeText(fullCaption(it)); toast('Legenda copiada.'); }}>Copiar legenda</button>
             {it.postUrl && <a className="btn ghost" href={it.postUrl} target="_blank" rel="noopener noreferrer">Ver no Instagram</a>}
+            <button className="danger" onClick={discard}>Excluir</button>
             {it.sheetSync && !it.sheetSync.ok && !it.sheetSync.skipped && <div className="aierr">Planilha: {it.sheetSync.msg}</div>}
           </>}
         </aside>

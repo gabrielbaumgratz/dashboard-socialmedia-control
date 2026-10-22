@@ -314,7 +314,7 @@ async function runEngine() {
       if (db0.seenNews.includes(n.id)) continue;
       seen.push(n.id);
       if (firstRun || db0.items.some(i => i.newsId === n.id)) continue;
-      const it = newItem({ newsId: n.id, origTitle: n.title, title: n.title, category: n.category, link: n.link, newsText: n.text || n.excerpt, newsDate: n.date, photoUrl: n.image || '', credit: n.credit || '', description: (n.excerpt || '').slice(0, 200), isNew: true });
+      const it = newItem({ newsId: n.id, origTitle: n.title, title: n.title, category: n.category, link: n.link, newsText: n.text || n.excerpt, newsDate: n.date, photoUrl: n.image || '', credit: n.credit || '', description: '', isNew: true });
       if (cfg.geminiKey && cfg.autoAi) {
         try { applyAi(it, await callGemini(n), cfg); } catch (e) { it.aiError = e.message; }
       }

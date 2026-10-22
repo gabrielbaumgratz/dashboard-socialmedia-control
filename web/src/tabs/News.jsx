@@ -63,7 +63,7 @@ export default function News() {
     let it = items.find(i => i.newsId === n.id);
     if (it) { openPost(it.id); return; }
     try {
-      it = await api('/api/items', { method: 'POST', body: { newsId: n.id, origTitle: n.title, title: n.title, category: n.category || '', link: n.link, newsText: n.text || n.excerpt || '', newsDate: n.date, photoUrl: n.image || '', credit: n.credit || '', description: (n.excerpt || '').slice(0, 200) } });
+      it = await api('/api/items', { method: 'POST', body: { newsId: n.id, origTitle: n.title, title: n.title, category: n.category || '', link: n.link, newsText: n.text || n.excerpt || '', newsDate: n.date, photoUrl: n.image || '', credit: n.credit || '', description: '' } });
       setItems(l => [...l, it]); setReading(null); openPost(it.id); // abre direto a página do post: arte, legendas e Programar
       if (cfg.hasKey) {
         try { const s = await api(`/api/items/${it.id}/ai`, { method: 'POST' }); setItems(l => l.map(x => (x.id === s.id ? s : x))); toast('3 legendas prontas.'); }
