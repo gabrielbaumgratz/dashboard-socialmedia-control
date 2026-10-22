@@ -171,9 +171,9 @@ const Render = (() => {
   const catOf = d => String(d.category || '').trim(); // categoria em branco = sem texto (fica só o tracinho)
   const G = 18; // respiro padrão entre blocos de texto nos posts (o story usa 22, como o Foto em cima + painel)
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
-  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100, sym: false }, uh: { bg: C.tealE, acc: C.turq, size: 48, bar: '', chip: '' }, tag: { on: true, bg: C.turq, tc: C.navy }, pbar: { bar: '' }, cut: { bg: C.navy, size: 52, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
+  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100, sym: false }, uh: { bg: C.tealE, acc: C.turq, size: 48, bar: '', chip: '' }, tag: { on: true, bg: C.turq, tc: C.navy }, pbar: { bar: '' }, nd: { ph: 680, sym: true }, cut: { bg: C.navy, size: 52, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
   const UH_PRESETS = [['Verde petróleo', C.tealE, C.turq], ['Amarelo', '#735400', '#fabd0d'], ['Azul marinho', C.navy, C.turq], ['Teal', C.tealM, C.verde], ['Preto', C.preto, '#fabd0d']];
-  const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) }, uh: { ...LOOK.uh, ...(d.tpl && d.tpl.post === 'p05' ? { bg: '#735400', acc: '#fabd0d' } : {}), ...((d.look || {}).uh) }, cut: { ...LOOK.cut, ...((d.look || {}).cut) }, tag: { ...LOOK.tag, ...((d.look || {}).tag) }, pbar: { ...LOOK.pbar, ...((d.look || {}).pbar) } });
+  const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) }, uh: { ...LOOK.uh, ...(d.tpl && d.tpl.post === 'p05' ? { bg: '#735400', acc: '#fabd0d' } : {}), ...((d.look || {}).uh) }, cut: { ...LOOK.cut, ...((d.look || {}).cut) }, tag: { ...LOOK.tag, ...((d.look || {}).tag) }, pbar: { ...LOOK.pbar, ...((d.look || {}).pbar) }, nd: { ...LOOK.nd, ...((d.look || {}).nd) } });
   // selo do story: mesmo desenho do selo original (cantos 10), só mais baixo; cor e visibilidade editáveis
   const SCH = lineH(28) + 16;
   const stag = (ctx, d, text, x, y, o = {}) => { const { bg, tc } = look(d).tag; return chip(ctx, text, x, y, 28, { bg, color: tc === C.branco ? C.branco : C.navy, h: SCH, pad: 21, r: 10, ...o }); };
@@ -233,9 +233,10 @@ const Render = (() => {
       credit(ctx, d.credit, 1249);
     } else if (t === 'p04') {
       ctx.fillStyle = C.branco; ctx.fillRect(0, 0, 1080, 1350);
-      photo(ctx, img, 0, 0, 1080, 680, d.focal);
-      symbol(ctx, 880, 628, 105.6);
-      let y = 728;
+      const nd = look(d).nd, ph = nd.ph; // altura da foto editável, o resto é o fundo branco
+      photo(ctx, img, 0, 0, 1080, ph, d.focal);
+      if (nd.sym) symbol(ctx, 880, ph - 52, 105.6);
+      let y = ph + 48;
       if (catOf(d)) { font(ctx, 700, 32, 2); ctx.fillStyle = C.tealM; ctx.fillText(up(catOf(d)), 72, y, 936); y += lineH(32) + 20; }
       y = draw(ctx, block(ctx, d.title, 900, 56, 62, 936, 4), 72, y, C.preto) + G;
       if (d.description) y = draw(ctx, block(ctx, d.description, 400, 30, 39, 936, 3), 72, y, C.preto) + G;

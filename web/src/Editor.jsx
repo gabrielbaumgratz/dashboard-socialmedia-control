@@ -187,6 +187,14 @@ function UhCtl({ e, patch, k = 'uh' }) {
       <BarPick value={cur.bar} same={uh} onChange={v => set({ bar: v })} /></div>);
 }
 
+// notícia com descrição: altura da foto (o resto é o fundo branco) e símbolo na divisória
+function NdCtl({ e, patch }) {
+  const cur = { ...Render.LOOK.nd, ...((e.look || {}).nd) }, set = p => patch({ look: { ...(e.look || {}), nd: { ...cur, ...p } } });
+  return (
+    <div className="lookbox"><Head title="Foto e divisória" reset={(e.look || {}).nd && <button type="button" className="ghost mini" onClick={() => patch({ look: { ...(e.look || {}), nd: undefined } })}>Voltar ao padrão</button>} />
+      <Rng label="Altura da foto" value={Math.round(cur.ph / 13.5)} unit="%" min={30} max={75} onChange={v => set({ ph: Math.round(v * 13.5) })} />
+      <Row label="Símbolo"><Check label="" on={cur.sym} set={sym => set({ sym })} /></Row></div>);
+}
 // tracinho embaixo da categoria no post (p01 e capa do carrossel)
 function PBarCtl({ e, patch }) {
   const v = ((e.look || {}).pbar || {}).bar || '';
@@ -303,7 +311,8 @@ export default function Editor() {
   const setCf = f => (slPhoto ? slideSet(slideIdx, { ...sl, focal: f }) : patch({ focal: f }));
   const thumbs = [e.photoUrl, ...e.slides.map(s => s.photoUrl)].filter(Boolean);
   const order = [{ u: e.photoUrl }, ...e.slides.map(s => ({ u: s.photoUrl, s }))];
-  const [drag, setDrag] = useState(null), [ovr, setOvr] = useState(null);
+  const [drag, setDrag] = useState(null), [place, setPlace] = useState(null);
+  const shown = (() => { const a = order.map((_, i) => i); if (drag !== null && place !== null) { a.splice(a.indexOf(drag), 1); a.splice(place, 0, drag); } return a; })();
   function moveItem(from, to) {
     if (from === to) return;
     const m = from === 0 ? { photoUrl: e.photoUrl } : e.slides[from - 1];
@@ -328,19 +337,18 @@ export default function Editor() {
 
       <section className={'drop' + (over ? ' over' : '')} onDragOver={ev => { ev.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={ev => { ev.preventDefault(); setOver(false); take(ev.dataTransfer.files); }}>
         <div className="mediarow">
-          {order.map((o, i) => (
-            <div key={(o.u || 'x') + i} className={'mthumb' + (car && at === i ? ' sel' : '') + (ovr === i && drag !== null && drag !== i ? ' ovr' : '')} draggable={order.length > 1}
+          {shown.map((i, p) => { const o = order[i]; return (
+            <div key={(o.u || 'x') + i} className={'mthumb' + (car && at === i ? ' sel' : '') + (drag === i ? ' dragging' : '')} draggable={order.length > 1}
               onClick={() => car && setCur(i)}
-              onDragStart={ev => { ev.dataTransfer.setData('text/plain', 'ordem'); ev.dataTransfer.effectAllowed = 'move'; setDrag(i); }}
-              onDragEnd={() => { setDrag(null); setOvr(null); }}
-              onDragOver={ev => { if (drag === null) return; ev.preventDefault(); ev.stopPropagation(); setOvr(i); }}
-              onDrop={ev => { if (drag === null) return; ev.preventDefault(); ev.stopPropagation(); moveItem(drag, i); setDrag(null); setOvr(null); }}>
+              onDragStart={ev => { ev.dataTransfer.setData('text/plain', 'ordem'); ev.dataTransfer.effectAllowed = 'move'; setDrag(i); setPlace(i); }}
+              onDragEnd={() => { setDrag(null); setPlace(null); }}
+              onDragOver={ev => { if (drag === null) return; ev.preventDefault(); ev.stopPropagation(); if (place !== p) setPlace(p); }}
+              onDrop={ev => { if (drag === null) return; ev.preventDefault(); ev.stopPropagation(); moveItem(drag, place ?? p); setDrag(null); setPlace(null); }}>
               {o.u ? <img src={o.u} alt="" draggable={false} /> : <em>{(types.find(t => t.id === o.s.type) || {}).name || 'Texto'}</em>}
               {order.length > 1 && <b className="grip" aria-hidden="true">⋮⋮</b>}
-              <span>{i === 0 ? 'Capa' : i + 1}</span>
-              {i > 0 && <button className="x" aria-label="Tirar slide" onClick={ev => { ev.stopPropagation(); setE(x => ({ ...x, slides: x.slides.filter((_, k) => k !== i - 1) })); setCur(c => Math.min(c, order.length - 2)); }}>×</button>}
-            </div>
-          ))}
+              <span>{p === 0 ? 'Capa' : p + 1}</span>
+              {i > 0 && drag === null && <button className="x" aria-label="Tirar slide" onClick={ev => { ev.stopPropagation(); setE(x => ({ ...x, slides: x.slides.filter((_, k) => k !== i - 1) })); setCur(c => Math.min(c, order.length - 2)); }}>×</button>}
+            </div>); })}
           {car && <div className={'mthumb fin' + (at === n - 1 ? ' sel' : '')} onClick={() => setCur(n - 1)} title="O último slide é sempre o de chamada"><em>Final</em></div>}
           {video && <div className="mthumb vid"><Icon name="reels" /><button className="x" aria-label="Tirar vídeo" onClick={() => patch({ mediaType: 'image', videoUrl: '' })}>×</button></div>}
           <label className="mthumb add">+<input type="file" multiple accept=".jpg,.jpeg,.png,.svg,.mp4" disabled={up} onChange={ev => { take(ev.target.files, thumbs.length ? 'add' : ''); ev.target.value = ''; }} /></label>
@@ -376,6 +384,7 @@ export default function Editor() {
           {video && <Seg value={e.tpl.reel || 'r01'} onChange={id => setE(x => ({ ...x, tpl: { ...x.tpl, reel: id } }))} options={Render.REELS.map(r => [r.id, r.name])} />}
           {(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses).map(k => FIELDS[k]())}
           {!video && ptpl === 'p01' && <><LookCtl e={e} patch={patch} k="post" /><PBarCtl e={e} patch={patch} /></>}
+          {!video && ptpl === 'p04' && <NdCtl e={e} patch={patch} />}
           {!video && ptpl === 'p02' && <UhCtl e={e} patch={patch} />}
           {!video && ptpl === 'p03' && <UhCtl e={e} patch={patch} k="cut" />}
           {midSlide && <SlideRow s={types.some(t => t.id === e.slides[slideIdx].type) ? e.slides[slideIdx] : { ...e.slides[slideIdx], type: types[0].id }} i={slideIdx} types={types} set={v => slideSet(slideIdx, v)}
