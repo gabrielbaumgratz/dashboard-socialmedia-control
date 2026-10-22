@@ -6,20 +6,20 @@ const Render = (() => {
   const BRAND = { handle: '@reconstrucoes.observatorio', site: 'reconstrucoes.digital' };
 
   const POSTS = [
-    { id: 'p01', name: 'Post 1: Foto + título' },
-    { id: 'p04', name: 'Post 2: Notícia com descrição' },
-    { id: 'p02', name: 'Post 3: Última hora' },
-    { id: 'p03', name: 'Post 4: Recorte PNG' }
+    { id: 'p01', name: 'Post 1' },
+    { id: 'p04', name: 'Post 2' },
+    { id: 'p02', name: 'Post 3' },
+    { id: 'p03', name: 'Post 4' }
   ];
   const CAROUSELS = [
     { id: 'A', name: 'Carrossel A (texto e dados)' },
     { id: 'B', name: 'Carrossel B (fotos)' }
   ];
   const STORIES = [
-    { id: 's02', name: 'Story 1: Foto + título + link' },
-    { id: 's03', name: 'Story 2: Foto em cima + painel' },
-    { id: 's01', name: 'Story 3: Post do feed' },
-    { id: 's04', name: 'Story 4: Foto em card' }
+    { id: 's02', name: 'Story 1' },
+    { id: 's03', name: 'Story 2' },
+    { id: 's01', name: 'Story 3' },
+    { id: 's04', name: 'Story 4' }
   ];
   // qualquer modelo de post também vale como slide ('p:p02' = Última hora etc.)
   const POST_SLIDES = POSTS.map(p => ({ id: 'p:' + p.id, name: p.name }));

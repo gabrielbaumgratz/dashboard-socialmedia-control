@@ -792,3 +792,17 @@ button.cbtn:hover{background:color-mix(in srgb,var(--txt) 11%,transparent)}
 button.nthumb:hover,button.nthumb:active{background-size:cover;background-position:center;background-repeat:no-repeat;transform:none}
 .tdel{position:absolute;top:8px;right:8px;z-index:2;display:none;place-items:center;width:30px;height:30px;border-radius:10px;background:rgba(10,20,34,.7);color:#fff;cursor:pointer}.tdel .ico{width:15px;height:15px}.tile:hover .tdel,.tile:focus-within .tdel,.tdel:focus{display:grid}.tdel:hover{background:var(--danger)}
 .crow{grid-template-columns:150px minmax(0,1fr)}
+
+/* editor: cards de aparência com 2 colunas por dentro, pares lado a lado, slide compacto */
+.lookbox{grid-template-columns:repeat(auto-fit,minmax(290px,1fr));column-gap:28px;align-content:start}
+.lookbox>.lookhead,.lookbox>.presets,.lookbox>label.chk,.lookbox>.copts{grid-column:1/-1}
+.lookbox .crow{grid-template-columns:118px minmax(0,1fr)}
+.lookpair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch}
+.lookpair>.lookbox{height:100%}
+@media(max-width:900px){.lookpair{grid-template-columns:1fr}}
+.slbody{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px 10px;align-items:start}
+.slbody>.w2{grid-column:span 2}.slbody>.wf{grid-column:1/-1}
+.slbody label{display:grid;gap:4px;font-size:12px;font-weight:700;color:var(--mut)}
+@media(max-width:700px){.slbody>.w2{grid-column:1/-1}}
+.edform>.w6{grid-column:1/-1}
+.crop-btns{display:flex;flex-wrap:wrap;gap:8px}

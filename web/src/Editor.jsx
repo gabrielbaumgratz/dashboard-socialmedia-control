@@ -90,7 +90,7 @@ function SlideRow({ s, i, n, types, set, remove, move }) {
         <button type="button" className="ghost" onClick={() => move(1)} aria-label="Mover pra frente" disabled={i >= n - 3}>&rarr;</button>
         <button type="button" className="danger" onClick={remove}>Remover</button>
       </header>
-      <label className="sltype">Layout deste slide
+      <div className="slbody"><label className="sltype w2">Layout
         <select aria-label="Layout do slide" value={s.type} onChange={ev => set({ ...s, type: ev.target.value })}>
           <optgroup label="Layouts do carrossel">{car.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</optgroup>
           <optgroup label="Modelos de post">{pst.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</optgroup>
@@ -99,8 +99,8 @@ function SlideRow({ s, i, n, types, set, remove, move }) {
       {(SLIDE_FIELDS[s.type] || []).map(([k, label, multi]) => {
         const val = k === 'text' && s.items && !s.text ? s.items.join('\n') : (s[k] || '');
         const on = ev => { const v = ev.target.value; set({ ...s, [k]: v, ...(k === 'text' && s.type === 'resumo' ? { items: v.split('\n').filter(Boolean) } : {}) }); };
-        return <label key={k}>{label}{multi ? <textarea rows={3} value={val} onChange={on} /> : <input value={val} onChange={on} />}</label>;
-      })}
+        return <label key={k} className={multi ? 'wf' : 'w2'}>{label}{multi ? <textarea rows={2} value={val} onChange={on} /> : <input value={val} onChange={on} />}</label>;
+      })}</div>
     </div>
   );
 }
@@ -120,7 +120,7 @@ function Crop({ f, set, photo, w, h, extra }) {
       </div>
       <div className="crop-btns">
         <button className="ghost" onClick={() => set({ x: .5, y: .5, zoom: min })}>Foto inteira</button>
-        <button className="ghost" onClick={() => set({ x: .5, y: .5, zoom: 1 })}>Padrão (preencher)</button>
+        <button className="ghost" onClick={() => set({ x: .5, y: .5, zoom: 1 })}>Preencher</button>
         {extra}
       </div>
     </div>
@@ -186,7 +186,7 @@ const BarPick = ({ value, same, onChange, sameLabel = 'Igual ao destaque' }) =>
 function UhCtl({ e, patch, k = 'uh' }) {
   const cur = { ...Render.LOOK[k], ...((e.look || {})[k]) }, set = p => patch({ look: { ...(e.look || {}), [k]: { ...cur, ...p } } }), uh = k === 'uh';
   return (
-    <div className="lookbox"><Head title={uh ? 'Cores e barra' : 'Degradê e barra'} reset={(e.look || {})[k] && <button type="button" className="ghost mini" onClick={() => patch({ look: { ...(e.look || {}), [k]: undefined } })}>Voltar ao padrão</button>} />
+    <div className="lookbox"><Head title="Aparência" reset={(e.look || {})[k] && <button type="button" className="ghost mini" onClick={() => patch({ look: { ...(e.look || {}), [k]: undefined } })}>Voltar ao padrão</button>} />
       {uh && <div className="presets">{Render.UH_PRESETS.map(([n, b, a]) => <button type="button" key={n} className={'preset' + (cur.bg === b && cur.acc === a ? ' on' : '')} onClick={() => set({ bg: b, acc: a })}><i style={{ background: b }} /><i style={{ background: a }} />{n}</button>)}</div>}
       <Row label="Cor do degradê"><ColorMenu value={cur.bg} onChange={c => set({ bg: c })} /></Row>
       <Rng label="Tamanho do degradê" value={cur.size} unit="%" min={0} max={100} onChange={size => set({ size })} />
@@ -213,7 +213,7 @@ function PBarRow({ e, patch }) {
 // selo do story (categoria / NOVA NOTÍCIA): mostrar ou não, cor do fundo e do texto
 function TagCtl({ e, patch, label = 'Destaque' }) {
   const cur = { ...Render.LOOK.tag, ...((e.look || {}).tag) }, set = p => patch({ look: { ...(e.look || {}), tag: { ...cur, ...p } } });
-  return <div className="lookbox"><Check label={label} on={cur.on} set={on => set({ on })} />
+  return <div className="lookbox"><div className="lookhead"><Check label={label} on={cur.on} set={on => set({ on })} /></div>
     {cur.on && <><Row label="Cor do destaque"><ColorMenu value={cur.bg} onChange={bg => set({ bg })} /></Row>
       <Row label="Cor do texto"><div className="seg2">{[['#0f172a', 'Preto'], ['#ffffff', 'Branco']].map(([c, n]) => <button type="button" key={c} className={'chipbtn' + ((cur.tc === '#ffffff') === (c === '#ffffff') ? ' on' : '')} onClick={() => set({ tc: c })}>{n}</button>)}</div></Row></>}</div>;
 }
@@ -306,14 +306,21 @@ export default function Editor() {
   const FIELDS = {
     title: () => field('title', 'Título', '', 1, 'w4'),
     category: () => field('category', 'Categoria', '', 0, 'w2'),
-    chip: () => field('chip', 'Selo', 'ÚLTIMA HORA', 0, 'w3'),
-    bigTitle: () => field('bigTitle', 'Título grande atrás do recorte', 'as 2 primeiras palavras do título'),
+    chip: c => field('chip', 'Selo', 'ÚLTIMA HORA', 0, c),
+    bigTitle: c => field('bigTitle', 'Título grande atrás do recorte', 'as 2 primeiras palavras do título', 0, c),
     description: () => <div key="description" className="descbox">{field('description', 'Descrição curta', 'sem descrição', 1)}<button type="button" className="ghost" onClick={genDesc} disabled={dbusy || !cfg.hasKey}>{dbusy ? 'Gerando…' : 'Gerar descrição com IA'}</button></div>,
-    source: () => field('source', 'Fonte', 'sem fonte', 0, 'w3'),
-    credit: () => field('credit', 'Crédito da foto', 'sem crédito', 0, 'w3'),
-    dateline: () => field('dateline', 'Linha de data', 'cidade · data da notícia', 0, 'w3'),
+    source: c => field('source', 'Fonte', 'sem fonte', 0, c),
+    credit: c => field('credit', 'Crédito da foto', 'sem crédito', 0, c),
+    dateline: c => field('dateline', 'Linha de data', 'cidade · data da notícia', 0, c),
     legendas: () => field('legendas', 'Legendas (uma por linha, aparecem em sequência)', 'uma frase por linha', 1),
-    cutout: () => <label key="cutout">Recorte PNG sem fundo<input type="file" accept=".png" disabled={up} onChange={ev => { take(ev.target.files, 'cutout'); ev.target.value = ''; }} /></label>
+    cutout: c => <label key="cutout" className={c}>Recorte PNG sem fundo<input type="file" accept=".png" disabled={up} onChange={ev => { take(ev.target.files, 'cutout'); ev.target.value = ''; }} /></label>
+  };
+  // mesma ordem em todo template: título e categoria, depois selo/fonte/crédito lado a lado, depois descrição
+  const MID = ['chip', 'bigTitle', 'cutout', 'source', 'credit', 'dateline'];
+  const renderFields = list => {
+    const top = list.filter(k => k === 'title' || k === 'category'), mid = list.filter(k => MID.includes(k)), rest = list.filter(k => !top.includes(k) && !mid.includes(k));
+    const c = mid.length === 2 || mid.length === 4 ? 'w3' : mid.length === 1 ? 'w6' : 'w2';
+    return [...top.map(k => FIELDS[k]()), ...mid.map(k => FIELDS[k](c)), ...rest.map(k => FIELDS[k]())];
   };
   const slideIdx = at - 1; // slide do meio que está no preview (capa = -1)
   const midSlide = car && slideIdx >= 0 && slideIdx < e.slides.length;
@@ -387,8 +394,8 @@ export default function Editor() {
                 <button type="button" className="pvarrow r" disabled={at >= n - 1} onClick={() => setCur(at + 1)} aria-label="Próximo slide">›</button></>}
             </div>
             {car && <div className="slidenav" aria-live="polite"><div className="pvdots">{Array.from({ length: n }, (_, k) => <button type="button" key={k} className={k === at ? 'on' : ''} onClick={() => setCur(k)} aria-label={'Ir pro slide ' + (k + 1)} />)}</div><span>{at === 0 ? 'Capa' : at === n - 1 ? 'Final' : 'Slide ' + (at + 1)} · {at + 1}/{n}</span></div>}
-            <Crop f={cf} set={setCf} photo={cp} w={1080} h={1350} />
-            <SaveBtn onClick={() => savePng(c => (car ? Render.slide(c, base, photo, at) : Render.post(c, base, photo)), slug(e.title) + (car ? '-slide-' + (at + 1) : '-post'))} />
+            <Crop f={cf} set={setCf} photo={cp} w={1080} h={1350}
+              extra={<SaveBtn onClick={() => savePng(c => (car ? Render.slide(c, base, photo, at) : Render.post(c, base, photo)), slug(e.title) + (car ? '-slide-' + (at + 1) : '-post'))} />} />
           </>)}
         </div>
         <div className="edform">
@@ -397,7 +404,7 @@ export default function Editor() {
           {!video && car && at > 0 && <TplRow list={Render.CAROUSELS} kname="carousel" e={e} sig={thumbSig} w={84} h={105} onPick={id => setE(x => ({ ...x, tpl: { ...x.tpl, carousel: id } }))}
             draw={(c, id) => Render.slide(c, { ...dd({ carousel: id }, false), slides: [{ type: id === 'A' ? 'contexto' : 'legenda', title: 'Título', label: 'Contexto', text: 'Texto do slide', photoUrl: '' }] }, photo, 1)} />}
           {video && <Seg value={e.tpl.reel || 'r01'} onChange={id => setE(x => ({ ...x, tpl: { ...x.tpl, reel: id } }))} options={Render.REELS.map(r => [r.id, r.name])} />}
-          {(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses).map(k => FIELDS[k]())}
+          {renderFields(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses)}
           {!video && ptpl === 'p01' && <LookCtl e={e} patch={patch} k="post" pre={<PBarRow e={e} patch={patch} />} />}
           {!video && ptpl === 'p04' && <NdCtl e={e} patch={patch} />}
           {!video && ptpl === 'p02' && <UhCtl e={e} patch={patch} />}
@@ -413,21 +420,20 @@ export default function Editor() {
         <div className="sechead"><h3>{video ? 'Capa do reel e story' : 'Story'}</h3><button className="ghost" onClick={() => patch({ look: { ...(e.look || {}), story: undefined, bg: undefined }, focalStory: { x: .5, y: .5, zoom: 1 } })}>Restaurar padrão do story</button></div>
         <div className="edpv">
           <CanvasPv w={225} h={400} sig={textSig} photo={photo} focal={e.focalStory} onFocal={f => patch({ focalStory: f })} label="" draw={c => Render.story(c, base, photo)} />
-          <SaveBtn onClick={() => savePng(c => Render.story(c, base, photo), slug(e.title) + '-story')} />
           <Crop f={e.focalStory} set={f => patch({ focalStory: f })} photo={photo} w={1080} h={1920}
-            extra={!video && <button className="ghost" onClick={() => patch({ focalStory: { ...e.focal } })}>Igual ao post</button>} />
+            extra={<>{!video && <button className="ghost" onClick={() => patch({ focalStory: { ...e.focal } })}>Igual ao post</button>}<SaveBtn onClick={() => savePng(c => Render.story(c, base, photo), slug(e.title) + '-story')} /></>} />
         </div>
         <div className="edform">
           <TplRow list={Render.STORIES} kname="story" e={e} sig={thumbSig} w={62} h={110} story onPick={id => setE(x => ({ ...x, tpl: { ...x.tpl, story: id } }))}
             draw={(c, id) => Render.story(c, dd({ story: id }, false), photo)} />
           {e.tpl.story !== 's01' && <>
             <StoryField label="Título" k="storyTitle" from="title" multi cls="w4" e={e} patch={patch} />
-            <StoryField label="Categoria" k="storyCategory" from="category" cls="w2" e={e} patch={patch} />
-            <TagCtl e={e} patch={patch} label="Destaque da categoria" /></>}
-          {e.tpl.story === 's01' && <TagCtl e={e} patch={patch} label="Selo NOVA NOTÍCIA" />}
-          {storyOnly.map(k => FIELDS[k]())}
-          {e.tpl.story === 's02' && <LookCtl e={e} patch={patch} k="story" />}
-          {['s01', 's03', 's04'].includes(e.tpl.story) && <LookCtl e={e} patch={patch} k="bg" tpl={e.tpl.story} />}
+            <StoryField label="Categoria" k="storyCategory" from="category" cls="w2" e={e} patch={patch} /></>}
+          {renderFields(storyOnly)}
+          <div className="lookpair">
+            <TagCtl e={e} patch={patch} label={e.tpl.story === 's01' ? 'Selo NOVA NOTÍCIA' : 'Destaque da categoria'} />
+            {e.tpl.story === 's02' ? <LookCtl e={e} patch={patch} k="story" /> : <LookCtl e={e} patch={patch} k="bg" tpl={e.tpl.story} />}
+          </div>
         </div>
       </section>
       <div className="savebar"><button onClick={() => save(true)}>Salvar</button></div>
