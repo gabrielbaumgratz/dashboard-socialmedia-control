@@ -29,7 +29,7 @@ function Sidebar({ mini, toggle }) {
   };
   return (
     <aside className={'side glass-dark'}>
-      <div className="brandrow"><div className="brand">{logo ? <img src="/assets/logo-branco.png" alt="Reconstruções" /> : 'Reconstruções'}</div>
+      <div className="brandrow"><div className="brand" role="link" tabIndex={0} style={{cursor:'pointer'}} title="Notícias do site" onClick={() => setTab('news')} onKeyDown={e => e.key === 'Enter' && setTab('news')}>{logo ? <img src="/assets/logo-branco.png" alt="Reconstruções" /> : 'Reconstruções'}</div>
         <button className="sidetoggle" onClick={toggle} aria-expanded={!mini} aria-label={mini ? 'Expandir a barra lateral' : 'Recolher a barra lateral'} title={mini ? 'Expandir a barra lateral' : 'Recolher a barra lateral'}><Icon name="sidebar" /></button></div>
       <nav>
         {NAV.map(([id, icon, label]) => (

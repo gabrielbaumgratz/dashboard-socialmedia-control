@@ -32,6 +32,22 @@ function doPost(e) {
   return ContentService.createTextOutput('ok');
 }
 
+// menu "Reconstruções" na planilha: apagar o(s) post(s) selecionado(s) na aba Posts
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('Reconstruções').addItem('Apagar post(s) selecionado(s)', 'apagarSelecionados').addToUi();
+}
+function apagarSelecionados() {
+  const ui = SpreadsheetApp.getUi(), ss = SpreadsheetApp.getActiveSpreadsheet(), sh = ss.getActiveSheet();
+  if (sh.getName() !== 'Posts') return ui.alert('Vá na aba Posts e clique numa célula da linha do post que quer apagar.');
+  const rows = [];
+  (ss.getActiveRangeList() ? ss.getActiveRangeList().getRanges() : [sh.getActiveRange()]).forEach(r => { for (let i = 0; i < r.getNumRows(); i++) rows.push(r.getRow() + i); });
+  const alvo = [...new Set(rows)].filter(n => n >= 2 && sh.getRange(n, 1).getValue() !== '').sort((a, b) => b - a);
+  if (!alvo.length) return ui.alert('Selecione a linha de um post (da linha 2 pra baixo).');
+  const lista = alvo.slice().reverse().slice(0, 8).map(n => '• ' + sh.getRange(n, 10).getValue()).join('\n') + (alvo.length > 8 ? '\n• …' : '');
+  if (ui.alert('Apagar ' + alvo.length + ' post(s) da planilha?', lista + '\n\nIsso não apaga do dashboard. Se o post for atualizado lá, ele volta pra planilha.', ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
+  alvo.forEach(n => sh.deleteRow(n)); // de baixo pra cima pra não deslocar as linhas
+}
+
 // bordas finas em volta de cada célula, pra separar as áreas
 function borda(r) { r.setBorder(true, true, true, true, true, true, '#c7d2dc', SpreadsheetApp.BorderStyle.SOLID); }
 

@@ -24,7 +24,7 @@ function SheetCell({ it }) {
 }
 
 export default function History() {
-  const { items, trash, openPost, restoreItem, purgeItem, toast } = useApp();
+  const { items, trash, openPost, restoreItem, purgeItem, trashItem, toast } = useApp();
   const [st, setSt] = useState('all'), [mo, setMo] = useState(''), [q, setQ] = useState('');
   const rows = items.filter(it => (st === 'all' || it.status === st)
     && (!mo || dayKey(new Date(itemDate(it) || it.createdAt)).startsWith(mo))
@@ -62,9 +62,9 @@ export default function History() {
       </PageHead>
       <div className="tablewrap">
         <table className="table">
-          <thead><tr><th>Status</th><th>Data e hora</th><th>Tipo</th><th>Título</th><th>Post nas redes</th><th>Matéria</th><th>Planilha</th></tr></thead>
+          <thead><tr><th>Status</th><th>Data e hora</th><th>Tipo</th><th>Título</th><th>Post nas redes</th><th>Matéria</th><th>Planilha</th><th></th></tr></thead>
           <tbody>
-            {!rows.length && <tr><td colSpan="7" className="hint">Nada nesse filtro.</td></tr>}
+            {!rows.length && <tr><td colSpan="8" className="hint">Nada nesse filtro.</td></tr>}
             {rows.map(it => {
               const iso = itemDate(it);
               return (
@@ -76,6 +76,7 @@ export default function History() {
                   <td data-l="Post"><PostLinkCell it={it} /></td>
                   <td data-l="Matéria">{it.link ? <a href={it.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>Matéria</a> : '-'}</td>
                   <td data-l="Planilha"><SheetCell it={it} /></td>
+                  <td data-l=""><button className="danger mini" title="Mandar pra lixeira" onClick={e => { e.stopPropagation(); trashItem(it.id); }}>Excluir</button></td>
                 </tr>
               );
             })}

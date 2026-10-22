@@ -787,3 +787,7 @@ button.cbtn:hover{background:color-mix(in srgb,var(--txt) 11%,transparent)}
 .edform>.w3>.lookbox{height:100%}
 .edform>.w3 .crow{grid-template-columns:minmax(0,1fr);gap:4px}
 @media(max-width:700px){.edform>.w2,.edform>.w3,.edform>.w4{grid-column:1/-1}}
+
+/* hover do botão trocava o 'background' inteiro e a foto do card perdia o cover (zoom absurdo) */
+button.nthumb:hover,button.nthumb:active{background-size:cover;background-position:center;background-repeat:no-repeat;transform:none}
+.tdel{position:absolute;top:8px;right:8px;z-index:2;display:none;place-items:center;width:30px;height:30px;border-radius:10px;background:rgba(10,20,34,.7);color:#fff;cursor:pointer}.tdel .ico{width:15px;height:15px}.tile:hover .tdel,.tile:focus-within .tdel,.tdel:focus{display:grid}.tdel:hover{background:var(--danger)}

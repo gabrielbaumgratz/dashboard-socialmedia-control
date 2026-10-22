@@ -4,12 +4,20 @@ import { DEF_TPL, typeOf } from './util.js';
 
 const photoCache = new Map(), coverCache = new Map();
 export const clearCovers = () => coverCache.clear();
+// no máximo 4 downloads ao mesmo tempo: o feed pede dezenas de fotos de uma vez e o excesso estourava o tempo e virava capa azul
+let busy = 0; const wait = [];
+const slot = async () => { if (busy >= 4) await new Promise(r => wait.push(r)); busy++; };
+const free = () => { busy--; const n = wait.shift(); if (n) n(); };
 export function getImg(url) {
   if (!url) return Promise.resolve(null);
   if (!photoCache.has(url)) {
     // foto recém enviada pode demorar um instante pra ficar disponível: tenta de novo e nunca guarda falha no cache
     const p = (async () => {
-      for (let t = 0; t < 5; t++) { try { return await Render.loadImage(url); } catch { await new Promise(r => setTimeout(r, 500 * (t + 1))); } }
+      for (let t = 0; t < 5; t++) {
+        await slot();
+        try { return await Render.loadImage(url); } catch { /* tenta de novo */ } finally { free(); }
+        await new Promise(r => setTimeout(r, 500 * (t + 1)));
+      }
       photoCache.delete(url); return null;
     })();
     photoCache.set(url, p);
@@ -28,17 +36,24 @@ export async function prep(it) {
   const d = artData(it);
   if (it.cutoutUrl) d.cutoutImg = await getImg(it.cutoutUrl);
   for (const s of d.slides) if (s && s.photoUrl) d.imgs[s.photoUrl] = await getImg(s.photoUrl);
-  return [d, await getImg(it.photoUrl)];
+  const ph = await getImg(it.photoUrl);
+  d.missing = (it.photoUrl && !ph) || d.slides.some(s => s && s.photoUrl && !d.imgs[s.photoUrl]);
+  return [d, ph];
+}
+// se faltou foto, nunca guarda o resultado vazio: tenta de novo e, se ainda faltar, tira do cache pra próxima tentativa
+async function solid(cache, key, run) {
+  for (let t = 0; t < 3; t++) { const r = await run(); if (!r.miss) return r.v; if (t < 2) await new Promise(x => setTimeout(x, 1500)); else cache && cache.delete(key); }
+  return (await run()).v;
 }
 const coverKey = it => JSON.stringify([it.id, it.focalStory, it.mediaType, it.title, it.category, it.photoUrl, it.focal, it.tpl, it.slides, it.description, it.chip, it.credit, it.source, it.bigTitle, it.cutoutUrl, it.look, it.storyTitle, it.storyCategory]);
 export function coverUrl(it) {
   const key = coverKey(it);
   if (!coverCache.has(key)) {
-    coverCache.set(key, (async () => {
+    coverCache.set(key, solid(coverCache, key, async () => {
       const c = document.createElement('canvas'), [d, ph] = await prep(it);
       if (typeOf(it) === 'video') await Render.story(c, d, ph); else await Render.cover(c, d, ph); // reel: capa vertical 9:16
-      return c.toDataURL('image/jpeg', 0.85);
-    })());
+      return { v: c.toDataURL('image/jpeg', 0.85), miss: d.missing };
+    }));
   }
   return coverCache.get(key);
 }
@@ -54,23 +69,27 @@ export async function exportSet(it, fmt = 'png', scale = 2) {
 // download padrão: PNG em 2x (2160 px), sem perda, no formato que o downloadSet espera
 export async function hiresSet(it) { const f = await exportSet(it, 'png', 2); return { slides: f.slice(0, -1), story: f[f.length - 1] }; }
 export async function renderSet(it, mime = 'image/jpeg') {
+  for (let t = 0; t < 2; t++) { const r = await renderOnce(it, mime); if (!r.miss) return r.v; await new Promise(x => setTimeout(x, 1500)); }
+  return (await renderOnce(it, mime)).v;
+}
+async function renderOnce(it, mime) {
   const [d, photo] = await prep(it), c = document.createElement('canvas'), url = () => c.toDataURL(mime, 0.95);
   const files = [];
   if (typeOf(it) === 'carrossel') for (let i = 0; i < Render.count(d); i++) { await Render.slide(c, d, photo, i); files.push({ name: `post-${i + 1}.jpg`, dataUrl: url() }); }
   else { await Render.post(c, d, photo); files.push({ name: 'post-1.jpg', dataUrl: url() }); }
   const zone = await Render.story(c, d, photo);
-  return { slides: files, story: { name: 'story.' + (mime === 'image/png' ? 'png' : 'jpg'), dataUrl: url() }, zone };
+  return { v: { slides: files, story: { name: 'story.' + (mime === 'image/png' ? 'png' : 'jpg'), dataUrl: url() }, zone }, miss: d.missing };
 }
 
 const storyCache = new Map();
 export function storyUrl(it) {
   const key = 's' + coverKey(it);
   if (!storyCache.has(key)) {
-    storyCache.set(key, (async () => {
+    storyCache.set(key, solid(storyCache, key, async () => {
       const c = document.createElement('canvas'), [d, ph] = await prep(it);
       await Render.story(c, d, ph);
-      return c.toDataURL('image/jpeg', 0.8);
-    })());
+      return { v: c.toDataURL('image/jpeg', 0.8), miss: d.missing };
+    }));
   }
   return storyCache.get(key);
 }

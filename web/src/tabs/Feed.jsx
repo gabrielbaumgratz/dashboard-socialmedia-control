@@ -15,13 +15,13 @@ function StoryThumb({ it, className = '' }) {
 }
 
 function LineItem({ it }) {
-  const { cfg } = useApp();
+  const { cfg, trashItem } = useApp();
   const set = useSet(it);
-  return <div className="igwrap"><IgPost it={it} cfg={cfg} set={set} /></div>;
+  return <div className="igwrap"><IgPost it={it} cfg={cfg} set={set} onDelete={() => trashItem(it.id)} /></div>;
 }
 
 export default function Feed() {
-  const { items, cfg, openPost } = useApp();
+  const { items, cfg, openPost, trashItem } = useApp();
   const [brand, setBrand] = useState(false);
   const [mode, setMode] = useState('grid'), [sub, setSub] = useState('posts'), [drafts, setDrafts] = useState(false);
   const [avatar, setAvatar] = useState(null);
@@ -76,6 +76,7 @@ export default function Feed() {
                   {sub !== 'stories' && t === 'video' && <Icon name="reels" className="tico" />}
                   {sub !== 'stories' && t === 'carrossel' && <Icon name="carousel" className="tico" />}
                   {it.status !== 'posted' && <span className="tag"><Status st={it.status} /></span>}
+                  <span className="tdel" role="button" tabIndex={0} title="Excluir" aria-label="Excluir" onClick={e => { e.stopPropagation(); trashItem(it.id); }} onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); trashItem(it.id); } }}><Icon name="trash" /></span>
                 </button>
               );
             })}

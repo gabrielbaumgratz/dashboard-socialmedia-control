@@ -37,7 +37,7 @@ export function Caption({ text, limit }) {
 }
 
 // ---------- post do feed (post único ou carrossel) ----------
-export function IgPost({ it, cfg, set }) {
+export function IgPost({ it, cfg, set, onDelete }) {
   const handle = handleOf(cfg);
   const [idx, setIdx] = useState(0), [liked, setLiked] = useState(false), [saved, setSaved] = useState(false), [pop, setPop] = useState(0);
   useEffect(() => setIdx(0), [it.id]);
@@ -48,7 +48,7 @@ export function IgPost({ it, cfg, set }) {
       <header>
         <span className="av"><span>R</span></span>
         <div className="who"><b>{handle}</b> <span className="time">• {shortWhen(it)}</span><small>{cfg.location || ''}</small></div>
-        <button className="ico" title="Mais opções"><Icon name="dots" /></button>
+        {onDelete ? <button className="ico" title="Excluir post" aria-label="Excluir post" onClick={onDelete}><Icon name="trash" /></button> : <button className="ico" title="Mais opções"><Icon name="dots" /></button>}
       </header>
       <div className="media" onDoubleClick={() => { setLiked(true); setPop(p => p + 1); }}>
         {video && it.videoUrl ? <video src={it.videoUrl} controls loop playsInline preload="metadata" /> :
