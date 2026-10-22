@@ -547,7 +547,10 @@ async function handleApi(req, res, url) {
     } catch (e) { return send(res, 502, { error: e.message }); }
   }
   if (p === '/api/items' && m === 'POST') {
-    const db = await loadDb(), item = newItem(await readJson(req));
+    const db = await loadDb(), body = await readJson(req);
+    const dup = body.newsId && db.items.find(i => i.newsId === body.newsId && !i.deletedAt); // clique duplo ou motor ao mesmo tempo: devolve o que já existe
+    if (dup) return send(res, 200, dup);
+    const item = newItem(body);
     db.items.push(item); await saveDb(db);
     await syncSheet(item);
     return send(res, 200, item);

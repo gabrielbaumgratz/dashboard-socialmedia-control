@@ -59,9 +59,12 @@ export default function News() {
   useEffect(() => { if (first.current) { first.current = false; return; } const id = setTimeout(apply, 350); return () => clearTimeout(id); }, [period, month, year, search]);
   const apply = () => { const f = { ...rangeOf(period, month, year), search: search.trim() }; setApplied(f); load(true, f, 1); };
   
+  const sending = useRef(new Set());
   async function send(n) {
     let it = items.find(i => i.newsId === n.id);
     if (it) { openPost(it.id); return; }
+    if (sending.current.has(n.id)) return; // segundo clique enquanto cria não cria outro
+    sending.current.add(n.id);
     try {
       it = await api('/api/items', { method: 'POST', body: { newsId: n.id, origTitle: n.title, title: n.title, category: n.category || '', link: n.link, newsText: n.text || n.excerpt || '', newsDate: n.date, photoUrl: n.image || '', credit: n.credit || '', description: '' } });
       setItems(l => [...l, it]); setReading(null); openPost(it.id); // abre direto a página do post: arte, legendas e Programar
@@ -70,6 +73,7 @@ export default function News() {
         catch (e) { toast(e.message, true); }
       } else toast('Post criado. Coloque a chave do Gemini em Configurações para gerar as legendas.');
     } catch (e) { toast(e.message, true); }
+    finally { sending.current.delete(n.id); }
   }
   const labelFor = n => { const it = items.find(i => i.newsId === n.id); return it ? (it.status === 'posted' ? 'Já postada' : 'Abrir post') : 'Criar post'; };
   // atualiza a lista e já roda o motor (cria rascunho do que for novo)

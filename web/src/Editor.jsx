@@ -174,18 +174,25 @@ function LookCtl({ e, patch, k, tpl, pre, inline }) {
       <Rng label="Transição" value={cur.fade} unit="%" min={0} max={100} onChange={fade => set({ fade })} />
       <Rng label="Opacidade da foto" value={cur.op} unit="%" min={0} max={100} onChange={op => set({ op })} />
     </Card>}</>;
+  const off = !cur.on;
   const bgCard = (
-    <Card title="Fundo atrás do texto" right={<Switch on={cur.on} set={on => set({ on })} label="Fundo atrás do texto" />} off={!cur.on}>
+    <Card title="Fundo atrás do texto" right={<Switch on={cur.on} set={on => set({ on })} label="Fundo atrás do texto" />} off={off}>
       <Row label="Cor do fundo"><ColorMenu value={cur.color} onChange={color => set({ color })} /></Row>
-      <Rng label="Opacidade do fundo" value={cur.opacity} unit="%" min={0} max={100} onChange={opacity => set({ opacity })} />
-      <Rng label="Cantos arredondados" value={cur.r} unit=" px" min={0} max={60} onChange={r => set({ r })} />
-      <Rng label="Espessura do contorno" value={cur.bw} unit=" px" min={0} max={12} onChange={bw => set({ bw })} />
-      <Row label="Cor do contorno"><ColorMenu value={cur.bc} onChange={bc => set({ bc })} /></Row>
-      <Rng label="Opacidade do contorno" value={cur.bo} unit="%" min={0} max={100} onChange={bo => set({ bo })} />
+      <Rng label="Opacidade" value={cur.opacity} unit="%" min={0} max={100} onChange={opacity => set({ opacity })} />
+      <Rng label="Cantos" value={cur.r} unit=" px" min={0} max={60} onChange={r => set({ r })} />
     </Card>);
-  const body = bgCard;
-  if (inline) return <>{body}<Card title="Texto" right={resetBtn(e, patch, k)}><TextColor value={cur.tc} onChange={tc => set({ tc })} /></Card></>;
-  return <Pair><Card title="Texto e barra" right={resetBtn(e, patch, k)}>{pre}<TextColor value={cur.tc} onChange={tc => set({ tc })} /></Card>{body}</Pair>;
+  const lineCard = (
+    <Card title="Contorno do fundo" off={off}>
+      <Rng label="Espessura" value={cur.bw} unit=" px" min={0} max={12} onChange={bw => set({ bw })} />
+      <Row label="Cor do contorno"><ColorMenu value={cur.bc} onChange={bc => set({ bc })} /></Row>
+      <Rng label="Opacidade" value={cur.bo} unit="%" min={0} max={100} onChange={bo => set({ bo })} />
+    </Card>);
+  const textCard = (full) => (
+    <Card title={pre ? 'Texto e barra' : 'Texto'} cls={full ? 'full' : ''} right={resetBtn(e, patch, k)}>
+      {pre}<TextColor value={cur.tc} onChange={tc => set({ tc })} />
+    </Card>);
+  if (inline) return <>{bgCard}{lineCard}{textCard(false)}</>;
+  return <Pair>{bgCard}{lineCard}{textCard(true)}</Pair>;
 }
 
 // barra: same = opção "igual ao destaque"/"padrão"
@@ -205,16 +212,21 @@ function PresetMenu({ cur, set }) {
 // k = 'uh' (post 3: degradê + destaque) ou 'cut' (post 4: degradê + barra)
 function UhCtl({ e, patch, k = 'uh' }) {
   const cur = { ...Render.LOOK[k], ...((e.look || {})[k]) }, set = p => patch({ look: { ...(e.look || {}), [k]: { ...cur, ...p } } }), uh = k === 'uh';
+  if (!uh) return <Pair><Card title="Degradê e barra" cls="full" right={resetBtn(e, patch, k)}>
+      <Row label="Cor do degradê"><ColorMenu value={cur.bg} onChange={c => set({ bg: c })} /></Row>
+      <Rng label="Tamanho" value={cur.size} unit="%" min={0} max={100} onChange={size => set({ size })} />
+      <BarPick value={cur.bar} onChange={v => set({ bar: v })} />
+    </Card></Pair>;
   return <Pair>
     <Card title="Degradê" right={resetBtn(e, patch, k)}>
-      {uh && <Row label="Combinação"><PresetMenu cur={cur} set={set} /></Row>}
+      <Row label="Combinação"><PresetMenu cur={cur} set={set} /></Row>
       <Row label="Cor do degradê"><ColorMenu value={cur.bg} onChange={c => set({ bg: c })} /></Row>
-      <Rng label="Tamanho do degradê" value={cur.size} unit="%" min={0} max={100} onChange={size => set({ size })} />
+      <Rng label="Tamanho" value={cur.size} unit="%" min={0} max={100} onChange={size => set({ size })} />
     </Card>
-    <Card title={uh ? 'Destaque' : 'Barra'}>
-      {uh && <Row label="Cor de destaque"><ColorMenu value={cur.acc} onChange={c => set({ acc: c })} /></Row>}
-      {uh && <Row label="Cor do selo"><ColorMenu value={cur.chip || ''} onChange={chip => set({ chip })} opts={[['', 'Igual ao destaque'], ['none', 'Sem selo']]} /></Row>}
-      <BarPick value={cur.bar} same={uh} onChange={v => set({ bar: v })} />
+    <Card title="Destaque">
+      <Row label="Cor de destaque"><ColorMenu value={cur.acc} onChange={c => set({ acc: c })} /></Row>
+      <Row label="Cor do selo"><ColorMenu value={cur.chip || ''} onChange={chip => set({ chip })} opts={[['', 'Igual ao destaque'], ['none', 'Sem selo']]} /></Row>
+      <BarPick value={cur.bar} same onChange={v => set({ bar: v })} />
     </Card>
   </Pair>;
 }

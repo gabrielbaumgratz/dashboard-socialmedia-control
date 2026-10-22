@@ -835,3 +835,18 @@ button.nthumb:hover,button.nthumb:active{background-size:cover;background-positi
 .crop.narrow .rng2{grid-template-columns:1fr;gap:6px}
 .lookbox .crow{grid-template-columns:124px minmax(0,1fr)}.cbtn{white-space:nowrap}
 .crop.narrow .crop-btns button{padding:7px 4px;font-size:12px}
+button.ncover:hover,button.ncover:active,button[style*="background-image"]:hover{background-size:cover;background-position:center;background-repeat:no-repeat}
+
+/* v4: cards compactos, rótulo e controle sempre juntos (coluna do rótulo = tamanho do maior rótulo do card) */
+.lookbox{padding:10px 14px 12px;gap:8px}
+.lookbox .lbody{grid-template-columns:max-content minmax(0,1fr);column-gap:14px;row-gap:8px;align-items:center}
+.lookbox .crow{display:contents}
+.lookbox .clbl{font-size:13px;font-weight:700;color:var(--mut);white-space:nowrap}
+.lookbox .cctl{display:flex;align-items:center;gap:10px;min-width:0}
+.lookbox .cctl input[type=range]{flex:1;min-width:60px}
+.lookbox .cval{min-width:46px;text-align:right;font-size:13px}
+.lookbox .cbtn,.lookbox .chipbtn{font-size:13px}
+.lookbox.full .lbody{grid-template-columns:max-content minmax(0,1fr) max-content minmax(0,1fr);column-gap:14px}
+.lookbox .lookhead b{font-size:14px}
+.lookpair{align-items:stretch}
+@media(max-width:900px){.lookbox.full .lbody{grid-template-columns:max-content minmax(0,1fr)}}
