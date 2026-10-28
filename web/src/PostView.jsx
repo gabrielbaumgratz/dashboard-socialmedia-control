@@ -102,8 +102,8 @@ export default function PostView() {
     setBusy(false);
   };
   const doReel = async () => {
-    setExp(true); toast('Gravando o vídeo em 4K na melhor qualidade… deixe esta aba aberta.');
-    try { const { blob, ext } = await exportReel(live, () => {}, 2); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `reel-4k.${ext}`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); toast(ext === 'mp4' ? 'Vídeo exportado em 4K (MP4).' : 'Vídeo exportado em 4K (WebM).'); }
+    setExp(true); toast('Baixando vídeo...');
+    try { const { blob, ext } = await exportReel(live, () => {}, 1); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `reel.${ext}`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); toast('Vídeo baixado.'); }
     catch (e) { toast(e.message, true); }
     setExp(false);
   };
@@ -162,7 +162,7 @@ export default function PostView() {
               <button className="ok" onClick={markPosted}>Já postei</button>
             </div>
             <div className="exportbox">
-              {video && it.videoUrl && <button className="ghost" onClick={doReel} disabled={exp}>{exp ? <><Spin /> Gravando 4K…</> : 'Baixar vídeo 4K'}</button>}
+              {video && it.videoUrl && <button className="ghost" onClick={doReel} disabled={exp}>{exp ? <><Spin /> Baixando…</> : 'Baixar vídeo'}</button>}
               <button className="ghost" onClick={doExport} disabled={exp}>{exp ? <><Spin /> Exportando…</> : video ? 'Capa 4K' : 'Baixar 4K'}</button>
               <select value={fmt} onChange={e => setFmt(e.target.value)} aria-label="Formato"><option value="png">PNG</option><option value="jpg">JPG</option></select>
             </div>

@@ -57,7 +57,17 @@ const Render = (() => {
 
   // ---------- desenho básico ----------
   let S = 1; // escala de saída: 1 = 1080px, 2 = 4K (2160px de largura)
-  function setup(canvas, w, h) { canvas.width = w * S; canvas.height = h * S; const ctx = canvas.getContext('2d'); ctx.setTransform(S, 0, 0, S, 0, 0); ctx.textBaseline = 'top'; return ctx; }
+  function setup(canvas, w, h) {
+    const tw = Math.round(w * S), th = Math.round(h * S);
+    if (canvas.width !== tw || canvas.height !== th) {
+      canvas.width = tw;
+      canvas.height = th;
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(S, 0, 0, S, 0, 0);
+    ctx.textBaseline = 'top';
+    return ctx;
+  }
   function font(ctx, weight, size, spacing = 0) {
     ctx.font = `${weight} ${size}px ${F}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = spacing + 'px';
@@ -509,26 +519,33 @@ const Render = (() => {
       ctx.fillStyle = C.branco; ctx.fillRect(0, vh, 1080, 1920 - vh);
       if (nd.sym) symbol(ctx, 1080 - 72 - 96, vh - 72, 96);
       credit(ctx, d.credit, vh - 84, 1050, 'VÍDEO');
-      const yStart = vh + 42, yFooter = 1808, availH = yFooter - 22 - yStart;
+      const yFooter = 1808, availH = yFooter - 32 - (vh + 48);
       const catH = cat ? (nd.pill ? 52 : 36) : 0;
-      let ti, de = null, gap = 18;
-      for (let sc = 1; sc >= 0.72; sc -= 0.04) {
-        gap = Math.max(12, Math.round(18 * sc));
+      let ti, de = null, gap = 18, scOpt = 1;
+      for (let sc = 1; sc >= 0.70; sc -= 0.04) {
+        scOpt = sc;
+        gap = Math.max(14, Math.round(20 * sc));
+        const catGap = nd.pill ? Math.max(26, Math.round(34 * sc)) : Math.max(18, Math.round(24 * sc));
         const tSz = Math.round(60 * sc), tLh = Math.round(66 * sc);
         const dSz = Math.round(33 * sc), dLh = Math.round(41 * sc);
         ti = block(ctx, d.title, 900, tSz, tLh, 936, d.description ? 3 : 4);
         de = d.description ? block(ctx, d.description, 400, dSz, dLh, 936, sc < 0.85 ? 2 : 3) : null;
-        const tot = (cat ? catH + gap : 0) + ti.h + (de ? gap + de.h : 0);
+        const tot = (cat ? catH + catGap : 0) + ti.h + (de ? gap + de.h : 0);
         if (tot <= availH) break;
       }
-      let y = yStart;
+      const catGap = nd.pill ? Math.max(26, Math.round(34 * scOpt)) : Math.max(18, Math.round(24 * scOpt));
+      const contentH = (cat ? catH + catGap : 0) + ti.h + (de ? gap + de.h : 0);
+      const extraH = Math.max(0, availH - contentH);
+      // Se não tiver categoria, dá um espaçamento maior no topo para não colar na borda do vídeo e balancear o espaço em branco
+      const topPad = cat ? Math.min(68, Math.round(42 + extraH * 0.12)) : Math.min(180, Math.round(72 + extraH * 0.28));
+      let y = vh + topPad;
       ctx.globalAlpha = catA;
       if (cat && nd.pill) {
         chip(ctx, up(cat), 72, y + (1 - catA) * 12, 28, { bg: nd.cat, color: lum(nd.cat) > 0.35 ? C.navy : C.branco, sp: 2, h: 52 });
-        y += 52 + gap;
+        y += 52 + catGap;
       } else if (cat) {
         font(ctx, 800, 30, 2); ctx.fillStyle = nd.cat; ctx.fillText(up(cat), 72, y + (1 - catA) * 12, 936);
-        y += 36 + gap;
+        y += 36 + catGap;
       }
       ctx.globalAlpha = tiA; y = draw(ctx, ti, 72, y + (1 - tiA) * 18, C.preto) - (1 - tiA) * 18;
       if (de) {

@@ -60,21 +60,24 @@ function CanvasPv({ label, w, h, sig, draw, photo, focal, onFocal }) {
 }
 
 function TplRow({ list, kname, e, sig, draw, w, h, story, onPick }) {
-  const [urls, setUrls] = useState({}), deb = useDebounced(sig, 350), run = useCanvasJob();
+  const [urls, setUrls] = useState({}), deb = useDebounced(sig, 250), run = useCanvasJob();
   useEffect(() => {
     let alive = true;
     run(async () => {
-      const big = document.createElement('canvas'), sm = document.createElement('canvas');
-      sm.width = w * 2; sm.height = h * 2;
-      const sctx = sm.getContext('2d');
       for (const t of list) {
-        if (!alive) break;
-        await draw(big, t.id);
-        sctx.clearRect(0, 0, sm.width, sm.height);
-        sctx.drawImage(big, 0, 0, sm.width, sm.height);
-        if (alive) setUrls(u => ({ ...u, [t.id]: sm.toDataURL('image/jpeg', .78) }));
+        if (!alive) return;
+        try {
+          const big = document.createElement('canvas');
+          await draw(big, t.id);
+          const sm = document.createElement('canvas');
+          sm.width = w * 2; sm.height = h * 2;
+          sm.getContext('2d').drawImage(big, 0, 0, sm.width, sm.height);
+          const dataUrl = sm.toDataURL('image/jpeg', 0.8);
+          if (alive) setUrls(u => ({ ...u, [t.id]: dataUrl }));
+        } catch (err) {
+          console.warn('Erro ao gerar preview do modelo:', t.id, err);
+        }
       }
-      big.width = 0; big.height = 0; sm.width = 0; sm.height = 0;
     });
     return () => { alive = false; };
   }, [deb]);
@@ -416,12 +419,12 @@ export default function Editor() {
   async function saveVideo() {
     if (!e.videoUrl || vbusy) return;
     if (vref.current && !vref.current.paused) try { vref.current.pause(); } catch {}
-    setVbusy(true); toast('Gravando vídeo em 4K na melhor qualidade… mantenha esta aba aberta.');
+    setVbusy(true); toast('Baixando vídeo...');
     try {
-      const { blob, ext } = await exportReel({ ...e, tpl: e.tpl }, () => {}, 2);
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${slug(e.title)}-reel-4k.${ext}`; a.click();
+      const { blob, ext } = await exportReel({ ...e, tpl: e.tpl }, () => {}, 1);
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${slug(e.title)}-reel.${ext}`; a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-      toast('Vídeo em 4K baixado.');
+      toast('Vídeo baixado.');
     } catch (err) { toast(err.message, true); }
     setVbusy(false);
   }
@@ -537,7 +540,7 @@ export default function Editor() {
                 </div>}
                 {e.videoUrl && <Crop f={e.focal || { x: .5, y: .5, zoom: 1 }} set={f => patch({ focal: f })} photo={vphoto} w={rbox.w} h={rbox.h} pw={225} cols={2} fitLabel="Vídeo inteiro"
                   extra={<><button type="button" className="ghost" onClick={toggleVid}>{vp ? 'Pausar vídeo' : 'Dar play no vídeo'}</button>
-                    <button type="button" className="ghost savepng" disabled={vbusy} onClick={saveVideo}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" /></svg>{vbusy ? 'Gravando 4K…' : 'Baixar vídeo'}</button></>} />}
+                    <button type="button" className="ghost savepng" disabled={vbusy} onClick={saveVideo}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" /></svg>{vbusy ? 'Baixando…' : 'Baixar vídeo'}</button></>} />}
               </div>
             );
           })() : (<>

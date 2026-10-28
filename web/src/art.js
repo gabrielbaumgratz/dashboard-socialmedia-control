@@ -10,11 +10,27 @@ export function getVideoFrame(url) {
   if (!url) return Promise.resolve(null);
   if (!frameCache.has(url)) {
     capCache(frameCache, 12);
-    frameCache.set(url, new Promise(resolve => {
+    frameCache.set(url, new Promise(async resolve => {
+      let src = url, blobUrl = null;
+      if (url.startsWith('/images/')) {
+        try {
+          const res = await fetch(url, { credentials: 'include' });
+          if (res.ok) {
+            const b = await res.blob();
+            blobUrl = URL.createObjectURL(b);
+            src = blobUrl;
+          }
+        } catch {}
+      }
       const v = document.createElement('video');
-      v.crossOrigin = 'anonymous'; v.muted = true; v.playsInline = true; v.preload = 'auto';
-      const done = ok => { try { v.pause(); v.removeAttribute('src'); v.load(); } catch {} resolve(ok); };
-      const timer = setTimeout(() => done(null), 6000);
+      if (!blobUrl) v.crossOrigin = 'anonymous';
+      v.muted = true; v.playsInline = true; v.preload = 'auto';
+      const done = ok => {
+        try { v.pause(); v.removeAttribute('src'); v.load(); } catch {}
+        if (blobUrl) try { URL.revokeObjectURL(blobUrl); } catch {}
+        resolve(ok);
+      };
+      const timer = setTimeout(() => done(null), 7000);
       v.onloadeddata = () => { try { v.currentTime = Math.min(0.1, v.duration || 0.1); } catch { clearTimeout(timer); done(null); } };
       v.onseeked = () => {
         clearTimeout(timer);
@@ -29,7 +45,7 @@ export function getVideoFrame(url) {
         } catch { done(null); }
       };
       v.onerror = () => { clearTimeout(timer); frameCache.delete(url); done(null); };
-      v.src = url;
+      v.src = src;
     }));
   }
   return frameCache.get(url);
@@ -136,52 +152,90 @@ export function storyUrl(it) {
   return storyCache.get(key);
 }
 
-// reel pronto em 4K (2160x3840 @ 30fps) ultra-otimizado: pré-renderiza o overlay 4K na GPU antes de gravar, zero async/await no loop de quadros e zero travamento/RAM alta
-export async function exportReel(it, onProgress = () => {}, scale = 2) {
+// reel pronto em 1080p/2K (1080x1920 @ 30fps) ultra-otimizado e rápido: pré-carrega o vídeo em Blob local (imune a CORS e oscilações de rede) e pré-renderiza overlay na GPU
+export async function exportReel(it, onProgress = () => {}, scale = 1) {
   await Render.preload();
-  const d = artData(it), v = document.createElement('video');
-  v.crossOrigin = 'anonymous';
-  v.src = it.videoUrl; v.playsInline = true; v.preload = 'auto';
-  await new Promise((ok, no) => { v.onloadeddata = ok; v.onerror = () => no(new Error('Não consegui abrir o vídeo.')); });
+  const d = artData(it);
+  let srcUrl = it.videoUrl, blobObj = null;
+  if (srcUrl && !srcUrl.startsWith('blob:') && !srcUrl.startsWith('data:')) {
+    try {
+      const res = await fetch(srcUrl, { credentials: 'include' });
+      if (res.ok) {
+        const b = await res.blob();
+        blobObj = URL.createObjectURL(b);
+        srcUrl = blobObj;
+      }
+    } catch {
+      if (srcUrl.startsWith('/images/')) {
+        try {
+          const res2 = await fetch(srcUrl + (srcUrl.includes('?') ? '&' : '?') + 'proxy=1', { credentials: 'include' });
+          if (res2.ok) {
+            const b = await res2.blob();
+            blobObj = URL.createObjectURL(b);
+            srcUrl = blobObj;
+          }
+        } catch {}
+      }
+    }
+  }
+
+  const v = document.createElement('video');
+  if (!blobObj) v.crossOrigin = 'anonymous';
+  v.src = srcUrl;
+  v.playsInline = true;
+  v.preload = 'auto';
+  v.muted = false;
+
+  await new Promise((ok, no) => {
+    let done = false;
+    v.onloadeddata = () => { if (!done) { done = true; ok(); } };
+    v.oncanplay = () => { if (!done) { done = true; ok(); } };
+    v.onerror = () => { if (!done) { done = true; no(new Error('Não consegui abrir o vídeo.')); } };
+    setTimeout(() => { if (!done) { done = true; ok(); } }, 6000);
+  });
+
   const mimes = [
     'video/mp4;codecs=avc1.640033,mp4a.40.2',
     'video/mp4;codecs=avc1.4d0033,mp4a.40.2',
     'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
     'video/mp4',
     'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
     'video/webm'
   ];
   const mime = mimes.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
   if (!mime) throw new Error('Este navegador não grava vídeo. Use o Chrome ou o Edge.');
+
+  const sc = scale || 1;
   const c = document.createElement('canvas');
-  let sc = scale || 2;
   c.width = 1080 * sc; c.height = 1920 * sc;
-  let stream = c.captureStream(30);
+  const stream = c.captureStream(30);
+
   let ac, dest;
-  try { ac = new AudioContext(); dest = ac.createMediaStreamDestination(); ac.createMediaElementSource(v).connect(dest); dest.stream.getAudioTracks().forEach(t => stream.addTrack(t)); } catch {}
-  let rec;
-  const chunks = [];
   try {
-    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 18e6 });
-    rec.ondataavailable = e => e.data.size && chunks.push(e.data);
-    rec.start(500);
-  } catch {
-    sc = 1; c.width = 1080; c.height = 1920;
-    stream = c.captureStream(30);
-    if (dest) dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
-    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 12e6 });
-    rec.ondataavailable = e => e.data.size && chunks.push(e.data);
-    rec.start(500);
-  }
+    ac = new AudioContext();
+    if (ac.state === 'suspended') ac.resume().catch(() => {});
+    dest = ac.createMediaStreamDestination();
+    ac.createMediaElementSource(v).connect(dest);
+    dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+  } catch {}
+
+  const chunks = [];
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8e6 });
+  rec.ondataavailable = e => e.data && e.data.size && chunks.push(e.data);
+  rec.start(250);
+
   const ctx = c.getContext('2d', { alpha: false });
   ctx.imageSmoothingEnabled = true;
-  // pré-renderiza o overlay final em 4K uma única vez antes do vídeo tocar (após 0.92s de vídeo, só copia da GPU em 0.1ms!)
+
+  // pré-renderiza o overlay final na GPU uma única vez (após 0.92s de vídeo, só copia da GPU em 0.1ms!)
   const staticOv = document.createElement('canvas');
   staticOv.width = c.width; staticOv.height = c.height;
   Render.reelSync(staticOv, d, 99, true);
-  // canvas leve para os primeiros 0.92s de animação de entrada + micro-canvas para fundo borrado instantâneo (sem filter blur pesado em 4K)
+
   const animOv = document.createElement('canvas');
-  animOv.width = 1080; animOv.height = 1920;
+  animOv.width = c.width; animOv.height = c.height;
+
   const blurCv = document.createElement('canvas');
   blurCv.width = 45; blurCv.height = 80;
   const blurCtx = blurCv.getContext('2d', { alpha: false });
@@ -234,7 +288,17 @@ export async function exportReel(it, onProgress = () => {}, scale = 2) {
     };
     rafId = requestAnimationFrame(onRaf);
   }
-  const ended = new Promise(r => (v.onended = r));
+
+  const ended = new Promise(r => {
+    v.onended = r;
+    const check = () => {
+      if (v.ended || (v.duration && v.currentTime >= v.duration - 0.05)) r();
+      else if (active) setTimeout(check, 250);
+    };
+    setTimeout(check, 1000);
+  });
+
+  try { if (v.currentTime > 0.01) v.currentTime = 0; } catch {}
   drawFrame();
   await v.play();
   await ended;
@@ -245,6 +309,7 @@ export async function exportReel(it, onProgress = () => {}, scale = 2) {
   await stopped;
   if (ac) try { await ac.close(); } catch {}
   try { v.pause(); v.removeAttribute('src'); v.load(); } catch {}
+  if (blobObj) try { URL.revokeObjectURL(blobObj); } catch {}
   c.width = 0; c.height = 0;
   staticOv.width = 0; staticOv.height = 0;
   animOv.width = 0; animOv.height = 0;

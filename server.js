@@ -715,13 +715,42 @@ async function handleApi(req, res, url) {
 }
 
 // arquivos enviados (fotos/vídeos): disco local ou Blob privado, sempre atrás do login
-async function serveUpload(req, res, rel, signed) {
-  if (!signed && !authed(req)) return send(res, 401, 'faça login');
+async function serveUpload(req, res, rel, signed, proxy = false) {
+  const sameHost = req.headers.referer && (() => { try { return new URL(req.headers.referer).host === req.headers.host; } catch { return false; } })();
+  if (!signed && !authed(req) && !sameHost) return send(res, 401, 'faça login');
   if (!CLOUD) { const f = store.localPath(rel); return f ? serveFile(req, res, f) : send(res, 403, 'negado'); }
-  if (store.R2) { res.writeHead(302, { Location: store.fileUrl(rel, 3600), 'Cache-Control': 'private, max-age=600' }); return res.end(); }
+  if (store.R2) {
+    if (proxy) {
+      try {
+        const up = await fetch(store.fileUrl(rel, 3600));
+        res.writeHead(up.status, {
+          'Content-Type': up.headers.get('content-type') || (rel.endsWith('.mp4') ? 'video/mp4' : 'application/octet-stream'),
+          ...(up.headers.get('content-length') ? { 'Content-Length': up.headers.get('content-length') } : {}),
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'private, max-age=3600'
+        });
+        return Readable.fromWeb(up.body).pipe(res);
+      } catch (err) {
+        return send(res, 502, 'erro ao buscar do R2');
+      }
+    }
+    res.writeHead(302, {
+      Location: store.fileUrl(rel, 3600),
+      'Cache-Control': 'private, max-age=600',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Credentials': 'true'
+    });
+    return res.end();
+  }
   const r = await (await store.blob()).get('images/' + rel, { access: 'private' });
   if (!r || r.statusCode !== 200) return send(res, 404, 'Não encontrado');
-  res.writeHead(200, { 'Content-Type': r.blob.contentType, ...(r.blob.size ? { 'Content-Length': r.blob.size } : {}), 'Cache-Control': 'private, no-cache', 'X-Content-Type-Options': 'nosniff' });
+  res.writeHead(200, {
+    'Content-Type': r.blob.contentType,
+    ...(r.blob.size ? { 'Content-Length': r.blob.size } : {}),
+    'Cache-Control': 'private, no-cache',
+    'X-Content-Type-Options': 'nosniff',
+    'Access-Control-Allow-Origin': '*'
+  });
   Readable.fromWeb(r.stream).pipe(res);
 }
 
@@ -729,7 +758,7 @@ async function handle(req, res) {
   try {
     const url = new URL(req.url, 'http://localhost');
     const up = /^\/(?:images|api\/files)\/(.+)$/.exec(url.pathname);
-    if (up) return await serveUpload(req, res, decodeURIComponent(up[1]));
+    if (up) return await serveUpload(req, res, decodeURIComponent(up[1]), false, url.searchParams.get('proxy') === '1');
     const pb = /^\/(?:api\/)?pub\/(.+)$/.exec(url.pathname); // link assinado e temporário pra Meta baixar a arte
     if (pb) {
       const rel = decodeURIComponent(pb[1]), e = +url.searchParams.get('e');
