@@ -415,17 +415,15 @@ function pubUrl(base, id, name) { // link temporário (12h) que a Meta usa pra b
 async function markPosted(id, postUrl, what) {
   const db0 = await loadDb(), it0 = findItem(db0, id);
   if (!it0) return null;
-  await store.delFiles(it0.id);           // apaga tudo: a foto original continua no WordPress
-  const done = { postedAt: new Date().toISOString(), status: 'posted', isNew: false, images: [], export: null, ig: null, publishError: '', publishTries: 0 };
+  // Mantém os arquivos e mídias por 14 dias para permitir re-download em alta qualidade e edições
+  const done = { postedAt: new Date().toISOString(), status: 'posted', isNew: false, publishError: '', publishTries: 0 };
   if (postUrl) done.postUrl = String(postUrl).trim();
-  done.postedWhat = ['feed', 'story', 'both'].includes(what) ? what : 'feed'; // o que foi pro Instagram: post, story ou os dois
-  const cut = x => (x && x.startsWith('/images/') ? '' : x);
+  done.postedWhat = ['feed', 'story', 'both'].includes(what) ? what : 'feed';
   const tmp = { ...it0, ...done };
   tmp.sheetSync = await syncSheet(tmp);
   const db = await loadDb(), it = findItem(db, id); // relê: a planilha demorou
   if (!it) return null;
-  Object.assign(it, done, { sheetSync: tmp.sheetSync, videoUrl: '', cutoutUrl: '', photoUrl: cut(it.photoUrl), customArt: {} });
-  (it.slides || []).forEach(sl => { if (sl && sl.photoUrl) sl.photoUrl = cut(sl.photoUrl); });
+  Object.assign(it, done, { sheetSync: tmp.sheetSync });
   await saveDb(db);
   return it;
 }
@@ -555,18 +553,45 @@ async function handleApi(req, res, url) {
   }
   if (p === '/api/img' && m === 'GET') {
     const target = url.searchParams.get('url') || '';
-    let host; try { host = new URL(target).host; } catch { return send(res, 400, 'url inválida'); }
-    if (host !== new URL(loadConfig().wpUrl).host) return send(res, 403, 'host não permitido');
-    const r = await fetch(target);
-    if (!r.ok) return send(res, 502, 'falha ao baixar imagem');
-    res.writeHead(200, { 'Content-Type': r.headers.get('content-type') || 'image/jpeg', 'Cache-Control': 'max-age=86400' });
-    return res.end(Buffer.from(await r.arrayBuffer()));
+    let parsed; try { parsed = new URL(target); } catch { return send(res, 400, 'url inválida'); }
+    if (!['http:', 'https:'].includes(parsed.protocol)) return send(res, 400, 'protocolo inválido');
+    const host = parsed.hostname;
+    if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|169\.254\.|::1|0\.0\.0\.0)/i.test(host)) return send(res, 403, 'host não permitido');
+    try {
+      const r = await fetch(target, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+      });
+      if (!r.ok) return send(res, 502, 'falha ao baixar imagem');
+      res.writeHead(200, {
+        'Content-Type': r.headers.get('content-type') || 'image/jpeg',
+        'Cache-Control': 'public, max-age=86400',
+        'Access-Control-Allow-Origin': '*'
+      });
+      return res.end(Buffer.from(await r.arrayBuffer()));
+    } catch {
+      return send(res, 502, 'erro ao buscar imagem');
+    }
   }
 
   if (p === '/api/items' && m === 'GET') {
-    const db = await loadDb(), cut = Date.now() - 7 * 864e5, old = db.items.filter(i => i.deletedAt && Date.parse(i.deletedAt) < cut);
+    const db = await loadDb(), now = Date.now();
+    const cutTrash = now - 7 * 864e5, oldTrash = db.items.filter(i => i.deletedAt && Date.parse(i.deletedAt) < cutTrash);
     let dirty = false;
-    if (old.length) { for (const i of old) await store.delFiles(i.id); db.items = db.items.filter(i => !old.includes(i)); dirty = true; }
+    if (oldTrash.length) { for (const i of oldTrash) await store.delFiles(i.id); db.items = db.items.filter(i => !oldTrash.includes(i)); dirty = true; }
+    // Retenção de 14 dias: posts já postados há mais de 14 dias têm arquivos pesados de mídia limpos para economizar espaço
+    const cutPosted = now - 14 * 864e5, cutImg = x => (x && x.startsWith('/images/') ? '' : x);
+    const expiredPosted = db.items.filter(i => i.status === 'posted' && i.postedAt && Date.parse(i.postedAt) < cutPosted && !i.mediaCleaned);
+    if (expiredPosted.length) {
+      for (const i of expiredPosted) {
+        await store.delFiles(i.id);
+        i.videoUrl = '';
+        i.cutoutUrl = '';
+        i.photoUrl = cutImg(i.photoUrl);
+        (i.slides || []).forEach(sl => { if (sl && sl.photoUrl) sl.photoUrl = cutImg(sl.photoUrl); });
+        i.mediaCleaned = true;
+        dirty = true;
+      }
+    }
     for (const i of db.items) if (/^(uncategorized|sem categoria)$/i.test(String(i.category || '').trim())) { i.category = ''; dirty = true; }
     if (dirty) await saveDb(db);
     return send(res, 200, db.items);
@@ -758,7 +783,7 @@ async function handle(req, res) {
   try {
     const url = new URL(req.url, 'http://localhost');
     const up = /^\/(?:images|api\/files)\/(.+)$/.exec(url.pathname);
-    if (up) return await serveUpload(req, res, decodeURIComponent(up[1]), false, url.searchParams.get('proxy') === '1');
+    if (up) return await serveUpload(req, res, decodeURIComponent(up[1]), false, url.searchParams.get('proxy') === '1' || url.searchParams.get('cv') === '1');
     const pb = /^\/(?:api\/)?pub\/(.+)$/.exec(url.pathname); // link assinado e temporário pra Meta baixar a arte
     if (pb) {
       const rel = decodeURIComponent(pb[1]), e = +url.searchParams.get('e');

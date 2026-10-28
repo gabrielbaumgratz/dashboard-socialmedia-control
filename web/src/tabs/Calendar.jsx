@@ -28,7 +28,7 @@ function Menu({ m, close }) {
   return (
     <div className="ctxmenu glass" role="menu" style={{ left: Math.min(m.x, innerWidth - 200), top: Math.min(m.y, innerHeight - 190) }} onClick={e => e.stopPropagation()}>
       <button onClick={() => { close(); openPost(it.id); }}>Abrir</button>
-      {!posted && <button onClick={() => { close(); setEditorId(it.id); }}>Editar arte</button>}
+      {(!posted || !it.mediaCleaned) && <button onClick={() => { close(); setEditorId(it.id); }}>Editar arte</button>}
       {!posted && <button onClick={() => { close(); postNow(); }}>Postar agora</button>}
       <button className="del" onClick={() => { close(); del(); }}>Excluir</button>
     </div>

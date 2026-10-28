@@ -88,7 +88,7 @@ export default function PostView() {
     toast(dl ? 'Legenda copiada e arquivos em 4K baixados. Poste no Instagram e depois clique em "Já postei".' : 'Legenda copiada. Poste no Instagram e depois clique em "Já postei".');
   };
   const markPosted = async () => {
-    const what = await askChoice('O que você postou? Os arquivos enviados serão apagados.', [['feed', 'Post'], ['story', 'Story'], ['both', 'Ambos']]);
+    const what = await askChoice('O que você postou? Os arquivos e downloads ficarão disponíveis por 14 dias no histórico.', [['feed', 'Post'], ['story', 'Story'], ['both', 'Ambos']]);
     if (!what) return;
     try {
       const s = await api(`/api/items/${it.id}/posted`, { method: 'POST', body: { postUrl: url.trim(), what } }); replace(s);
@@ -140,15 +140,18 @@ export default function PostView() {
         </div>
 
         <aside className="pvside">
-          {!posted && <button onClick={() => vt(() => setEditorId(it.id))}><Icon name="edit" />Editar arte</button>}
+          <button onClick={() => vt(() => setEditorId(it.id))} disabled={it.mediaCleaned}>
+            <Icon name="edit" />Editar arte{it.mediaCleaned ? ' (mídia arquivada)' : ''}
+          </button>
 
           <div className="capbox">
             <div className="caphead"><b>Legenda</b>
-              {!posted && <button className={'aibtn' + (vars.length ? ' ghost' : '')} onClick={regen} disabled={busy}>{busy ? <Spin /> : null}{busy ? 'Gerando…' : vars.length ? 'Gerar legendas de novo' : 'Gerar legendas com IA'}</button>}</div>
-            {vars.length > 0 && !posted && <Seg value={String(it.chosen || 0)} onChange={i => { saveItem(it, { chosen: +i, caption: vars[+i].text }); setCaption(vars[+i].text); }}
+              <button className={'aibtn' + (vars.length ? ' ghost' : '')} onClick={regen} disabled={busy}>{busy ? <Spin /> : null}{busy ? 'Gerando…' : vars.length ? 'Gerar legendas de novo' : 'Gerar legendas com IA'}</button>
+            </div>
+            {vars.length > 0 && <Seg value={String(it.chosen || 0)} onChange={i => { saveItem(it, { chosen: +i, caption: vars[+i].text }); setCaption(vars[+i].text); }}
               options={vars.map((v, i) => [String(i), STYLE[v.style] || `Opção ${i + 1}`])} />}
-            <textarea value={caption} readOnly={posted} onChange={e => setCaption(e.target.value)} />
-            <input value={tags} readOnly={posted} onChange={e => setTags(e.target.value)} aria-label="Hashtags" placeholder="#hashtags" />
+            <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Legenda do post…" />
+            <input value={tags} onChange={e => setTags(e.target.value)} aria-label="Hashtags" placeholder="#hashtags" />
             {it.aiError && <div className="aierr">IA: {it.aiError}</div>}
           </div>
 
@@ -161,19 +164,30 @@ export default function PostView() {
               <input placeholder="Link do post no Instagram (opcional)" value={url} onChange={e => setUrl(e.target.value)} />
               <button className="ok" onClick={markPosted}>Já postei</button>
             </div>
-            <div className="exportbox">
-              {video && it.videoUrl && <button className="ghost" onClick={doReel} disabled={exp}>{exp ? <><Spin /> Baixando…</> : 'Baixar vídeo'}</button>}
-              <button className="ghost" onClick={doExport} disabled={exp}>{exp ? <><Spin /> Exportando…</> : video ? 'Capa 4K' : 'Baixar 4K'}</button>
-              <select value={fmt} onChange={e => setFmt(e.target.value)} aria-label="Formato"><option value="png">PNG</option><option value="jpg">JPG</option></select>
-            </div>
-            <button className="danger" onClick={discard}>Excluir</button>
           </>}
+
           {posted && <>
+            {it.mediaCleaned ? (
+              <div className="cutnote" style={{ fontSize: '0.85rem', color: 'var(--muted, #94a3b8)', padding: '4px 0' }}>
+                Mídia arquivada após 14 dias de retenção.
+              </div>
+            ) : (
+              <div className="cutnote" style={{ fontSize: '0.85rem', color: '#00c49f', padding: '4px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>⏳</span> Download e edição disponíveis por mais <b>{Math.max(0, 14 - Math.floor((Date.now() - Date.parse(it.postedAt || it.createdAt)) / 864e5))} dias</b>.
+              </div>
+            )}
             <button className="ghost" onClick={async () => { await navigator.clipboard.writeText(fullCaption(it)); toast('Legenda copiada.'); }}>Copiar legenda</button>
             {it.postUrl && <a className="btn ghost" href={it.postUrl} target="_blank" rel="noopener noreferrer">Ver no Instagram</a>}
-            <button className="danger" onClick={discard}>Excluir</button>
             {it.sheetSync && !it.sheetSync.ok && !it.sheetSync.skipped && <div className="aierr">Planilha: {it.sheetSync.msg}</div>}
           </>}
+
+          <div className="exportbox">
+            {video && it.videoUrl && <button className="ghost" onClick={doReel} disabled={exp || it.mediaCleaned}>{exp ? <><Spin /> Baixando…</> : 'Baixar vídeo'}</button>}
+            <button className="ghost" onClick={doExport} disabled={exp || it.mediaCleaned}>{exp ? <><Spin /> Exportando…</> : video ? 'Capa 4K' : 'Baixar 4K'}</button>
+            <select value={fmt} onChange={e => setFmt(e.target.value)} aria-label="Formato"><option value="png">PNG</option><option value="jpg">JPG</option></select>
+          </div>
+
+          <button className="danger" onClick={discard}>Excluir</button>
         </aside>
       </div>
     </div>

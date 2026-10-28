@@ -50,20 +50,20 @@ export function getVideoFrame(url) {
   }
   return frameCache.get(url);
 }
-// no máximo 4 downloads ao mesmo tempo: o feed pede dezenas de fotos de uma vez e o excesso estourava o tempo e virava capa azul
+// no máximo 8 downloads ao mesmo tempo com fila rápida para carregar feed sem travar
 let busy = 0; const wait = [];
-const slot = async () => { if (busy >= 4) await new Promise(r => wait.push(r)); busy++; };
+const slot = async () => { if (busy >= 8) await new Promise(r => wait.push(r)); busy++; };
 const free = () => { busy--; const n = wait.shift(); if (n) n(); };
 export function getImg(url) {
   if (!url) return Promise.resolve(null);
   if (!photoCache.has(url)) {
-    capCache(photoCache, 24);
+    capCache(photoCache, 120);
     // foto recém enviada pode demorar um instante pra ficar disponível: tenta de novo e nunca guarda falha no cache
     const p = (async () => {
-      for (let t = 0; t < 5; t++) {
+      for (let t = 0; t < 4; t++) {
         await slot();
         try { return await Render.loadImage(url); } catch { /* tenta de novo */ } finally { free(); }
-        await new Promise(r => setTimeout(r, 500 * (t + 1)));
+        await new Promise(r => setTimeout(r, 400 * (t + 1)));
       }
       photoCache.delete(url); return null;
     })();
@@ -80,11 +80,30 @@ export function artData(it) {
     legendas: it.legendas || '', dateline: it.dateline || [String(Render.BRAND.location || '').split(',')[0], it.newsDate ? new Date(it.newsDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' }) : ''].filter(Boolean).join(' · ')
   };
 }
+// Carrega apenas a imagem necessária para a CAPA/Story (economiza dezenas de downloads no feed e evita fundo azul por sobrecarga)
+export async function prepCover(it) {
+  const d = artData(it);
+  let phUrl = it.photoUrl;
+  if (!phUrl && d.slides && d.slides.length) {
+    const firstWithPhoto = d.slides.find(s => s && s.photoUrl);
+    if (firstWithPhoto) phUrl = firstWithPhoto.photoUrl;
+  }
+  if (it.cutoutUrl) d.cutoutImg = await getImg(it.cutoutUrl);
+  let ph = await getImg(phUrl);
+  if (!ph && it.videoUrl) ph = await getVideoFrame(it.videoUrl);
+  if (ph && phUrl) d.imgs[phUrl] = ph;
+  d.missing = !!(phUrl && !ph);
+  return [d, ph];
+}
 export async function prep(it) {
   const d = artData(it);
   if (it.cutoutUrl) d.cutoutImg = await getImg(it.cutoutUrl);
   for (const s of d.slides) if (s && s.photoUrl) d.imgs[s.photoUrl] = await getImg(s.photoUrl);
   let ph = await getImg(it.photoUrl);
+  if (!ph && d.slides && d.slides.length) {
+    const firstWithPhoto = d.slides.find(s => s && s.photoUrl);
+    if (firstWithPhoto) ph = d.imgs[firstWithPhoto.photoUrl] || await getImg(firstWithPhoto.photoUrl);
+  }
   if (!ph && it.videoUrl) ph = await getVideoFrame(it.videoUrl);
   d.missing = (it.photoUrl && !ph) || d.slides.some(s => s && s.photoUrl && !d.imgs[s.photoUrl]);
   return [d, ph];
@@ -98,10 +117,10 @@ const coverKey = it => JSON.stringify([it.id, it.focalStory, it.mediaType, it.vi
 export function coverUrl(it) {
   const key = coverKey(it);
   if (!coverCache.has(key)) {
-    capCache(coverCache, 24);
+    capCache(coverCache, 60);
     coverCache.set(key, solid(coverCache, key, async () => {
-      const c = document.createElement('canvas'), [d, ph] = await prep(it);
-      if (typeOf(it) === 'video') await Render.reelThumb(c, d, ph); else await Render.cover(c, d, ph); // reel: capa vertical 9:16 do próprio reel
+      const c = document.createElement('canvas'), [d, ph] = await prepCover(it);
+      if (typeOf(it) === 'video') await Render.reelThumb(c, d, ph); else await Render.cover(c, d, ph);
       const v = c.toDataURL('image/jpeg', 0.85);
       c.width = 0; c.height = 0;
       return { v, miss: d.missing };
@@ -140,9 +159,9 @@ const storyCache = new Map();
 export function storyUrl(it) {
   const key = 's' + coverKey(it);
   if (!storyCache.has(key)) {
-    capCache(storyCache, 24);
+    capCache(storyCache, 48);
     storyCache.set(key, solid(storyCache, key, async () => {
-      const c = document.createElement('canvas'), [d, ph] = await prep(it);
+      const c = document.createElement('canvas'), [d, ph] = await prepCover(it);
       await Render.story(c, d, ph);
       const v = c.toDataURL('image/jpeg', 0.8);
       c.width = 0; c.height = 0;
