@@ -60,7 +60,7 @@ function QueueRow({ it }) {
     <article className="qrow" data-id={it.id}>
       <div className="qart">
         <div className="thumbwrap"><button className="thumb" onClick={() => openPost(it.id)} aria-label="Ver como fica no Instagram">
-          {t === 'video' && it.videoUrl ? <video src={it.videoUrl} muted preload="metadata" /> : <Cover it={it} />}
+          <Cover it={it} />
           {t === 'video' && <Icon name="play" className="playbadge" />}
         </button>
         <span className="thumbacts"><button type="button" onClick={() => setEditorId(it.id)} title="Editar arte" aria-label="Editar arte"><Icon name="edit" /></button><button type="button" className="del" onClick={() => trashItem(it.id)} title="Excluir" aria-label="Excluir"><Icon name="trash" /></button></span></div>
@@ -69,7 +69,7 @@ function QueueRow({ it }) {
       <div className="qmain">
         <div className="inline"><Status st={it.status} />
           <span className="meta">{[it.newsDate ? new Date(it.newsDate).toLocaleDateString('pt-BR') : '', it.category, it.isNew ? 'nova do site' : ''].filter(Boolean).join('  |  ')}</span></div>
-        <h3>{it.origTitle || it.title}</h3>
+        <h3>{it.origTitle || it.title || 'Novo post'}</h3>
         {vars.length > 0 && (
           <div className="vars" role="radiogroup" aria-label="Opções de legenda">
             {vars.map((v, i) => (
@@ -100,12 +100,12 @@ function QueueCard({ it }) {
   return (
     <article className="qcard" data-id={it.id}>
       <div className="thumbwrap"><button className="thumb" onClick={() => openPost(it.id)} aria-label="Ver como fica no Instagram">
-        {t === 'video' && it.videoUrl ? <video src={it.videoUrl} muted preload="metadata" /> : <Cover it={it} />}
+        <Cover it={it} />
         {t === 'video' && <Icon name="play" className="playbadge" />}
       </button>
       <span className="thumbacts"><button type="button" onClick={() => setEditorId(it.id)} title="Editar arte" aria-label="Editar arte"><Icon name="edit" /></button><button type="button" className="del" onClick={() => trashItem(it.id)} title="Excluir" aria-label="Excluir"><Icon name="trash" /></button></span></div>
       <div className="inline"><Status st={it.status} /></div>
-      <h4>{it.origTitle || it.title}</h4>
+      <h4>{it.origTitle || it.title || 'Novo post'}</h4>
       <span className="meta">{it.scheduledAt ? new Date(it.scheduledAt).toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Sem data ainda'}</span>
     </article>
   );
@@ -113,7 +113,7 @@ function QueueCard({ it }) {
 
 export default function Queue() {
   const [view, setView] = usePref('queue-view', 'grid');
-  const { items, banner, setBanner } = useApp();
+  const { items, banner, setBanner, createItem } = useApp();
   const list = items.filter(i => i.status !== 'posted')
     .sort((x, y) => (x.scheduledAt ? 0 : 1) - (y.scheduledAt ? 0 : 1) || sortKey(x).localeCompare(sortKey(y)));
   let last = null;
@@ -121,6 +121,7 @@ export default function Queue() {
     <>
       <PageHead title="Fila">
         <ViewToggle value={view} onChange={setView} />
+        <button onClick={createItem}>+ Novo post</button>
       </PageHead>
       {banner > 0 && <div className="banner glass"><span>{banner} notícia(s) nova(s) chegaram na fila.</span><button className="ghost" onClick={() => setBanner(0)}>Ok</button></div>}
       {!list.length && <Empty>Nada na fila. Quando sair notícia nova no site, ela aparece aqui. Você também pode mandar uma pela aba "Notícias do site".</Empty>}

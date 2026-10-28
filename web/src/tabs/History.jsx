@@ -24,11 +24,11 @@ function SheetCell({ it }) {
 }
 
 export default function History() {
-  const { items, trash, openPost, restoreItem, purgeItem, trashItem, toast } = useApp();
+  const { items, trash, openPost, createItem, restoreItem, purgeItem, trashItem, toast } = useApp();
   const [st, setSt] = useState('all'), [mo, setMo] = useState(''), [q, setQ] = useState('');
   const rows = items.filter(it => (st === 'all' || it.status === st)
     && (!mo || dayKey(new Date(itemDate(it) || it.createdAt)).startsWith(mo))
-    && (!q.trim() || (it.title + ' ' + it.origTitle).toLowerCase().includes(q.trim().toLowerCase())))
+    && (!q.trim() || ((it.title || '') + ' ' + (it.origTitle || '')).toLowerCase().includes(q.trim().toLowerCase())))
     .sort((a, b) => String(itemDate(b) || b.createdAt).localeCompare(String(itemDate(a) || a.createdAt)));
   const left = d => Math.max(0, 7 - Math.floor((Date.now() - Date.parse(d)) / 864e5));
   if (st === 'trash') return (
@@ -42,7 +42,7 @@ export default function History() {
           {!trash.length && <tr><td colSpan="4" className="hint">Lixeira vazia.</td></tr>}
           {trash.map(it => (
             <tr key={it.id}>
-              <td data-l="Título" className="t">{it.title || it.origTitle}</td>
+              <td data-l="Título" className="t">{it.title || it.origTitle || 'Novo post'}</td>
               <td>{new Date(it.deletedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
               <td>{left(it.deletedAt)} dia(s)</td>
               <td className="acts"><button className="ghost" onClick={async () => { await restoreItem(it.id); toast('Restaurado.'); }}>Restaurar</button>
@@ -59,6 +59,7 @@ export default function History() {
         <Seg value={st} onChange={setSt} options={[['all', 'Todos'], ['posted', 'Postados'], ['scheduled', 'Programados'], ['draft', 'Rascunhos'], ['trash', `Lixeira${trash.length ? ' (' + trash.length + ')' : ''}`]]} />
         <input type="month" className="mini glass" value={mo} onChange={e => setMo(e.target.value)} aria-label="Filtrar por mês" />
         <ExpandableSearch value={q} onChange={setQ} placeholder="Buscar título" />
+        <button onClick={createItem}>+ Novo post</button>
       </PageHead>
       <div className="tablewrap">
         <table className="table">
@@ -72,7 +73,7 @@ export default function History() {
                   <td data-l="Status"><Status st={it.status} /></td>
                   <td data-l="Data">{iso ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td>
                   <td data-l="Tipo"><TypeTag it={it} /></td>
-                  <td data-l="Título" className="t">{it.title || it.origTitle}</td>
+                  <td data-l="Título" className="t">{it.title || it.origTitle || 'Novo post'}</td>
                   <td data-l="Post"><PostLinkCell it={it} /></td>
                   <td data-l="Matéria">{it.link ? <a href={it.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>Matéria</a> : '-'}</td>
                   <td data-l="Planilha"><SheetCell it={it} /></td>

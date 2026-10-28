@@ -6,13 +6,13 @@ import { fullCaption, handleOf, shortWhen, fmtWhen, typeOf } from './util.js';
 
 export function useCover(it) {
   const [u, setU] = useState(null);
-  const key = JSON.stringify([it.id, it.focalStory, it.mediaType, it.title, it.category, it.photoUrl, it.focal, it.tpl, it.slides, it.description, it.chip, it.credit, it.source, it.bigTitle, it.cutoutUrl, it.look]);
+  const key = JSON.stringify([it.id, it.focalStory, it.mediaType, it.videoUrl, it.title, it.category, it.photoUrl, it.focal, it.tpl, it.slides, it.description, it.chip, it.credit, it.source, it.bigTitle, it.cutoutUrl, it.look]);
   useEffect(() => { let ok = true; setU(null); coverUrl(it).then(x => ok && setU(x)); return () => { ok = false; }; }, [key]);
   return u;
 }
 export function useSet(it, enabled = true) {
   const [s, setS] = useState(null);
-  const key = JSON.stringify([it.id, it.focalStory, it.mediaType, it.title, it.category, it.photoUrl, it.focal, it.tpl, it.slides, it.description, it.chip, it.credit, it.source, it.bigTitle, it.cutoutUrl, it.look]);
+  const key = JSON.stringify([it.id, it.focalStory, it.mediaType, it.videoUrl, it.title, it.category, it.photoUrl, it.focal, it.tpl, it.slides, it.description, it.chip, it.credit, it.source, it.bigTitle, it.cutoutUrl, it.look]);
   useEffect(() => {
     if (!enabled) return; let ok = true; setS(null);
     renderSet(it).then(x => ok && setS(x));
@@ -120,48 +120,55 @@ export function StoryPhone({ src, zone, it, cfg, guides }) {
 }
 
 // ---------- reel ----------
-// texto animado do template de reel por cima do vídeo (parado = estado final)
-export function ReelOverlay({ it, video, playing }) {
-  const c = useRef(null);
+// posição da janela onde o vídeo aparece (tela cheia no modelo 1, topo no 2, card arredondado no 3 e 4)
+export function reelVideoStyle(it) {
+  const b = Render.reelBox(artData(it));
+  if (b.x === 0 && b.y === 0 && b.w === 1080 && b.h === 1920) return undefined;
+  return { position: 'absolute', left: (b.x / 10.8) + '%', top: (b.y / 19.2) + '%', width: (b.w / 10.8) + '%', height: (b.h / 19.2) + '%', objectFit: 'cover' };
+}
+// camada gráfica do template de reel por cima do vídeo
+export function ReelOverlay({ it }) {
+  const c = useRef(null), lookSig = JSON.stringify(it.look || {});
   useEffect(() => {
-    let id, alive = true; const d = artData(it);
-    const loop = async () => {
-      const v = video.current, cv = c.current; if (!alive || !cv) return;
+    let alive = true; const d = artData(it);
+    (async () => {
+      const cv = c.current; if (!alive || !cv) return;
       cv.width = 540; cv.height = 960; cv.getContext('2d').clearRect(0, 0, 540, 960);
-      await Render.reel(cv, d, v && playing ? v.currentTime : 99, (v && v.duration) || 15);
-      if (playing) id = requestAnimationFrame(loop);
-    };
-    loop(); return () => { alive = false; cancelAnimationFrame(id); };
-  }, [playing, it.title, it.category, it.legendas, it.dateline, it.tpl && it.tpl.reel]);
+      await Render.reel(cv, d);
+    })();
+    return () => { alive = false; };
+  }, [it.title, it.category, it.description, it.source, it.chip, it.credit, lookSig, it.tpl && it.tpl.reel]);
   return <canvas ref={c} className="rl-overlay" aria-hidden="true" />;
 }
 
-export function ReelPhone({ it, cfg, cover }) {
+export function ReelPhone({ it, cfg, cover, guides }) {
   const handle = handleOf(cfg), v = useRef(null);
   const [playing, setPlaying] = useState(false), [liked, setLiked] = useState(false);
-  const toggle = () => { if (!v.current) return; if (v.current.paused) { v.current.play(); setPlaying(true); } else { v.current.pause(); setPlaying(false); } };
+  const toggle = () => { if (!v.current) return; if (v.current.paused) v.current.play().catch(() => {}); else v.current.pause(); };
   return (
     <div className="phone reel">
       <div className="phone-screen">
-        <div className="rl-media">
-          {it.videoUrl ? <video ref={v} src={it.videoUrl + '#t=0.1'} loop playsInline preload="metadata" onClick={toggle} /> :
+        <div className="rl-media" onClick={toggle}>
+          {it.videoUrl ? <video ref={v} style={reelVideoStyle(it)} src={it.videoUrl} loop playsInline preload="auto" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onLoadedData={ev => { try { if (ev.currentTarget.currentTime === 0) ev.currentTarget.currentTime = 0.05; } catch {} }} /> :
             cover ? <img src={cover} alt="" draggable="false" /> : <div className="skel" />}
-          {it.videoUrl && <ReelOverlay it={it} video={v} playing={playing} />}
+          {it.videoUrl && <ReelOverlay it={it} />}
         </div>
-        {!playing && it.videoUrl && <button className="reelplay" onClick={toggle} aria-label="Tocar"><Icon name="play" /></button>}
-        <div className="rl-top"><b>Reels</b><span className="sp" /><Icon name="story" /></div>
-        <div className="rl-rail">
-          <button onClick={() => setLiked(!liked)} className={liked ? 'liked' : ''}><Icon name={liked ? 'heart-f' : 'heart'} /><small>{liked ? 1 : 0}</small></button>
-          <button><Icon name="comment" /><small>0</small></button>
-          <button><Icon name="share" /><small>0</small></button>
-          <button><Icon name="dots" /></button>
-          <span className="audio"><Icon name="music" /></span>
-        </div>
-        <div className="rl-bottom">
-          <div className="rl-who"><span className="av"><span>R</span></span><b>{handle}</b><span className="follow">Seguir</span></div>
-          <p><Caption text={fullCaption(it)} limit={70} /></p>
-          <div className="rl-audio"><Icon name="music" /><span>Áudio original · {handle}</span></div>
-        </div>
+        {!playing && it.videoUrl && <button type="button" className="reelplay" onClick={toggle} aria-label="Tocar"><Icon name="play" /></button>}
+        {guides && <>
+          <div className="rl-top" style={{ pointerEvents: 'none' }}><b>Reels</b><span className="sp" /><Icon name="story" /></div>
+          <div className="rl-rail">
+            <button onClick={() => setLiked(!liked)} className={liked ? 'liked' : ''}><Icon name={liked ? 'heart-f' : 'heart'} /><small>{liked ? 1 : 0}</small></button>
+            <button><Icon name="comment" /><small>0</small></button>
+            <button><Icon name="share" /><small>0</small></button>
+            <button><Icon name="dots" /></button>
+            <span className="audio"><Icon name="music" /></span>
+          </div>
+          <div className="rl-bottom" style={{ pointerEvents: 'none' }}>
+            <div className="rl-who"><span className="av"><span>R</span></span><b>{handle}</b><span className="follow">Seguir</span></div>
+            <p><Caption text={fullCaption(it)} limit={70} /></p>
+            <div className="rl-audio"><Icon name="music" /><span>Áudio original · {handle}</span></div>
+          </div>
+        </>}
       </div>
       <span className="island" />
     </div>

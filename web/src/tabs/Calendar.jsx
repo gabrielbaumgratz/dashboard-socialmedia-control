@@ -39,7 +39,7 @@ const hhmm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 function WCard({ it, compact }) {
   const { openPost } = useApp();
   const iso = itemDate(it), d = iso ? new Date(iso) : null;
-  const title = it.title || it.origTitle, mn = useMenu(it);
+  const title = it.title || it.origTitle || 'Novo post', mn = useMenu(it);
   return (
     <div className={'wcard ' + it.status + (compact ? ' compact' : '')} title={`${title} (${STATUS[it.status]})`}
       draggable={it.status !== 'posted'} onDragStart={drag(it)} onClick={() => openPost(it.id)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), openPost(it.id))} tabIndex={0} role="button" onContextMenu={mn.onContextMenu}>{mn.dots}
@@ -84,7 +84,7 @@ function KCard({ it }) {
   return (
     <div className="kcard" draggable onDragStart={drag(it)} onClick={() => openPost(it.id)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), openPost(it.id))} tabIndex={0} role="button" onContextMenu={mn.onContextMenu}>{mn.dots}
       <div className="kt"><Cover it={it} /></div>
-      <div><b>{it.title || it.origTitle}</b>
+      <div><b>{it.title || it.origTitle || 'Novo post'}</b>
         <small>{TYPE[typeOf(it)]}{iso ? ', ' + new Date(iso).toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ', sem data'}</small></div>
     </div>
   );
@@ -102,7 +102,7 @@ function KCol({ st, name, list, onMove }) {
 }
 
 export default function Calendar() {
-  const { items, cfg, saveItem, replace, byId, toast } = useApp();
+  const { items, cfg, saveItem, replace, byId, createItem, toast } = useApp();
   const [view, setView] = usePref('cal-view', 'week');
   const [wf, setWf] = useState({ draft: true, scheduled: true, posted: true });
   const [menu, setMenu] = useState(null);
@@ -148,6 +148,7 @@ export default function Calendar() {
           <button className="ghost glass" onClick={today}>Hoje</button>
           <button className="ghost glass" onClick={() => step(1)} aria-label="Próximo">&rarr;</button>
         </span>}
+        <button onClick={createItem}>+ Novo post</button>
       </PageHead>
       <div className="legend">
         {[['draft', 'Rascunho'], ['scheduled', 'Programado'], ['posted', 'Postado']].map(([st, n]) => (

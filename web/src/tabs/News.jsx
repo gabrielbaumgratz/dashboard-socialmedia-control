@@ -34,7 +34,7 @@ function Reader({ n, onBack, onSend, label }) {
 }
 
 export default function News() {
-  const { items, cfg, setItems, setTab, openPost, toast, engine, refreshEngine, reload, setBanner } = useApp();
+  const { items, cfg, setItems, setTab, openPost, createItem, toast, engine, refreshEngine, reload, setBanner } = useApp();
   const [view, setView] = usePref('news-view', 'grid'), [checking, setChecking] = useState(false);
   const [period, setPeriod] = useState('all'), [month, setMonth] = useState(''), [year, setYear] = useState(''), [search, setSearch] = useState('');
   const [applied, setApplied] = useState({}), [list, setList] = useState([]), [page, setPage] = useState(1), [pages, setPages] = useState(1);
@@ -95,6 +95,7 @@ export default function News() {
       <PageHead title="Notícias do site" hint={when}>
         <ViewToggle value={view} onChange={setView} />
         <button className="ghost glass" onClick={refresh} disabled={checking}>{checking ? <><Spin /> Atualizando…</> : 'Atualizar'}</button>
+        <button onClick={createItem}>+ Novo post</button>
       </PageHead>
       <div className="filters">
         <select value={period} onChange={e => setPeriod(e.target.value)} aria-label="Período">

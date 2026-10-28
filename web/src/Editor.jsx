@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, uploadMedia } from './api.js';
-import { Seg } from './ui.jsx';
-import { ReelOverlay } from './previews.jsx';
+import { ReelOverlay, reelVideoStyle } from './previews.jsx';
 import { useApp, vt } from './store.jsx';
 import Render from './render.js';
-import { artData, getImg } from './art.js';
+import { artData, getImg, getVideoFrame } from './art.js';
 import { DEF_TPL, typeOf } from './util.js';
 import { Icon } from './icons.jsx';
 
@@ -19,7 +18,13 @@ const SLIDE_FIELDS = {
 // quais campos cada template realmente usa (o que não aparece aqui não vai na arte)
 const POST_USES = { p01: ['title', 'category', 'credit'], p02: ['title', 'chip', 'description', 'credit'], p03: ['title', 'category', 'bigTitle', 'cutout', 'credit'], p04: ['title', 'category', 'description', 'source', 'credit'], p05: ['title', 'chip', 'description', 'credit'] };
 const CAR_USES = ['title', 'category'];
-const REEL_USES = { r00: [], r01: ['title', 'category'], r02: ['title', 'dateline', 'legendas'] };
+const REEL_USES = {
+  r00: [],
+  r01: ['title', 'category', 'description', 'credit'],
+  r02: ['title', 'category', 'description', 'source', 'credit'],
+  r03: ['title', 'category', 'description', 'source', 'credit'],
+  r04: ['title', 'category', 'description', 'credit']
+};
 const STORY_USES = { s02: ['title', 'category', 'credit'], s03: ['title', 'category', 'description', 'credit'], s01: [], s04: ['title', 'category', 'description', 'credit'] };
 // baixa em tamanho real, sem guias, exatamente o que está sendo editado
 async function savePng(draw, name) {
@@ -160,13 +165,14 @@ const Switch = ({ on, set, label }) => <label className="swt" title={label}><inp
 const SwitchRow = ({ label, on, set }) => <Row label={label}><Switch on={on} set={set} label={label} /></Row>;
 const Pair = ({ children }) => <div className="lookpair">{children}</div>;
 const resetBtn = (e, patch, k) => (e.look || {})[k] ? <button type="button" className="ghost mini" onClick={() => patch({ look: { ...(e.look || {}), [k]: undefined } })}>Voltar ao padrão</button> : null;
-// k = 'post' | 'story' (fundo atrás do texto) ou 'bg' (fundo do story). pre = linhas extras do card de texto (ex.: barra)
-function LookCtl({ e, patch, k, tpl, pre, inline }) {
+// k = 'post' | 'story' (fundo atrás do texto) ou 'bg' (fundo do story/reel). pre = linhas extras do card de texto (ex.: barra)
+function LookCtl({ e, patch, k, tpl, pre, inline, video }) {
   const base = Render.LOOK[k], cur = { ...base, ...((e.look || {})[k]) }, set = p => patch({ look: { ...(e.look || {}), [k]: { ...cur, ...p } } });
   if (k === 'bg') return <>
-    <Card title="Fundo do story" right={resetBtn(e, patch, k)}>
+    <Card title={video ? 'Fundo do reel' : 'Fundo do story'} right={resetBtn(e, patch, k)}>
       <Row label="Cor do fundo"><ColorMenu value={cur.color} onChange={color => set({ color })} /></Row>
       <TextColor value={cur.tc} onChange={tc => set({ tc })} />
+      {pre}
       {tpl === 's03' && <SwitchRow label="Mostrar símbolo" on={cur.sym} set={sym => set({ sym })} />}
     </Card>
     {tpl === 's03' && <Card title="Foto do story" cls="full">
@@ -231,12 +237,12 @@ function UhCtl({ e, patch, k = 'uh' }) {
   </Pair>;
 }
 
-// post 2: foto e divisória num card, categoria no outro
-function NdCtl({ e, patch }) {
+// post 2 e reels de jornal (r02/r03): vídeo/foto e divisória num card, categoria no outro
+function NdCtl({ e, patch, video, hideHeight }) {
   const cur = { ...Render.LOOK.nd, ...((e.look || {}).nd) }, set = p => patch({ look: { ...(e.look || {}), nd: { ...cur, ...p } } });
   return <Pair>
-    <Card title="Foto" right={resetBtn(e, patch, 'nd')}>
-      <Rng label="Altura da foto" value={Math.round(cur.ph / 13.5)} unit="%" min={30} max={75} onChange={v => set({ ph: Math.round(v * 13.5) })} />
+    <Card title={video ? 'Vídeo' : 'Foto'} right={resetBtn(e, patch, 'nd')}>
+      {!hideHeight && <Rng label={'Altura d' + (video ? 'o vídeo' : 'a foto')} value={Math.round(cur.ph / 13.5)} unit="%" min={30} max={75} onChange={v => set({ ph: Math.round(v * 13.5) })} />}
       <SwitchRow label="Mostrar símbolo" on={cur.sym} set={sym => set({ sym })} />
     </Card>
     <Card title="Categoria">
@@ -269,18 +275,30 @@ function Field({ label, k, e, patch, ph, multi, cls }) {
 }
 
 export default function Editor() {
-  const { editorId, setEditorId, byId, saveItem, replace, toast, cfg } = useApp();
+  const { editorId, setEditorId, setPostId, byId, saveItem, purgeItem, replace, toast, cfg } = useApp();
   const [src] = useState(() => byId(editorId));
   const [e, setE] = useState(() => ({ ...JSON.parse(JSON.stringify(src)), ...(src.tpl && src.tpl.post === 'p05' ? { look: { ...(src.look || {}), uh: { bg: '#735400', acc: '#fabd0d', ...((src.look || {}).uh) } } } : {}), focal: src.focal || { x: .5, y: .5, zoom: 1 }, focalStory: src.focalStory || src.focal || { x: .5, y: .5, zoom: 1 }, tpl: { ...DEF_TPL, ...(src.tpl || {}), ...(src.tpl && src.tpl.post === 'p05' ? { post: 'p02' } : {}) }, slides: Render.slidesOf(src) }));
   const [photo, setPhoto] = useState(null), [cut, setCut] = useState(null), [imgs, setImgs] = useState({}), [over, setOver] = useState(false), [up, setUp] = useState(false), [dbusy, setDbusy] = useState(false);
   const [cur, setCur] = useState(0), [vr, setVr] = useState(null), [vp, setVp] = useState(false), vref = useRef(null);
   const kind = typeOf(e), car = kind === 'carrossel', video = kind === 'video';
   const patch = p => setE(x => ({ ...x, ...p }));
-  const dirty = useRef(false), first = useRef(true);
-  const close = () => { if (dirty.current && !confirm('Sair sem salvar a arte?')) return; vt(() => setEditorId(null)); };
+  const dirty = useRef(false), saved = useRef(false), first = useRef(true);
+  const close = () => {
+    if (dirty.current && !confirm('Sair sem salvar a arte?')) return;
+    if (!saved.current && !dirty.current && !src.newsId && !src.title && !src.origTitle && !src.photoUrl && !src.videoUrl && !(src.slides || []).length) {
+      purgeItem(src.id);
+      vt(() => { setEditorId(null); setPostId(null); });
+      return;
+    }
+    vt(() => setEditorId(null));
+  };
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
-  useEffect(() => { let ok = true; getImg(e.photoUrl).then(i => ok && setPhoto(i)); return () => { ok = false; }; }, [e.photoUrl]);
+  useEffect(() => {
+    let ok = true;
+    (e.photoUrl ? getImg(e.photoUrl) : e.videoUrl ? getVideoFrame(e.videoUrl) : Promise.resolve(null)).then(i => ok && setPhoto(i));
+    return () => { ok = false; };
+  }, [e.photoUrl, e.videoUrl]);
   useEffect(() => { let ok = true; getImg(e.cutoutUrl).then(i => ok && setCut(i)); return () => { ok = false; }; }, [e.cutoutUrl]);
   const photoSig = e.slides.map(s => s.photoUrl || '').join('|');
   useEffect(() => { let ok = true; (async () => { const m = {}; for (const s of e.slides) if (s.photoUrl) m[s.photoUrl] = await getImg(s.photoUrl); if (ok) setImgs(m); })(); return () => { ok = false; }; }, [photoSig]);
@@ -289,14 +307,15 @@ export default function Editor() {
   useEffect(() => { if (first.current) { first.current = false; return; } dirty.current = true; }, [e]);
   useEffect(() => { const h = ev => { if (dirty.current) { ev.preventDefault(); ev.returnValue = ''; } }; window.addEventListener('beforeunload', h); return () => window.removeEventListener('beforeunload', h); }, []);
   const base = useMemo(() => ({ ...artData(e), cutoutImg: cut, imgs }), [e, cut, imgs]);
-  const textSig = JSON.stringify([e.title, e.storyTitle, e.storyCategory, e.category, e.chip, e.description, e.source, e.credit, e.bigTitle, e.look, e.slides, e.tpl, e.focal, e.focalStory, e.photoUrl, e.cutoutUrl, kind, !!photo, !!cut, Object.keys(imgs).length, cur]);
-  const thumbSig = JSON.stringify([e.title, e.storyTitle, e.storyCategory, e.category, e.chip, e.description, e.source, e.credit, e.bigTitle, e.look, e.slides, e.focal, e.photoUrl, e.cutoutUrl, kind, !!photo, !!cut]);
+  const textSig = JSON.stringify([e.title, e.storyTitle, e.storyCategory, e.category, e.chip, e.description, e.source, e.credit, e.bigTitle, e.dateline, e.legendas, e.look, e.slides, e.tpl, e.focal, e.focalStory, e.photoUrl, e.cutoutUrl, kind, !!photo, !!cut, Object.keys(imgs).length, cur]);
+  const thumbSig = JSON.stringify([e.title, e.storyTitle, e.storyCategory, e.category, e.chip, e.description, e.source, e.credit, e.bigTitle, e.dateline, e.legendas, e.look, e.slides, e.focal, e.photoUrl, e.cutoutUrl, kind, !!photo, !!cut]);
   const n = car ? Render.count(base) : 1, at = Math.min(cur, n - 1);
   const FORDER = ['title', 'category', 'chip', 'description', 'bigTitle', 'cutout', 'source', 'credit', 'dateline', 'legendas']; // mesma ordem em todo o editor
   const midI = car ? at - 1 : -1, midS = midI >= 0 && midI < e.slides.length ? e.slides[midI] : null;
   const ptpl = !car || at === 0 ? e.tpl.post : midS && String(midS.type).startsWith('p:') ? midS.type.slice(2) : null;
+  const rtpl = e.tpl.reel || 'r01';
   const postUses = [...new Set(['category', ...(POST_USES[e.tpl.post] || []), ...(ptpl ? POST_USES[ptpl] || [] : [])])].sort((a, b) => FORDER.indexOf(a) - FORDER.indexOf(b));
-  const storyOnly = (STORY_USES[e.tpl.story] || []).filter(k => !['title', 'category'].includes(k) && !(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses).includes(k));
+  const storyOnly = (STORY_USES[e.tpl.story] || []).filter(k => !['title', 'category'].includes(k) && !(video ? (REEL_USES[rtpl] || REEL_USES.r01) : postUses).includes(k));
   const types = Render.SLIDE_TYPES[e.tpl.carousel] || Render.SLIDE_TYPES.A;
   const frame = car ? 'carousel' : 'post';
   const dd = (tplPatch, guides) => ({ ...base, tpl: { ...base.tpl, ...tplPatch }, guides });
@@ -319,28 +338,32 @@ export default function Editor() {
     for (const f of files) { const r = await sendFile(f, 'add'); if (r) added.push({ type: 'foto', photoUrl: r.addedUrl, text: '' }); }
     setE(x => ({ ...x, slides: [...x.slides, ...added] }));
   }
-  // várias fotos = carrossel na hora: a 1a vira capa, o resto vira slide
+  // várias fotos = carrossel na hora: a 1a vira capa, o resto vira slide; MP4 vira sempre reel
   async function take(files, mode) {
     files = [...files]; if (!files.length) return;
     setUp(true); toast('Enviando…');
     try {
-      if (mode === 'add') await addPhotos(files);
-      else if (mode === 'cutout') await replaceMain(files[0], 'cutout');
-      else { await replaceMain(files[0]); if (files.length > 1) await addPhotos(files.slice(1)); }
+      const vid = files.find(f => /\.mp4$/i.test(f.name)), pics = files.filter(f => !/\.mp4$/i.test(f.name));
+      if (vid) await replaceMain(vid);
+      if (pics.length) {
+        if (mode === 'add') await addPhotos(pics);
+        else if (mode === 'cutout') await replaceMain(pics[0], 'cutout');
+        else { await replaceMain(pics[0]); if (pics.length > 1) await addPhotos(pics.slice(1)); }
+      }
       toast(files.length > 1 ? `${files.length} arquivos enviados.` : 'Enviado.');
     } catch (err) { toast(err.message, true); }
     setUp(false);
   }
   async function genDesc() {
     setDbusy(true);
-    try { const r = await api(`/api/items/${e.id}/ai-desc`, { method: 'POST' }); if (r.description) patch({ description: r.description }); else toast('A IA não devolveu descrição.', true); }
+    try { const r = await api(`/api/items/${e.id}/ai-desc`, { method: 'POST', body: { title: e.title, description: e.description } }); if (r.description) patch({ description: r.description }); else toast('A IA não devolveu descrição.', true); }
     catch (err) { toast(err.message, true); }
     setDbusy(false);
   }
   async function save(leave) {
     try {
       await saveItem(byId(e.id), { title: e.title.trim(), category: e.category.trim(), mediaType: e.mediaType, videoUrl: e.videoUrl, slides: e.slides, photoUrl: e.photoUrl, cutoutUrl: e.cutoutUrl, focal: e.focal, focalStory: e.focalStory, tpl: e.tpl, description: e.description.trim(), chip: e.chip.trim(), legendas: e.legendas || '', dateline: e.dateline || '', source: e.source.trim(), credit: e.credit.trim(), bigTitle: e.bigTitle.trim(), look: e.look || {}, storyTitle: e.storyTitle == null ? null : e.storyTitle.trim(), storyCategory: e.storyCategory == null ? null : e.storyCategory.trim() });
-      dirty.current = false; toast('Arte salva.'); if (leave) close();
+      saved.current = true; dirty.current = false; toast('Arte salva.'); if (leave) close();
     } catch (err) { toast(err.message, true); }
   }
   const field = (k, label, ph, multi, cls) => <Field key={k} k={k} label={label} ph={ph} multi={multi} cls={cls} e={e} patch={patch} />;
@@ -390,7 +413,7 @@ export default function Editor() {
     <div className="page editor">
       <div className="pagebar glass">
         <button className="ghost" onClick={close}><Icon name="back" />Voltar</button>
-        <h2>{e.title || src.origTitle}</h2>
+        <h2>{e.title || src.origTitle || 'Novo post'}</h2>
         <button onClick={() => save(true)}>Salvar</button>
       </div>
 
@@ -420,13 +443,20 @@ export default function Editor() {
       </section>
 
       <section className="edsec">
-        <div className="sechead"><h3>{video ? 'Reel' : car ? 'Carrossel' : 'Post'}</h3>{!video && <button className="ghost" onClick={() => patch({ look: { ...(e.look || {}), post: undefined }, focal: { x: .5, y: .5, zoom: 1 } })}>Restaurar padrão do post</button>}</div>
+        <div className="sechead"><h3>{video ? 'Reel' : car ? 'Carrossel' : 'Post'}</h3><button className="ghost" onClick={() => patch({ look: { ...(e.look || {}), post: undefined, nd: undefined, uh: undefined, pbar: undefined, bg: undefined }, focal: { x: .5, y: .5, zoom: 1 } })}>{video ? 'Restaurar padrão do reel' : 'Restaurar padrão do post'}</button></div>
         <div className="edpv">
           {video ? (
-            <div className="pv">{e.videoUrl && <div className="rl-media reelpv">
-                <video ref={vref} src={e.videoUrl + '#t=0.1'} controls onPlay={() => setVp(true)} onPause={() => setVp(false)} onLoadedMetadata={ev => setVr(ev.target.videoWidth / ev.target.videoHeight)} />
-                <ReelOverlay it={{ ...e, tpl: e.tpl }} video={vref} playing={vp} /></div>}
-              {vr && Math.abs(vr - 9 / 16) > 0.03 && <p className="warn">Vídeo em {vr.toFixed(2)}:1. O Reels usa 9:16.</p>}</div>
+            <div className="pv">
+              {e.videoUrl && <div className="rl-media reelpv" onClick={() => { const v = vref.current; if (!v) return; if (v.paused) v.play().catch(() => {}); else v.pause(); }}>
+                <video ref={vref} style={reelVideoStyle(e)} src={e.videoUrl} loop playsInline preload="auto" onPlay={() => setVp(true)} onPause={() => setVp(false)} onLoadedMetadata={ev => setVr(ev.target.videoWidth / ev.target.videoHeight)} onLoadedData={ev => { try { if (ev.currentTarget.currentTime === 0) ev.currentTarget.currentTime = 0.05; } catch {} }} />
+                <ReelOverlay it={{ ...e, tpl: e.tpl }} />
+                {!vp && <button type="button" className="reelplay" aria-label="Tocar"><Icon name="play" /></button>}
+              </div>}
+              {e.videoUrl && <div className="crop-btns" style={{ gridTemplateColumns: '1fr', width: 225 }}>
+                <button type="button" className="ghost" onClick={() => { const v = vref.current; if (!v) return; if (v.paused) v.play().catch(() => {}); else v.pause(); }}>{vp ? 'Pausar vídeo' : 'Dar play no vídeo'}</button>
+                <SaveBtn onClick={() => savePng(c => Render.reelThumb(c, base, (vref.current && vref.current.readyState >= 2) ? vref.current : photo), slug(e.title) + '-reel')} />
+              </div>}
+            </div>
           ) : (<>
             <div className="pvwrap">
               <CanvasPv w={340} h={425} sig={textSig} photo={cp} focal={cf} onFocal={setCf}
@@ -444,10 +474,12 @@ export default function Editor() {
             draw={(c, id) => Render.post(c, dd({ post: id }, false), photo)} />}
           {!video && car && at > 0 && <TplRow list={Render.CAROUSELS} kname="carousel" e={e} sig={thumbSig} w={84} h={105} onPick={id => setE(x => ({ ...x, tpl: { ...x.tpl, carousel: id } }))}
             draw={(c, id) => Render.slide(c, { ...dd({ carousel: id }, false), slides: [{ type: id === 'A' ? 'contexto' : 'legenda', title: 'Título', label: 'Contexto', text: 'Texto do slide', photoUrl: '' }] }, photo, 1)} />}
-          {video && <Seg value={e.tpl.reel || 'r01'} onChange={id => setE(x => ({ ...x, tpl: { ...x.tpl, reel: id } }))} options={Render.REELS.map(r => [r.id, r.name])} />}
-          {renderFields(video ? REEL_USES[e.tpl.reel || 'r01'] : postUses)}
-          {!video && ptpl === 'p01' && <LookCtl e={e} patch={patch} k="post" pre={<PBarRow e={e} patch={patch} />} />}
-          {!video && ptpl === 'p04' && <NdCtl e={e} patch={patch} />}
+          {video && <TplRow list={Render.REELS} kname="reel" e={e} sig={thumbSig} w={62} h={110} story onPick={id => setE(x => ({ ...x, tpl: { ...x.tpl, reel: id } }))}
+            draw={(c, id) => Render.reelThumb(c, dd({ reel: id }, false), photo)} />}
+          {renderFields(video ? (REEL_USES[rtpl] || REEL_USES.r01) : postUses)}
+          {(video ? rtpl === 'r01' : ptpl === 'p01') && <LookCtl e={e} patch={patch} k="post" pre={<PBarRow e={e} patch={patch} />} />}
+          {(video ? (rtpl === 'r02' || rtpl === 'r03') : ptpl === 'p04') && <NdCtl e={e} patch={patch} video={video} />}
+          {video && rtpl === 'r04' && <Pair><LookCtl e={e} patch={patch} k="bg" video pre={<PBarRow e={e} patch={patch} />} /></Pair>}
           {!video && ptpl === 'p02' && <UhCtl e={e} patch={patch} />}
           {!video && ptpl === 'p03' && <UhCtl e={e} patch={patch} k="cut" />}
           {midSlide && <SlideRow s={types.some(t => t.id === e.slides[slideIdx].type) ? e.slides[slideIdx] : { ...e.slides[slideIdx], type: types[0].id }} i={slideIdx} n={n} types={types} set={v => slideSet(slideIdx, v)}
@@ -458,7 +490,7 @@ export default function Editor() {
       </section>
 
       <section className="edsec">
-        <div className="sechead"><h3>{video ? 'Capa do reel e story' : 'Story'}</h3><button className="ghost" onClick={() => patch({ look: { ...(e.look || {}), story: undefined, bg: undefined }, focalStory: { x: .5, y: .5, zoom: 1 } })}>Restaurar padrão do story</button></div>
+        <div className="sechead"><h3>Story</h3><button className="ghost" onClick={() => patch({ look: { ...(e.look || {}), story: undefined, bg: undefined }, focalStory: { x: .5, y: .5, zoom: 1 } })}>Restaurar padrão do story</button></div>
         <div className="edpv">
           <CanvasPv w={225} h={400} sig={textSig} photo={photo} focal={e.focalStory} onFocal={f => patch({ focalStory: f })} label="" draw={c => Render.story(c, base, photo)} />
           <Crop f={e.focalStory} set={f => patch({ focalStory: f })} photo={photo} w={1080} h={1920} pw={225} cols={video ? 2 : 3}

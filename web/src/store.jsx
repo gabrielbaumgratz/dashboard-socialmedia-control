@@ -53,6 +53,15 @@ export function AppProvider({ children }) {
     replace(saved); return saved;
   }, [replace]);
   const openPost = useCallback((id, mode = '') => { setPostMode(mode); setPostId(id); }, []);
+  // cria um post avulso (sem notícia do site) e já abre no editor pra subir foto/vídeo próprio e escolher o template
+  const createItem = useCallback(async () => {
+    try {
+      const it = await api('/api/items', { method: 'POST', body: { title: '', origTitle: '' } });
+      setItems(l => [...l, it]);
+      vt(() => { setPostId(it.id); setEditorId(it.id); window.scrollTo(0, 0); });
+      return it;
+    } catch (e) { toast('Não consegui criar: ' + e.message, true); }
+  }, [toast]);
   // excluir manda pra lixeira (fica 7 dias); da lixeira dá pra restaurar ou apagar de vez
   const removeItem = useCallback(async id => {
     const at = new Date().toISOString(); setTomb(id, true);
@@ -93,7 +102,7 @@ export function AppProvider({ children }) {
   const live = useMemo(() => items.filter(i => !i.deletedAt), [items]), trash = useMemo(() => items.filter(i => i.deletedAt), [items]);
   const value = useMemo(() => ({
     items: live, trash, purgeItem, restoreItem, setItems, cfg, loadCfg, ready, tab, setTab, postId, setPostId, postMode, openPost, editorId, setEditorId, toast, toastMsg,
-    banner, setBanner, engine, refreshEngine, reload, saveItem, removeItem, trashItem, replace, clearCovers,
+    banner, setBanner, engine, refreshEngine, reload, saveItem, createItem, removeItem, trashItem, replace, clearCovers,
     byId: id => items.find(i => i.id === id)
   }), [items, live, trash, cfg, ready, tab, postId, postMode, editorId, toastMsg, banner, engine]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

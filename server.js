@@ -589,7 +589,7 @@ async function handleApi(req, res, url) {
     const db0 = await loadDb(), it0 = findItem(db0, mm[1]);
     if (!it0) return send(res, 404, { error: 'item não existe' });
     let ai, err = '';
-    try { ai = await callGemini({ title: it0.origTitle || it0.title, text: it0.newsText }); } catch (e) { err = e.message; }
+    try { ai = await callGemini({ title: it0.origTitle || it0.title, text: it0.newsText || it0.description || it0.caption || it0.title }); } catch (e) { err = e.message; }
     const db = await loadDb(), it = findItem(db, mm[1]); // relê: a IA demorou
     if (!it) return send(res, 404, { error: 'item não existe' });
     if (err) { it.aiError = err; await saveDb(db); return send(res, 502, { error: err }); }
@@ -597,9 +597,9 @@ async function handleApi(req, res, url) {
   }
   mm = p.match(/^\/api\/items\/([\w-]+)\/ai-desc$/);
   if (mm && m === 'POST') { // só devolve a descrição curta; o editor decide se aplica
-    const it = findItem(await loadDb(), mm[1]);
+    const b = await readJson(req).catch(() => ({})), it = findItem(await loadDb(), mm[1]);
     if (!it) return send(res, 404, { error: 'item não existe' });
-    try { const ai = await callGemini({ title: it.origTitle || it.title, text: it.newsText || it.description }, 'desc'); return send(res, 200, { description: String(ai.descricao || '').trim().slice(0, 200) }); }
+    try { const ai = await callGemini({ title: b.title || it.origTitle || it.title, text: it.newsText || b.description || it.description || b.title || it.title }, 'desc'); return send(res, 200, { description: String(ai.descricao || '').trim().slice(0, 200) }); }
     catch (e) { return send(res, 502, { error: e.message }); }
   }
   mm = p.match(/^\/api\/items\/([\w-]+)\/media$/);

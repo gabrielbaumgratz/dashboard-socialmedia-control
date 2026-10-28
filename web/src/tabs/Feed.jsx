@@ -21,7 +21,7 @@ function LineItem({ it }) {
 }
 
 export default function Feed() {
-  const { items, cfg, openPost, trashItem } = useApp();
+  const { items, cfg, openPost, createItem, trashItem } = useApp();
   const [brand, setBrand] = useState(false);
   const [mode, setMode] = useState('grid'), [sub, setSub] = useState('posts'), [drafts, setDrafts] = useState(false);
   const [avatar, setAvatar] = useState(null);
@@ -40,6 +40,7 @@ export default function Feed() {
         <label className="check"><input type="checkbox" checked={drafts} onChange={e => setDrafts(e.target.checked)} /> incluir rascunhos</label>
         <ViewToggle value={mode} onChange={setMode} alt="line" />
         <button className="ghost iconbtn" aria-label="Marca e legenda" title="Marca e legenda" onClick={() => setBrand(b => !b)}><Icon name="gear" /></button>
+        <button onClick={createItem}>+ Novo post</button>
       </PageHead>
       {brand && <BrandForm onClose={() => setBrand(false)} />}
       {mode === 'grid' ? (
@@ -72,7 +73,7 @@ export default function Feed() {
               const t = typeOf(it);
               return (
                 <button key={it.id} className="tile" onClick={() => openPost(it.id, sub === 'stories' ? 'story' : t === 'video' ? 'reel' : '')}>
-                  {sub === 'stories' ? <StoryThumb it={it} /> : t === 'video' && it.videoUrl && !it.photoUrl ? <video src={it.videoUrl} muted preload="metadata" /> : <Cover it={it} />}
+                  {sub === 'stories' ? <StoryThumb it={it} /> : <Cover it={it} />}
                   {sub !== 'stories' && t === 'video' && <Icon name="reels" className="tico" />}
                   {sub !== 'stories' && t === 'carrossel' && <Icon name="carousel" className="tico" />}
                   {it.status !== 'posted' && <span className="tag"><Status st={it.status} /></span>}

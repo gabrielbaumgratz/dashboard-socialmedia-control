@@ -116,7 +116,7 @@ export default function PostView() {
     <div className="page post">
       <div className="pagebar glass">
         <button className="ghost" onClick={close}><Icon name="back" />Voltar</button>
-        <h2>{it.title || it.origTitle}</h2>
+        <h2>{it.title || it.origTitle || 'Novo post'}</h2>
         <Status st={it.status} />
       </div>
       <div className="pvgrid">
@@ -128,7 +128,9 @@ export default function PostView() {
               {mode === 'story' && <div className="storywrap">
                 <StoryPhone src={set && set.story.dataUrl} zone={set && set.zone} it={it} cfg={cfg} guides={guides} />
                 <label className="check"><input type="checkbox" checked={guides} onChange={e => setGuides(e.target.checked)} /> áreas seguras</label></div>}
-              {mode === 'reel' && <div className="storywrap"><ReelPhone it={live} cfg={cfg} cover={set && set.story.dataUrl} /></div>}
+              {mode === 'reel' && <div className="storywrap">
+                <ReelPhone it={live} cfg={cfg} cover={set && set.slides[0] && set.slides[0].dataUrl} guides={guides} />
+                <label className="check"><input type="checkbox" checked={guides} onChange={e => setGuides(e.target.checked)} /> interface do Instagram</label></div>}
             </motion.div>
           </AnimatePresence>
           <div className="under"><WhenNote it={it} />{it.link && <a href={it.link} target="_blank" rel="noopener noreferrer">matéria original</a>}</div>

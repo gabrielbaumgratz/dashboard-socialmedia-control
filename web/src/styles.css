@@ -554,11 +554,12 @@ button.ok{background:color-mix(in srgb,var(--ok) 70%,transparent);color:#06231c}
 
 .iconseg button{padding:7px 10px;display:grid;place-items:center}.iconseg svg{display:block;position:relative;z-index:1}
 
-.rl-media{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);aspect-ratio:9/16;overflow:hidden}
+.rl-media{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);aspect-ratio:9/16;overflow:hidden;cursor:pointer}
 .rl-media>video,.rl-media>img{width:100%;height:100%;object-fit:cover;display:block}
-.rl-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.rl-overlay,.pv canvas.rl-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;background:transparent;border:0}
 .reel .phone-screen{background:#000}
-.rl-media.reelpv{position:relative;top:auto;transform:none;width:225px;border-radius:12px}.reelpv video{object-fit:cover}
+.rl-media.reelpv{position:relative;top:auto;transform:none;width:225px;border-radius:12px;background:#000;border:1px solid var(--line2)}.reelpv video,.pv .reelpv video{object-fit:cover;border:0;border-radius:0}
+button.reelplay,button.reelplay:hover{position:absolute;inset:0;margin:auto;width:62px;height:62px;border-radius:50%;padding:0;z-index:4;display:grid;place-items:center;background:rgba(0,0,0,.55);color:#fff;box-shadow:none;border:1.5px solid rgba(255,255,255,.5);cursor:pointer}
 
 .thumbacts button:hover{background:rgba(10,20,34,.85)}.thumbacts button.del:hover{background:var(--danger);border-color:transparent}
 .thumbacts{pointer-events:none}.thumbacts button{pointer-events:auto}
