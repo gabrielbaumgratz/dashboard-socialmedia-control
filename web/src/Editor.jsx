@@ -3,7 +3,7 @@ import { api, uploadMedia } from './api.js';
 import { ReelOverlay, reelBoxStyle, reelVideoStyle } from './previews.jsx';
 import { useApp, vt } from './store.jsx';
 import Render from './render.js';
-import { artData, getImg, getVideoFrame } from './art.js';
+import { artData, exportReel, getImg, getVideoFrame } from './art.js';
 import { DEF_TPL, typeOf } from './util.js';
 import { Icon } from './icons.jsx';
 
@@ -281,6 +281,7 @@ export default function Editor() {
   const [src] = useState(() => byId(editorId) || { id: editorId, title: '', origTitle: '', category: '' });
   const [e, setE] = useState(() => ({ ...JSON.parse(JSON.stringify(src)), category: cleanCat(src.category), storyCategory: src.storyCategory != null ? cleanCat(src.storyCategory) : null, ...(src.tpl && src.tpl.post === 'p05' ? { look: { ...(src.look || {}), uh: { bg: '#735400', acc: '#fabd0d', ...((src.look || {}).uh) } } } : {}), focal: src.focal || { x: .5, y: .5, zoom: 1 }, focalStory: src.focalStory || src.focal || { x: .5, y: .5, zoom: 1 }, tpl: { ...DEF_TPL, ...(src.tpl || {}), ...(src.tpl && src.tpl.post === 'p05' ? { post: 'p02' } : {}) }, slides: Render.slidesOf(src) }));
   const [photo, setPhoto] = useState(null), [cut, setCut] = useState(null), [imgs, setImgs] = useState({}), [over, setOver] = useState(false), [up, setUp] = useState(false), [dbusy, setDbusy] = useState(false);
+  const [fbusy, setFbusy] = useState(false), [aiHint, setAiHint] = useState(''), [vbusy, setVbusy] = useState(false);
   const [cur, setCur] = useState(0), [vr, setVr] = useState(null), [vdim, setVdim] = useState(null), [vp, setVp] = useState(false), vref = useRef(null), vdrag = useRef(null);
   const kind = typeOf(e), car = kind === 'carrossel', video = kind === 'video';
   const patch = p => setE(x => ({ ...x, ...p }));
@@ -362,6 +363,45 @@ export default function Editor() {
     catch (err) { toast(err.message, true); }
     setDbusy(false);
   }
+  async function genFields() {
+    let image = '';
+    try {
+      const srcEl = (vref.current && vref.current.readyState >= 2) ? vref.current : photo;
+      const sw = srcEl && (srcEl.videoWidth || srcEl.width), sh = srcEl && (srcEl.videoHeight || srcEl.height);
+      if (srcEl && sw && sh) {
+        const c = document.createElement('canvas'), sc = Math.min(1, 540 / Math.max(sw, sh));
+        c.width = Math.max(1, Math.round(sw * sc)); c.height = Math.max(1, Math.round(sh * sc));
+        c.getContext('2d').drawImage(srcEl, 0, 0, c.width, c.height);
+        image = c.toDataURL('image/jpeg', 0.8);
+      }
+    } catch {}
+    if (!image && !aiHint.trim() && !(e.title || '').trim() && !(e.description || '').trim()) {
+      toast('Suba um vídeo/foto ou digite um tema para a IA criar os dados.', true);
+      return;
+    }
+    setFbusy(true);
+    try {
+      const r = await api(`/api/items/${e.id}/ai-fields`, { method: 'POST', body: { prompt: aiHint.trim(), title: e.title, description: e.description, image } });
+      const next = {};
+      if (r.title) next.title = r.title;
+      if (r.category != null) next.category = cleanCat(r.category);
+      if (r.description) next.description = r.description;
+      patch(next);
+      toast('Título, categoria e descrição gerados com IA.');
+    } catch (err) { toast(err.message, true); }
+    setFbusy(false);
+  }
+  async function saveVideo() {
+    if (!e.videoUrl || vbusy) return;
+    setVbusy(true); toast('Gravando vídeo em 4K na melhor qualidade… mantenha esta aba aberta.');
+    try {
+      const { blob, ext } = await exportReel({ ...e, tpl: e.tpl }, () => {}, 2);
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${slug(e.title)}-reel-4k.${ext}`; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      toast('Vídeo em 4K baixado.');
+    } catch (err) { toast(err.message, true); }
+    setVbusy(false);
+  }
   async function save(leave) {
     try {
       await saveItem(byId(e.id) || src, { title: (e.title || '').trim(), category: cleanCat(e.category), mediaType: e.mediaType, videoUrl: e.videoUrl, slides: e.slides, photoUrl: e.photoUrl, cutoutUrl: e.cutoutUrl, focal: e.focal, focalStory: e.focalStory, tpl: e.tpl, description: (e.description || '').trim(), chip: (e.chip || '').trim(), legendas: e.legendas || '', dateline: e.dateline || '', source: (e.source || '').trim(), credit: (e.credit || '').trim(), bigTitle: (e.bigTitle || '').trim(), look: e.look || {}, storyTitle: e.storyTitle == null ? null : e.storyTitle.trim(), storyCategory: e.storyCategory == null ? null : cleanCat(e.storyCategory) });
@@ -376,7 +416,7 @@ export default function Editor() {
     bigTitle: c => field('bigTitle', 'Título grande atrás do recorte', 'as 2 primeiras palavras do título', 0, c),
     description: () => <div key="description" className="descbox">{field('description', 'Descrição curta', 'sem descrição', 1)}<button type="button" className="ghost" onClick={genDesc} disabled={dbusy || !cfg.hasKey}>{dbusy ? 'Gerando…' : 'Gerar descrição com IA'}</button></div>,
     source: c => field('source', 'Fonte', 'sem fonte', 0, c),
-    credit: c => field('credit', 'Crédito da foto', 'sem crédito', 0, c),
+    credit: c => field('credit', video ? 'Crédito do vídeo' : 'Crédito da foto', 'sem crédito', 0, c),
     dateline: c => field('dateline', 'Linha de data', 'cidade · data da notícia', 0, c),
     legendas: () => field('legendas', 'Legendas (uma por linha, aparecem em sequência)', 'uma frase por linha', 1),
     cutout: c => <label key="cutout" className={c}>Recorte PNG sem fundo<input type="file" accept=".png" disabled={up} onChange={ev => { take(ev.target.files, 'cutout'); ev.target.value = ''; }} /></label>
@@ -474,7 +514,7 @@ export default function Editor() {
                 </div>}
                 {e.videoUrl && <Crop f={e.focal || { x: .5, y: .5, zoom: 1 }} set={f => patch({ focal: f })} photo={vphoto} w={rbox.w} h={rbox.h} pw={225} cols={2} fitLabel="Vídeo inteiro"
                   extra={<><button type="button" className="ghost" onClick={toggleVid}>{vp ? 'Pausar vídeo' : 'Dar play no vídeo'}</button>
-                    <SaveBtn onClick={() => savePng(c => Render.reelThumb(c, base, (vref.current && vref.current.readyState >= 2) ? vref.current : photo), slug(e.title) + '-reel')} /></>} />}
+                    <button type="button" className="ghost savepng" disabled={vbusy} onClick={saveVideo}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" /></svg>{vbusy ? 'Gravando 4K…' : 'Baixar vídeo'}</button></>} />}
               </div>
             );
           })() : (<>
@@ -496,6 +536,12 @@ export default function Editor() {
             draw={(c, id) => Render.slide(c, { ...dd({ carousel: id }, false), slides: [{ type: id === 'A' ? 'contexto' : 'legenda', title: 'Título', label: 'Contexto', text: 'Texto do slide', photoUrl: '' }] }, photo, 1)} />}
           {video && <TplRow list={Render.REELS} kname="reel" e={e} sig={thumbSig} w={62} h={110} story onPick={id => setE(x => ({ ...x, tpl: { ...x.tpl, reel: id } }))}
             draw={(c, id) => Render.reelThumb(c, dd({ reel: id }, false), photo)} />}
+          {!e.newsId && !src.newsId && (
+            <div className="aifields w6">
+              <input value={aiHint} onChange={ev => setAiHint(ev.target.value)} placeholder="Assunto ou dica rápida (opcional — a IA também lê o vídeo ou a foto)" onKeyDown={ev => { if (ev.key === 'Enter') { ev.preventDefault(); genFields(); } }} />
+              <button type="button" className="aibtn" onClick={genFields} disabled={fbusy || !cfg.hasKey}>{fbusy ? 'Gerando com IA…' : 'Gerar dados com IA'}</button>
+            </div>
+          )}
           {renderFields(video ? (REEL_USES[rtpl] || REEL_USES.r01) : postUses)}
           {(video ? rtpl === 'r01' : ptpl === 'p01') && <LookCtl e={e} patch={patch} k="post" pre={<PBarRow e={e} patch={patch} />} />}
           {(video ? (rtpl === 'r02' || rtpl === 'r03') : ptpl === 'p04') && <NdCtl e={e} patch={patch} video={video} />}

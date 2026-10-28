@@ -3,7 +3,7 @@
 const Render = (() => {
   const C = { tealM: '#008995', turq: '#00b0ac', verde: '#5cbba4', tealE: '#006173', preto: '#1d1d1b', navy: '#0f172a', cinza: '#f1f5f9', branco: '#ffffff' };
   const F = 'Nunito, system-ui, sans-serif';
-  const BRAND = { handle: '@reconstrucoes.observatorio', site: 'reconstrucoes.digital' };
+  const BRAND = { handle: '@reconstrucoes.observatorio', site: '@reconstrucoes.observatorio' };
 
   const POSTS = [
     { id: 'p01', name: 'Post 1' },
@@ -156,11 +156,11 @@ const Render = (() => {
     tri([[2, 2], [3, 2], [2, 3]], C.tealE);
     ctx.restore();
   }
-  function credit(ctx, text, bottomY, x = 1050) {
+  function credit(ctx, text, bottomY, x = 1050, kind = 'FOTO') {
     if (!text) return;
     ctx.save(); ctx.translate(x, bottomY); ctx.rotate(-Math.PI / 2);
     font(ctx, 600, 22); ctx.fillStyle = C.branco; ctx.textBaseline = 'bottom';
-    ctx.fillText('FOTO: ' + text, 0, 0);
+    ctx.fillText(kind + ': ' + text, 0, 0);
     ctx.restore(); ctx.textBaseline = 'top';
   }
   function counter(ctx, i, n, dark) { font(ctx, 700, 30); ctx.fillStyle = dark ? C.preto : C.branco; ctx.textAlign = 'right'; ctx.fillText(`${i}/${n}`, 1008, 71.5); ctx.textAlign = 'left'; }
@@ -451,11 +451,13 @@ const Render = (() => {
   function reelBox(d) {
     const id = (d && d.tpl && d.tpl.reel) || 'r01', nd = look(d || {}).nd;
     if (id === 'r02') {
-      const vh = Math.max(540, Math.min(1260, Math.round((nd.ph / 1350) * 1920)));
+      const hasDesc = Boolean(d && String(d.description || '').trim());
+      const baseVh = Math.round(1920 - (1350 - nd.ph) * 0.9 + (hasDesc ? 0 : 70));
+      const vh = Math.max(900, Math.min(1480, baseVh));
       return { x: 0, y: 0, w: 1080, h: vh, r: 0 };
     }
     if (id === 'r03') {
-      const vh = Math.max(660, Math.min(1320, Math.round((nd.ph / 1350) * 1920)));
+      const vh = Math.max(760, Math.min(1380, Math.round((nd.ph / 1350) * 1920)));
       return { x: 0, y: 1920 - vh, w: 1080, h: vh, r: 0 };
     }
     return { x: 0, y: 0, w: 1080, h: 1920, r: 0 };
@@ -489,52 +491,56 @@ const Render = (() => {
       ctx.globalAlpha = tiA; y = draw(ctx, ti, 72, y + (1 - tiA) * 22, tc) - (1 - tiA) * 22 + G;
       if (de) { ctx.globalAlpha = deA; y = draw(ctx, de, 72, y + (1 - deA) * 16, tc) - (1 - deA) * 16 + G; }
       ctx.globalAlpha = 1; font(ctx, 600, 30); ctx.fillStyle = tc; ctx.fillText(BRAND.handle, 72, y);
-      credit(ctx, d.credit, 1920 - 140 - totalH - 36 - 30);
+      credit(ctx, d.credit, 1920 - 140 - totalH - 36 - 30, 1050, 'VÍDEO');
     } else if (id === 'r02') {
-      // Reel 2 (Baseado no Post 2): Vídeo no topo + painel branco de jornal embaixo, linha e textos entrando com fade
-      const nd = look(d).nd, vh = box.h;
+      // Reel 2 (Baseado no Post 2): Vídeo no topo + painel branco de jornal embaixo, textos proporcionais e espaçamento enxuto
+      const nd = look(d).nd, vh = box.h, cat = catOf(d);
       ctx.fillStyle = C.branco; ctx.fillRect(0, vh, 1080, 1920 - vh);
       if (nd.sym) symbol(ctx, 880, vh - 52, 105.6);
-      credit(ctx, d.credit, vh - 40);
-      let y = vh + 48;
+      credit(ctx, d.credit, vh - 40, 1050, 'VÍDEO');
+      let y = vh + (cat ? 34 : 30);
       ctx.globalAlpha = catA;
-      if (catOf(d) && nd.pill) { chip(ctx, up(catOf(d)), 72, vh + 40 + (1 - catA) * 14, 32, { bg: nd.cat, color: lum(nd.cat) > 0.35 ? C.navy : C.branco, sp: 2 }); y = vh + 40 + lineH(32) + 24 + 44; }
-      else if (catOf(d)) { font(ctx, 700, 32, 2); ctx.fillStyle = nd.cat; ctx.fillText(up(catOf(d)), 72, y + (1 - catA) * 14, 936); y += lineH(32) + 20; }
-      ctx.globalAlpha = tiA; y = draw(ctx, block(ctx, d.title, 900, 56, 62, 936, 4), 72, y + (1 - tiA) * 22, C.preto) - (1 - tiA) * 22 + G;
+      if (cat && nd.pill) {
+        chip(ctx, up(cat), 72, y + (1 - catA) * 12, 30, { bg: nd.cat, color: lum(nd.cat) > 0.35 ? C.navy : C.branco, sp: 2, h: lineH(30) + 16 });
+        y += lineH(30) + 16 + 12;
+      } else if (cat) {
+        font(ctx, 800, 32, 2); ctx.fillStyle = nd.cat; ctx.fillText(up(cat), 72, y + (1 - catA) * 12, 936);
+        y += 38 + 8;
+      }
+      const ti = block(ctx, d.title, 900, 64, 70, 936, d.description ? 3 : 4);
+      ctx.globalAlpha = tiA; y = draw(ctx, ti, 72, y + (1 - tiA) * 20, C.preto) - (1 - tiA) * 20 + 12;
       ctx.globalAlpha = deA;
-      if (d.description) y = draw(ctx, block(ctx, d.description, 400, 32, 42, 936, 4), 72, y + (1 - deA) * 16, C.preto) - (1 - deA) * 16 + G;
-      if (d.source) { font(ctx, 400, 26); ctx.fillStyle = 'rgba(29,29,27,.6)'; ctx.fillText('Fonte: ' + d.source, 72, y + (1 - deA) * 16); }
+      if (d.description) y = draw(ctx, block(ctx, d.description, 400, 34, 42, 936, 3), 72, y + (1 - deA) * 14, C.preto) - (1 - deA) * 14 + 12;
+      if (d.source) { font(ctx, 400, 26); ctx.fillStyle = 'rgba(29,29,27,.6)'; ctx.fillText('Fonte: ' + d.source, 72, y + (1 - deA) * 12); }
       ctx.globalAlpha = 1;
-      drawLogo(ctx, true, 72, 1760, 186.7);
-      font(ctx, 700, 28); ctx.fillStyle = C.tealM; ctx.textAlign = 'right'; ctx.fillText(BRAND.site, 1008, 1766); ctx.textAlign = 'left';
+      drawLogo(ctx, true, 72, 1786, 250);
+      font(ctx, 700, 26); ctx.fillStyle = C.tealM; ctx.textAlign = 'right'; ctx.fillText(BRAND.handle, 1008, 1798); ctx.textAlign = 'left';
     } else if (id === 'r03') {
       // Reel 3 (Estilo Jornal G1/Folha/Estadão): Cabeçalho editorial branco de jornal no topo + vídeo preenchendo a parte de baixo
       const nd = look(d).nd, topH = box.y;
       ctx.fillStyle = C.branco; ctx.fillRect(0, 0, 1080, topH);
-      drawLogo(ctx, true, 72, 88, 195);
-      font(ctx, 700, 26); ctx.fillStyle = C.tealM; ctx.textAlign = 'right'; ctx.fillText(BRAND.site, 1008, 100); ctx.textAlign = 'left';
-      ctx.fillStyle = 'rgba(15,23,42,0.12)'; ctx.fillRect(72, 154, 936, 2);
-      if (barA > 0.01) { ctx.fillStyle = nd.cat; ctx.fillRect(72, 153, Math.round(240 * barA), 4); }
+      drawLogo(ctx, true, 72, 88, 230);
+      font(ctx, 700, 26); ctx.fillStyle = C.tealM; ctx.textAlign = 'right'; ctx.fillText(BRAND.handle, 1008, 102); ctx.textAlign = 'left';
+      ctx.fillStyle = 'rgba(15,23,42,0.12)'; ctx.fillRect(72, 158, 936, 2);
+      if (barA > 0.01) { ctx.fillStyle = nd.cat; ctx.fillRect(72, 157, Math.round(240 * barA), 4); }
       let y = 180;
       const cat = catOf(d);
       ctx.globalAlpha = catA;
-      if (cat && nd.pill) { chip(ctx, up(cat), 72, y + (1 - catA) * 12, 28, { bg: nd.cat, color: lum(nd.cat) > 0.35 ? C.navy : C.branco, sp: 2, h: lineH(28) + 16 }); y += lineH(28) + 16 + 18; }
-      else if (cat) { font(ctx, 800, 28, 2); ctx.fillStyle = nd.cat; ctx.fillText(up(cat), 72, y + (1 - catA) * 12, 936); y += lineH(28) + 14; }
-      const tSize = topH < 680 ? 46 : 54, tLh = topH < 680 ? 52 : 60;
+      if (cat && nd.pill) { chip(ctx, up(cat), 72, y + (1 - catA) * 12, 28, { bg: nd.cat, color: lum(nd.cat) > 0.35 ? C.navy : C.branco, sp: 2, h: lineH(28) + 16 }); y += lineH(28) + 16 + 14; }
+      else if (cat) { font(ctx, 800, 28, 2); ctx.fillStyle = nd.cat; ctx.fillText(up(cat), 72, y + (1 - catA) * 12, 936); y += 34 + 8; }
+      const tSize = topH < 680 ? 50 : 58, tLh = topH < 680 ? 56 : 64;
       const ti = block(ctx, d.title, 900, tSize, tLh, 936, topH < 640 ? 3 : 4);
-      ctx.globalAlpha = tiA; y = draw(ctx, ti, 72, y + (1 - tiA) * 20, C.preto) - (1 - tiA) * 20 + 14;
+      ctx.globalAlpha = tiA; y = draw(ctx, ti, 72, y + (1 - tiA) * 20, C.preto) - (1 - tiA) * 20 + 12;
       ctx.globalAlpha = deA;
       if (d.description && y + 36 < topH - 28) {
-        const de = block(ctx, d.description, 400, 29, 37, 936, y + 90 < topH - 36 ? 3 : 2);
-        y = draw(ctx, de, 72, y + (1 - deA) * 14, 'rgba(29,29,27,0.85)') - (1 - deA) * 14 + 12;
+        const de = block(ctx, d.description, 400, 30, 38, 936, y + 90 < topH - 36 ? 3 : 2);
+        y = draw(ctx, de, 72, y + (1 - deA) * 14, 'rgba(29,29,27,0.85)') - (1 - deA) * 14 + 10;
       }
       if (d.source && y + 24 < topH - 14) { font(ctx, 400, 24); ctx.fillStyle = 'rgba(29,29,27,.6)'; ctx.fillText('Fonte: ' + d.source, 72, y + (1 - deA) * 12); }
       ctx.globalAlpha = 1;
       if (barA > 0.01) { ctx.fillStyle = nd.cat; ctx.fillRect(0, topH - 6, Math.round(1080 * barA), 6); }
       if (nd.sym) symbol(ctx, 880, topH - 52, 105.6);
-      vgrad(ctx, 1680, 240, 'rgba(15,23,42,0)', 'rgba(15,23,42,0.78)');
-      font(ctx, 600, 28); ctx.fillStyle = C.branco; ctx.fillText(BRAND.handle, 72, 1824);
-      credit(ctx, d.credit, 1820);
+      credit(ctx, d.credit, 1820, 1050, 'VÍDEO');
     } else {
       // Reel 4 (Estilo Telejornal / Plantão baseado no Post 3): Vídeo em tela cheia + degradê colorido + barra lateral e selo de destaque
       const uh = look(d).uh, bgc = uh.bg, acc = uh.acc;
@@ -556,8 +562,7 @@ const Render = (() => {
       if (de) { ctx.globalAlpha = deA; y = draw(ctx, de, tx, y + (1 - deA) * 16, 'rgba(255,255,255,0.92)') - (1 - deA) * 16 + G; }
       ctx.globalAlpha = 1;
       font(ctx, 600, 30); ctx.fillStyle = C.branco; ctx.fillText(BRAND.handle, 72, y);
-      font(ctx, 700, 28); ctx.fillStyle = acc; ctx.textAlign = 'right'; ctx.fillText(BRAND.site, 1008, y + 2); ctx.textAlign = 'left';
-      credit(ctx, d.credit, 1920 - 116 - hh - G - bodyH - G - (noChip ? 0 : chipH + G) - 30);
+      credit(ctx, d.credit, 1920 - 116 - hh - G - bodyH - G - (noChip ? 0 : chipH + G) - 30, 1050, 'VÍDEO');
     }
     ctx.restore();
   }
@@ -574,7 +579,7 @@ const Render = (() => {
   return {
     REELS, reel, reelBox, reelThumb,
     POSTS, CAROUSELS, STORIES, SLIDE_TYPES, BRAND, loadImage, ensureFonts, count, slidesOf,
-    setBrand(b) { Object.assign(BRAND, b); },
+    setBrand(b) { Object.assign(BRAND, b); if (b && b.handle && !b.site) BRAND.site = b.handle; },
     setScale(s) { S = s || 1; },
     // capa: a primeira imagem do post (post único ou capa do carrossel)
     cover: (canvas, d, img) => d.format === 'carrossel' ? slide(canvas, d, img, 0) : post(canvas, d, img),

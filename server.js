@@ -193,9 +193,9 @@ Regras gerais:
   2. estilo "comunidade": fala com quem mora na região e é afetado.
   3. estilo "topicos": até 2 tópicos curtos, um por linha, começando com "- ".
 
-TÍTULO ORIGINAL: ${n.title}
+TÍTULO ORIGINAL: ${n.title || '(sem título)'}
 TEXTO DA NOTÍCIA:
-${(n.text || n.excerpt || '').slice(0, 12000)}`;
+${(n.text || n.excerpt || n.title || '').slice(0, 12000)}`;
 }
 const AI_SCHEMA = {
   type: 'object',
@@ -214,11 +214,23 @@ const AI_SCHEMA = {
 function buildDescPrompt(n) {
   return `Resuma a notícia abaixo em UMA frase de no máximo 140 caracteres, em português do Brasil, para aparecer numa arte do Instagram.
 Use só fatos do texto, não invente nada, não copie o título, sem emojis e sem travessão (—).
-TÍTULO: ${n.title}
+TÍTULO: ${n.title || ''}
 TEXTO:
-${(n.text || '').slice(0, 6000)}`;
+${(n.text || n.title || '').slice(0, 6000)}`;
 }
 const DESC_SCHEMA = { type: 'object', properties: { descricao: { type: 'string' } }, required: ['descricao'] };
+function buildFieldsPrompt(n, cfg) {
+  const hint = [n.title, n.text].filter(Boolean).join('\n').trim();
+  return `Você escreve para o Instagram do ${cfg.brandName} (@${String(cfg.instagram || '').replace(/^@/, '')}).
+Crie os textos para a arte de um post ou reel do Instagram, em português do Brasil, sem emojis e sem travessão (—).
+${n.image ? 'Analise a imagem/frame do vídeo anexado' + (hint ? ' e o rascunho abaixo' : '') + ' para criar o conteúdo.' : 'Use o tema/rascunho abaixo para criar o conteúdo.'}
+Responda APENAS com um JSON válido contendo:
+- "titulo": título jornalístico forte, claro e direto para a capa (máximo 78 caracteres, sem ponto final).
+- "categoria": editoria curta em 1 ou 2 palavras (ex.: Cidades, Clima, Mobilidade, Obras, Meio Ambiente, Sustentabilidade, Habitação, Cultura).
+- "descricao": uma frase complementar de no máximo 130 caracteres que acrescenta contexto sem repetir o título.
+${hint ? '\nTEMA / RASCUNHO:\n' + hint.slice(0, 4000) : ''}`;
+}
+const FIELDS_SCHEMA = { type: 'object', properties: { titulo: { type: 'string' }, categoria: { type: 'string' }, descricao: { type: 'string' } }, required: ['titulo', 'categoria', 'descricao'] };
 function extractGeminiText(j) {
   if (Array.isArray(j.steps)) {
     for (const s of j.steps) {
@@ -233,35 +245,50 @@ function extractGeminiText(j) {
   if (c && c.parts) return c.parts.map(p => p.text || '').join('');
   return null;
 }
-// modelos Flash (nunca o Lite) que a chave enxerga, do mais novo pro mais velho
+const PREFERRED_MODELS = ['gemini-3-flash-preview', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.5-flash'];
 const flashCache = {};
 async function flashModels(key) {
   if (flashCache[key]) return flashCache[key];
-  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + encodeURIComponent(key));
-  const names = ((await r.json()).models || []).map(m => m.name.replace(/^models\//, '')).filter(n => /^gemini-[\d.]+-flash$/.test(n));
-  names.sort((a, b) => parseFloat(b.split('-')[1]) - parseFloat(a.split('-')[1]));
-  return (flashCache[key] = names);
+  try {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + encodeURIComponent(key), { signal: AbortSignal.timeout(6000) });
+    const all = ((await r.json()).models || []).map(m => m.name.replace(/^models\//, ''));
+    const pref = PREFERRED_MODELS.filter(m => all.includes(m));
+    const rest = all.filter(n => /^gemini-[\d.]+-flash$/.test(n) && !pref.includes(n) && !/^gemini-3\.[78]-flash$/.test(n));
+    const list = [...pref, ...rest];
+    if (list.length) return (flashCache[key] = list);
+  } catch {}
+  return PREFERRED_MODELS;
 }
 // o modelo escolhido primeiro; se o Google disser "alta demanda", tenta o próximo Flash. Se a cota da chave acabar, tenta a 2a chave.
 async function callGemini(news, kind = 'full') {
   const cfg = loadConfig(), keys = [cfg.geminiKey, cfg.geminiKey2].filter(Boolean);
   if (!keys.length) throw new Error('Falta a chave do Gemini (Configurações).');
-  const desc = kind === 'desc';
+  const prompt = kind === 'desc' ? buildDescPrompt(news) : kind === 'fields' ? buildFieldsPrompt(news, cfg) : buildPrompt(news, cfg);
+  const schema = kind === 'desc' ? DESC_SCHEMA : kind === 'fields' ? FIELDS_SCHEMA : AI_SCHEMA;
+  const imgMatch = news.image && String(news.image).match(/^data:(image\/[\w+.-]+);base64,(.+)$/);
   let models;
   if (process.env.GEMINI_URL) models = [cfg.geminiModel || 'teste'];
   else {
     const auto = await flashModels(keys[0]);
-    const pick = cfg.geminiModel && cfg.geminiModel !== 'gemini-3.8-flash' ? cfg.geminiModel : '';
-    models = [...new Set([pick, ...auto].filter(Boolean))].slice(0, 3);
+    const pick = cfg.geminiModel && !/^gemini-(3\.[78]|2\.5)-flash$/.test(cfg.geminiModel) ? cfg.geminiModel : '';
+    models = [...new Set([pick, ...auto].filter(Boolean))].slice(0, 5);
     if (!models.length) throw new Error('Não achei um modelo Flash para essa chave. Escolha um modelo em Configurações.');
   }
-  const body = m => JSON.stringify({ model: m, input: desc ? buildDescPrompt(news) : buildPrompt(news, cfg), response_format: { type: 'text', mime_type: 'application/json', schema: desc ? DESC_SCHEMA : AI_SCHEMA } });
   let last = '';
   for (const m of models) {
     for (const k of keys) {
       let r, raw;
       try {
-        r = await fetch(process.env.GEMINI_URL || 'https://generativelanguage.googleapis.com/v1beta/interactions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': k }, body: body(m), signal: AbortSignal.timeout(25000) });
+        if (imgMatch && !process.env.GEMINI_URL) {
+          const gBody = JSON.stringify({
+            contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: imgMatch[1], data: imgMatch[2] } }] }],
+            generationConfig: { responseMimeType: 'application/json', responseSchema: schema }
+          });
+          r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': k }, body: gBody, signal: AbortSignal.timeout(15000) });
+        } else {
+          const iBody = JSON.stringify({ model: m, input: prompt, response_format: { type: 'text', mime_type: 'application/json', schema } });
+          r = await fetch(process.env.GEMINI_URL || 'https://generativelanguage.googleapis.com/v1beta/interactions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': k }, body: iBody, signal: AbortSignal.timeout(12000) });
+        }
         raw = await r.text();
       } catch (e) { last = `${m} não respondeu a tempo`; break; } // modelo lento: outra chave não ajuda, vai pro próximo modelo
       if (r.ok) {
@@ -274,8 +301,8 @@ async function callGemini(news, kind = 'full') {
       }
       last = `${m} respondeu ${r.status}: ${raw.slice(0, 200)}`;
       if (r.status === 429) continue;                 // cota da chave acabou: tenta a outra chave
-      if ([500, 502, 503, 504].includes(r.status)) break; // modelo sobrecarregado: tenta o próximo modelo
-      throw new Error(`Gemini ${last}`);              // erro de verdade (chave errada, pedido inválido)
+      if ([400, 404, 500, 502, 503, 504].includes(r.status)) break; // modelo indisponível ou sobrecarregado: tenta o próximo modelo
+      throw new Error(`Gemini ${last}`);              // erro de verdade (chave errada)
     }
   }
   throw new Error(`O Gemini está ocupado agora (tentei ${models.length} modelo(s) e ${keys.length} chave(s)). Tente de novo em alguns minutos. Último erro: ${last}`);
@@ -607,6 +634,15 @@ async function handleApi(req, res, url) {
     if (!it) return send(res, 404, { error: 'item não existe' });
     try { const ai = await callGemini({ title: b.title || it.origTitle || it.title, text: it.newsText || b.description || it.description || b.title || it.title }, 'desc'); return send(res, 200, { description: String(ai.descricao || '').trim().slice(0, 200) }); }
     catch (e) { return send(res, 502, { error: e.message }); }
+  }
+  mm = p.match(/^\/api\/items\/([\w-]+)\/ai-fields$/);
+  if (mm && m === 'POST') { // gera título, categoria e descrição curta para um post criado do zero
+    const b = await readJson(req).catch(() => ({})), it = findItem(await loadDb(), mm[1]);
+    if (!it) return send(res, 404, { error: 'item não existe' });
+    try {
+      const ai = await callGemini({ title: b.title || it.title || '', text: b.prompt || b.description || it.description || it.newsText || '', image: b.image || '' }, 'fields');
+      return send(res, 200, { title: String(ai.titulo || '').trim(), category: cleanCat(ai.categoria), description: String(ai.descricao || '').trim().slice(0, 200) });
+    } catch (e) { return send(res, 502, { error: e.message }); }
   }
   mm = p.match(/^\/api\/items\/([\w-]+)\/media$/);
   if (mm && m === 'POST') {

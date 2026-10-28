@@ -851,3 +851,6 @@ button.ncover:hover,button.ncover:active,button[style*="background-image"]:hover
 .lookbox .lookhead b{font-size:14px}
 .lookpair{align-items:stretch}
 @media(max-width:900px){.lookbox.full .lbody{grid-template-columns:max-content minmax(0,1fr)}}
+.aifields{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-radius:14px;border:1px dashed var(--line2);background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.aifields input{flex:1;min-width:200px}
+.aifields button{flex:none;white-space:nowrap}

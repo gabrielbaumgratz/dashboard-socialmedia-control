@@ -74,15 +74,18 @@ export default function PostView() {
       setBusy(false); return;
     }
     if (!set) return;
-    const dl = await askChoice('A legenda já vai pra área de transferência. Quer baixar as imagens também?', [['y', 'Baixar as imagens'], ['n', 'Não baixar']]); // sem API: pergunta se baixa as artes junto
+    const dl = await askChoice(video ? 'A legenda já vai pra área de transferência. Quer baixar o vídeo em 4K e o story também?' : 'A legenda já vai pra área de transferência. Quer baixar as imagens também?', [['y', video ? 'Baixar vídeo 4K e story' : 'Baixar as imagens'], ['n', 'Não baixar']]); // sem API: pergunta se baixa as artes junto
     if (!dl) return;
     await copyPost(dl === 'y');
   };
   const copyPost = async dl => {
     await navigator.clipboard.writeText(fullCaption(live)).catch(() => {});
-    if (dl) downloadSet(await hiresSet(live), video);
+    if (dl) {
+      downloadSet(await hiresSet(live), video);
+      if (video && it.videoUrl) await doReel();
+    }
     if (it.status !== 'scheduled') await saveItem(it, { caption, hashtags: parseTags(tags), status: 'scheduled', scheduledAt: it.scheduledAt || new Date().toISOString(), isNew: false }).catch(() => {});
-    toast(dl ? 'Legenda copiada e artes baixadas. Poste no Instagram e depois clique em "Já postei".' : 'Legenda copiada. Poste no Instagram e depois clique em "Já postei".');
+    toast(dl ? 'Legenda copiada e arquivos em 4K baixados. Poste no Instagram e depois clique em "Já postei".' : 'Legenda copiada. Poste no Instagram e depois clique em "Já postei".');
   };
   const markPosted = async () => {
     const what = await askChoice('O que você postou? Os arquivos enviados serão apagados.', [['feed', 'Post'], ['story', 'Story'], ['both', 'Ambos']]);
@@ -99,8 +102,8 @@ export default function PostView() {
     setBusy(false);
   };
   const doReel = async () => {
-    setExp(true); toast('Gravando o reel com o texto animado… deixe esta aba aberta.');
-    try { const { blob, ext } = await exportReel(live, () => {}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `reel.${ext}`; a.click(); toast(ext === 'mp4' ? 'Reel exportado (MP4).' : 'Reel exportado em WebM: o Instagram pode recusar; converta para MP4 se precisar.'); }
+    setExp(true); toast('Gravando o vídeo em 4K na melhor qualidade… deixe esta aba aberta.');
+    try { const { blob, ext } = await exportReel(live, () => {}, 2); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `reel-4k.${ext}`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); toast(ext === 'mp4' ? 'Vídeo exportado em 4K (MP4).' : 'Vídeo exportado em 4K (WebM).'); }
     catch (e) { toast(e.message, true); }
     setExp(false);
   };
@@ -159,7 +162,7 @@ export default function PostView() {
               <button className="ok" onClick={markPosted}>Já postei</button>
             </div>
             <div className="exportbox">
-              {video && it.videoUrl && <button className="ghost" onClick={doReel} disabled={exp}>{exp ? <><Spin /> Gravando…</> : 'Exportar reel'}</button>}
+              {video && it.videoUrl && <button className="ghost" onClick={doReel} disabled={exp}>{exp ? <><Spin /> Gravando 4K…</> : 'Baixar vídeo 4K'}</button>}
               <button className="ghost" onClick={doExport} disabled={exp}>{exp ? <><Spin /> Exportando…</> : video ? 'Capa 4K' : 'Baixar 4K'}</button>
               <select value={fmt} onChange={e => setFmt(e.target.value)} aria-label="Formato"><option value="png">PNG</option><option value="jpg">JPG</option></select>
             </div>

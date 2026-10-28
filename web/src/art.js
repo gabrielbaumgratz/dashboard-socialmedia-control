@@ -122,31 +122,59 @@ export function storyUrl(it) {
   return storyCache.get(key);
 }
 
-// reel pronto: vídeo + texto animado do template, gravado no navegador (MP4 no Chrome novo, senão WebM)
-export async function exportReel(it, onProgress = () => {}) {
+// reel pronto em 4K (2160x3840): vídeo + texto animado do template, gravado na maior qualidade possível (MP4 High Profile 40 Mbps, com fallback automático p/ 1080p 25 Mbps se o dispositivo não suportar 4K)
+export async function exportReel(it, onProgress = () => {}, scale = 2) {
   const d = artData(it), v = document.createElement('video');
   v.crossOrigin = 'anonymous'; // o vídeo pode vir do R2: sem isso o canvas fica bloqueado
   v.src = it.videoUrl; v.playsInline = true; v.preload = 'auto';
   await new Promise((ok, no) => { v.onloadedmetadata = ok; v.onerror = () => no(new Error('Não consegui abrir o vídeo.')); });
-  const c = document.createElement('canvas'); c.width = 1080; c.height = 1920; const ctx = c.getContext('2d');
-  const stream = c.captureStream(30);
-  let ac; try { ac = new AudioContext(); const dest = ac.createMediaStreamDestination(); ac.createMediaElementSource(v).connect(dest); dest.stream.getAudioTracks().forEach(t => stream.addTrack(t)); } catch {}
-  const mime = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm'].find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
+  const mimes = [
+    'video/mp4;codecs=avc1.640034,mp4a.40.2',
+    'video/mp4;codecs=avc1.640033,mp4a.40.2',
+    'video/mp4;codecs=avc1.4d0034,mp4a.40.2',
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4',
+    'video/webm;codecs=vp9,opus',
+    'video/webm'
+  ];
+  const mime = mimes.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
   if (!mime) throw new Error('Este navegador não grava vídeo. Use o Chrome ou o Edge.');
-  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8e6 }), chunks = [];
-  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  const c = document.createElement('canvas');
+  let sc = scale || 2;
+  c.width = 1080 * sc; c.height = 1920 * sc;
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  let stream = c.captureStream(60);
+  let ac, dest;
+  try { ac = new AudioContext(); dest = ac.createMediaStreamDestination(); ac.createMediaElementSource(v).connect(dest); dest.stream.getAudioTracks().forEach(t => stream.addTrack(t)); } catch {}
+  let rec;
+  const chunks = [];
+  try {
+    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 40e6 });
+    rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    rec.start(250);
+  } catch {
+    sc = 1; c.width = 1080; c.height = 1920;
+    stream = c.captureStream(60);
+    if (dest) dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 25e6 });
+    rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    rec.start(250);
+  }
   const stopped = new Promise(r => (rec.onstop = r));
   const box = Render.reelBox(d), f = d.focal || { x: 0.5, y: 0.5, zoom: 1 };
   const frame = async () => {
-    const cov = Math.max(box.w / v.videoWidth, box.h / v.videoHeight), s = cov * (f.zoom || 1);
+    const bx = box.x * sc, by = box.y * sc, bw = box.w * sc, bh = box.h * sc, br = (box.r || 0) * sc;
+    const cov = Math.max(bw / v.videoWidth, bh / v.videoHeight), s = cov * (f.zoom || 1);
     const w = v.videoWidth * s, h = v.videoHeight * s;
-    const px = w >= box.w ? box.x - (w - box.w) * f.x : box.x + (box.w - w) / 2;
-    const py = h >= box.h ? box.y - (h - box.h) * f.y : box.y + (box.h - h) / 2;
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, 1080, 1920);
-    ctx.save(); ctx.beginPath(); ctx.roundRect(box.x, box.y, box.w, box.h, box.r || 0); ctx.clip();
-    if (w < box.w - 1 || h < box.h - 1) {
-      try { ctx.filter = 'blur(40px) brightness(.7)'; } catch {}
-      ctx.drawImage(v, box.x - box.w * .1 - (v.videoWidth * cov - box.w) * .5, box.y - box.h * .1 - (v.videoHeight * cov - box.h) * .5, v.videoWidth * cov + box.w * .2, v.videoHeight * cov + box.h * .2);
+    const px = w >= bw ? bx - (w - bw) * f.x : bx + (bw - w) / 2;
+    const py = h >= bh ? by - (h - bh) * f.y : by + (bh - h) / 2;
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.save(); ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, br); ctx.clip();
+    if (w < bw - 1 || h < bh - 1) {
+      try { ctx.filter = `blur(${40 * sc}px) brightness(.7)`; } catch {}
+      ctx.drawImage(v, bx - bw * .1 - (v.videoWidth * cov - bw) * .5, by - bh * .1 - (v.videoHeight * cov - bh) * .5, v.videoWidth * cov + bw * .2, v.videoHeight * cov + bh * .2);
       ctx.filter = 'none';
     }
     ctx.drawImage(v, px, py, w, h);
@@ -156,6 +184,6 @@ export async function exportReel(it, onProgress = () => {}) {
     if (!v.ended) requestAnimationFrame(frame);
   };
   const ended = new Promise(r => (v.onended = r));
-  rec.start(250); await v.play(); frame(); await ended; rec.stop(); await stopped; if (ac) ac.close();
+  await v.play(); frame(); await ended; rec.stop(); await stopped; if (ac) ac.close();
   return { blob: new Blob(chunks, { type: mime.split(';')[0] }), ext: mime.includes('mp4') ? 'mp4' : 'webm' };
 }
