@@ -56,9 +56,8 @@ export function AppProvider({ children }) {
   // cria um post avulso (sem notícia do site) e já abre no editor pra subir foto/vídeo próprio e escolher o template
   const createItem = useCallback(async () => {
     try {
-      const it = await api('/api/items', { method: 'POST', body: { title: '', origTitle: '' } });
-      setItems(l => [...l, it]);
-      vt(() => { setPostId(it.id); setEditorId(it.id); window.scrollTo(0, 0); });
+      const it = await api('/api/items', { method: 'POST', body: { title: '', origTitle: '', category: '' } });
+      vt(() => { setItems(l => [...l, it]); setPostId(it.id); setEditorId(it.id); window.scrollTo(0, 0); });
       return it;
     } catch (e) { toast('Não consegui criar: ' + e.message, true); }
   }, [toast]);

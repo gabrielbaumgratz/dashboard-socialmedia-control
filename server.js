@@ -61,14 +61,16 @@ async function loadDb() {
 const saveDb = db => store.writeText('db.json', JSON.stringify(db, null, 2));
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 function newItem(b = {}) {
-  return {
+  const out = {
     id: newId(), status: 'draft', createdAt: new Date().toISOString(), scheduledAt: null, postedAt: null,
     newsId: null, origTitle: '', title: '', category: '', link: '', newsText: '', newsDate: null,
     format: 'post', slides: [], variations: [], chosen: 0, caption: '', hashtags: [],
     photoUrl: '', focal: { x: 0.5, y: 0.5, zoom: 1 }, mediaType: 'image', videoUrl: '',
     images: [], postUrl: '', sheetSync: null, aiError: '',
-    tpl: { post: 'p01', carousel: 'A', story: 's02' }, description: '', chip: '', source: '', credit: '', bigTitle: '', cutoutUrl: '', ...b
+    tpl: { post: 'p01', carousel: 'A', story: 's02', reel: 'r01' }, description: '', chip: '', source: '', credit: '', bigTitle: '', cutoutUrl: '', ...b
   };
+  if (/^(uncategorized|sem categoria)$/i.test(String(out.category || '').trim())) out.category = '';
+  return out;
 }
 
 // ================= helpers http =================
@@ -125,6 +127,7 @@ function stripHtml(html = '') {
     .replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 const oneLine = t => stripHtml(t).replace(/\s+/g, ' ');
+const cleanCat = s => { const v = oneLine(s || ''); return /^(uncategorized|sem categoria)$/i.test(v) ? '' : v; };
 
 // ================= WordPress =================
 // crédito vem da legenda da foto destacada ("... Foto: PMU", "Foto PMU", "Crédito: Fulano") ou do metadado da imagem
@@ -163,7 +166,7 @@ async function fetchNews({ page = 1, perPage = 12, after, before, search } = {})
       excerpt: oneLine(p.excerpt && p.excerpt.rendered), text: stripHtml(p.content && p.content.rendered),
       image: (m && m.source_url) || null,
       thumb: (sizes.medium_large || sizes.large || {}).source_url || (m && m.source_url) || null,
-      category: terms[0] ? oneLine(terms[0].name) : '', credit
+      category: terms.map(t => cleanCat(t && t.name)).find(Boolean) || '', credit
     });
   }
   return { items, totalPages };
@@ -287,7 +290,7 @@ function mergeTags(aiTags, cfg) {
 }
 function applyAi(item, ai, cfg) {
   item.title = ai.titulo || item.title;
-  item.category = ai.categoria || item.category;
+  item.category = cleanCat(ai.categoria) || cleanCat(item.category);
   // formato (post ou carrossel) vem das imagens que a pessoa sobe, não da IA
   item.hashtags = mergeTags(ai.hashtags, cfg);
   item.variations = (ai.variacoes || []).map(v => ({ style: v.estilo, text: withCta(v.legenda, cfg) }));
@@ -535,7 +538,10 @@ async function handleApi(req, res, url) {
 
   if (p === '/api/items' && m === 'GET') {
     const db = await loadDb(), cut = Date.now() - 7 * 864e5, old = db.items.filter(i => i.deletedAt && Date.parse(i.deletedAt) < cut);
-    if (old.length) { for (const i of old) await store.delFiles(i.id); db.items = db.items.filter(i => !old.includes(i)); await saveDb(db); }
+    let dirty = false;
+    if (old.length) { for (const i of old) await store.delFiles(i.id); db.items = db.items.filter(i => !old.includes(i)); dirty = true; }
+    for (const i of db.items) if (/^(uncategorized|sem categoria)$/i.test(String(i.category || '').trim())) { i.category = ''; dirty = true; }
+    if (dirty) await saveDb(db);
     return send(res, 200, db.items);
   }
   mm0 = p.match(/^\/api\/items\/([\w-]+)\/restore$/);

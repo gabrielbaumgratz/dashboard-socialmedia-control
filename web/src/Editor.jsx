@@ -274,10 +274,12 @@ function Field({ label, k, e, patch, ph, multi, cls }) {
   return <label className={cls}>{label}{multi ? <textarea rows={1} {...p} /> : <input {...p} />}</label>;
 }
 
+const cleanCat = s => { const v = String(s || '').trim(); return /^(uncategorized|sem categoria)$/i.test(v) ? '' : v; };
+
 export default function Editor() {
   const { editorId, setEditorId, setPostId, byId, saveItem, purgeItem, replace, toast, cfg } = useApp();
-  const [src] = useState(() => byId(editorId));
-  const [e, setE] = useState(() => ({ ...JSON.parse(JSON.stringify(src)), ...(src.tpl && src.tpl.post === 'p05' ? { look: { ...(src.look || {}), uh: { bg: '#735400', acc: '#fabd0d', ...((src.look || {}).uh) } } } : {}), focal: src.focal || { x: .5, y: .5, zoom: 1 }, focalStory: src.focalStory || src.focal || { x: .5, y: .5, zoom: 1 }, tpl: { ...DEF_TPL, ...(src.tpl || {}), ...(src.tpl && src.tpl.post === 'p05' ? { post: 'p02' } : {}) }, slides: Render.slidesOf(src) }));
+  const [src] = useState(() => byId(editorId) || { id: editorId, title: '', origTitle: '', category: '' });
+  const [e, setE] = useState(() => ({ ...JSON.parse(JSON.stringify(src)), category: cleanCat(src.category), storyCategory: src.storyCategory != null ? cleanCat(src.storyCategory) : null, ...(src.tpl && src.tpl.post === 'p05' ? { look: { ...(src.look || {}), uh: { bg: '#735400', acc: '#fabd0d', ...((src.look || {}).uh) } } } : {}), focal: src.focal || { x: .5, y: .5, zoom: 1 }, focalStory: src.focalStory || src.focal || { x: .5, y: .5, zoom: 1 }, tpl: { ...DEF_TPL, ...(src.tpl || {}), ...(src.tpl && src.tpl.post === 'p05' ? { post: 'p02' } : {}) }, slides: Render.slidesOf(src) }));
   const [photo, setPhoto] = useState(null), [cut, setCut] = useState(null), [imgs, setImgs] = useState({}), [over, setOver] = useState(false), [up, setUp] = useState(false), [dbusy, setDbusy] = useState(false);
   const [cur, setCur] = useState(0), [vr, setVr] = useState(null), [vp, setVp] = useState(false), vref = useRef(null);
   const kind = typeOf(e), car = kind === 'carrossel', video = kind === 'video';
@@ -362,7 +364,7 @@ export default function Editor() {
   }
   async function save(leave) {
     try {
-      await saveItem(byId(e.id), { title: e.title.trim(), category: e.category.trim(), mediaType: e.mediaType, videoUrl: e.videoUrl, slides: e.slides, photoUrl: e.photoUrl, cutoutUrl: e.cutoutUrl, focal: e.focal, focalStory: e.focalStory, tpl: e.tpl, description: e.description.trim(), chip: e.chip.trim(), legendas: e.legendas || '', dateline: e.dateline || '', source: e.source.trim(), credit: e.credit.trim(), bigTitle: e.bigTitle.trim(), look: e.look || {}, storyTitle: e.storyTitle == null ? null : e.storyTitle.trim(), storyCategory: e.storyCategory == null ? null : e.storyCategory.trim() });
+      await saveItem(byId(e.id) || src, { title: (e.title || '').trim(), category: cleanCat(e.category), mediaType: e.mediaType, videoUrl: e.videoUrl, slides: e.slides, photoUrl: e.photoUrl, cutoutUrl: e.cutoutUrl, focal: e.focal, focalStory: e.focalStory, tpl: e.tpl, description: (e.description || '').trim(), chip: (e.chip || '').trim(), legendas: e.legendas || '', dateline: e.dateline || '', source: (e.source || '').trim(), credit: (e.credit || '').trim(), bigTitle: (e.bigTitle || '').trim(), look: e.look || {}, storyTitle: e.storyTitle == null ? null : e.storyTitle.trim(), storyCategory: e.storyCategory == null ? null : cleanCat(e.storyCategory) });
       saved.current = true; dirty.current = false; toast('Arte salva.'); if (leave) close();
     } catch (err) { toast(err.message, true); }
   }
@@ -394,7 +396,7 @@ export default function Editor() {
   const thumbs = [e.photoUrl, ...e.slides.map(s => s.photoUrl)].filter(Boolean);
   const order = [{ u: e.photoUrl }, ...e.slides.map(s => ({ u: s.photoUrl, s }))];
   const [drag, setDrag] = useState(null), [place, setPlace] = useState(null);
-  const shown = (() => { const a = order.map((_, i) => i); if (drag !== null && place !== null) { a.splice(a.indexOf(drag), 1); a.splice(place, 0, drag); } return a; })();
+  const shown = (() => { if (!e.photoUrl && !car) return []; const a = order.map((_, i) => i); if (drag !== null && place !== null) { a.splice(a.indexOf(drag), 1); a.splice(place, 0, drag); } return a; })();
   function moveItem(from, to) {
     if (from === to) return;
     const m = from === 0 ? { photoUrl: e.photoUrl } : e.slides[from - 1];
@@ -426,7 +428,7 @@ export default function Editor() {
               onDragEnd={() => { setDrag(null); setPlace(null); }}
               onDragOver={ev => { if (drag === null) return; ev.preventDefault(); ev.stopPropagation(); if (place !== p) setPlace(p); }}
               onDrop={ev => { if (drag === null) return; ev.preventDefault(); ev.stopPropagation(); moveItem(drag, place ?? p); setDrag(null); setPlace(null); }}>
-              {o.u ? (o.u.startsWith('/images/') ? <img src={o.u + (o.u.includes('?') ? '&' : '?') + 'cv=1'} alt="" crossOrigin="anonymous" draggable={false} /> : <img src={o.u} alt="" draggable={false} />) : <em>{(types.find(t => t.id === o.s.type) || {}).name || 'Texto'}</em>}
+              {o.u ? (o.u.startsWith('/images/') ? <img src={o.u + (o.u.includes('?') ? '&' : '?') + 'cv=1'} alt="" crossOrigin="anonymous" draggable={false} /> : <img src={o.u} alt="" draggable={false} />) : <em>{(o.s && (types.find(t => t.id === o.s.type) || {}).name) || (i === 0 ? 'Capa' : 'Texto')}</em>}
               {order.length > 1 && <b className="grip" aria-hidden="true">⋮⋮</b>}
               <span>{p === 0 ? 'Capa' : p + 1}</span>
               {i > 0 && drag === null && <button className="x" aria-label="Tirar slide" onClick={ev => { ev.stopPropagation(); setE(x => ({ ...x, slides: x.slides.filter((_, k) => k !== i - 1) })); setCur(c => Math.min(c, order.length - 2)); }}>×</button>}

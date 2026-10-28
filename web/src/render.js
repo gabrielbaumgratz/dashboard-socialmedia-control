@@ -170,7 +170,8 @@ const Render = (() => {
     if (!last) chip(ctx, 'ARRASTE →', 1008, 1219, 28, { right: true });
   }
   const up = s => String(s || '').toUpperCase();
-  const catOf = d => String(d.category || '').trim(); // categoria em branco = sem texto (fica só o tracinho)
+  const cleanCat = s => { const v = String(s || '').trim(); return /^(uncategorized|sem categoria)$/i.test(v) ? '' : v; };
+  const catOf = d => cleanCat(d.category); // categoria em branco = sem texto (fica só o tracinho)
   const G = 18; // respiro padrão entre blocos de texto nos posts (o story usa 22, como o Foto em cima + painel)
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
   const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100, sym: false }, uh: { bg: C.tealE, acc: C.turq, size: 48, bar: '', chip: '' }, tag: { on: true, bg: C.turq, tc: C.navy }, pbar: { bar: '' }, nd: { ph: 680, sym: true, cat: C.tealM, pill: false }, cut: { bg: C.navy, size: 52, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
@@ -326,7 +327,7 @@ const Render = (() => {
       if (type === 'foto') vgrad(ctx, 1000, 350, 'rgba(15,23,42,0)', 'rgba(15,23,42,0.55)');
       else if (type === 'legenda') {
         vgrad(ctx, 850, 500, 'rgba(15,23,42,0)', 'rgba(15,23,42,0.6)');
-        const lab = up(s.label || d.category || 'Notícia'), b = block(ctx, s.text, 700, 40, 54, 848, 5);
+        const lab = up(s.label || catOf(d) || 'Notícia'), b = block(ctx, s.text, 700, 40, 54, 848, 5);
         const h = 44 + lineH(30) + 14 + b.h + 44, y = 1350 - 190 - h;
         ctx.fillStyle = C.navy; rrect(ctx, 72, y, 936, h, 8); ctx.fill();
         font(ctx, 700, 30, 2); ctx.fillStyle = C.verde; ctx.fillText(lab, 116, y + 44);
