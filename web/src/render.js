@@ -174,7 +174,7 @@ const Render = (() => {
   const catOf = d => cleanCat(d.category); // categoria em branco = sem texto (fica só o tracinho)
   const G = 18; // respiro padrão entre blocos de texto nos posts (o story usa 22, como o Foto em cima + painel)
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
-  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100, sym: false }, uh: { bg: C.tealE, acc: C.turq, size: 48, bar: '', chip: '' }, r3: { bg: '#000000', opacity: 90, size: 36, chip: C.tealE, tc: 'auto' }, tag: { on: true, bg: C.turq, tc: C.navy }, pbar: { bar: '' }, nd: { ph: 680, sym: true, cat: C.tealM, pill: false }, cut: { bg: C.navy, size: 52, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
+  const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100, sym: false }, uh: { bg: C.tealE, acc: C.turq, size: 48, bar: '', chip: '' }, r3: { bg: '#000000', opacity: 90, size: 36, chip: C.tealE, tc: 'auto' }, tag: { on: true, bg: C.turq, tc: C.navy }, pbar: { bar: '' }, nd: { ph: 680, sym: true, topLogo: true, cat: C.tealM, pill: false }, cut: { bg: C.navy, size: 52, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
   const UH_PRESETS = [['Verde petróleo', C.tealE, C.turq], ['Amarelo', '#735400', '#fabd0d'], ['Azul marinho', C.navy, C.turq], ['Teal', C.tealM, C.verde], ['Preto', C.preto, '#fabd0d']];
   const look = d => ({ post: { ...LOOK.post, ...((d.look || {}).post) }, story: { ...LOOK.story, ...((d.look || {}).story) }, bg: { ...LOOK.bg, ...((d.look || {}).bg) }, uh: { ...LOOK.uh, ...(d.tpl && d.tpl.post === 'p05' ? { bg: '#735400', acc: '#fabd0d' } : {}), ...((d.look || {}).uh) }, r3: { ...LOOK.r3, ...((d.look || {}).r3) }, cut: { ...LOOK.cut, ...((d.look || {}).cut) }, tag: { ...LOOK.tag, ...((d.look || {}).tag) }, pbar: { ...LOOK.pbar, ...((d.look || {}).pbar) }, nd: { ...LOOK.nd, ...((d.look || {}).nd) } });
   // selo do story: mesmo desenho do selo original (cantos 10), só mais baixo; cor e visibilidade editáveis
@@ -451,9 +451,7 @@ const Render = (() => {
   function reelBox(d) {
     const id = (d && d.tpl && d.tpl.reel) || 'r01', nd = look(d || {}).nd;
     if (id === 'r02') {
-      const hasDesc = Boolean(d && String(d.description || '').trim());
-      const baseVh = Math.round(1920 - (1350 - nd.ph) * 0.9 + (hasDesc ? 0 : 70));
-      const vh = Math.max(900, Math.min(1480, baseVh));
+      const vh = Math.max(820, Math.min(1340, Math.round(1230 + (nd.ph - 680) * 0.85)));
       return { x: 0, y: 0, w: 1080, h: vh, r: 0 };
     }
     return { x: 0, y: 0, w: 1080, h: 1920, r: 0 };
@@ -489,28 +487,46 @@ const Render = (() => {
       ctx.globalAlpha = 1; font(ctx, 600, 30); ctx.fillStyle = tc; ctx.fillText(BRAND.handle, 72, y);
       credit(ctx, d.credit, 1920 - 140 - totalH - 36 - 30, 1050, 'VÍDEO');
     } else if (id === 'r02') {
-      // Reel 2 (Baseado no Post 2): Vídeo no topo + painel branco de jornal embaixo, textos proporcionais e espaçamento enxuto
+      // Reel 2 (Baseado no Post 2): Vídeo no topo + painel branco embaixo, auto-ajuste de texto sem sobreposição e opção de logo no topo
       const nd = look(d).nd, vh = box.h, cat = catOf(d);
+      if (nd.topLogo !== false) {
+        vgrad(ctx, 0, 280, 'rgba(15,23,42,0.48)', 'rgba(15,23,42,0)');
+        ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 3;
+        drawLogo(ctx, false, 72, 118, 270);
+        ctx.restore();
+      }
       ctx.fillStyle = C.branco; ctx.fillRect(0, vh, 1080, 1920 - vh);
-      if (nd.sym) symbol(ctx, 880, vh - 52, 105.6);
-      credit(ctx, d.credit, vh - 40, 1050, 'VÍDEO');
-      let y = vh + (cat ? 34 : 30);
+      if (nd.sym) symbol(ctx, 1080 - 72 - 96, vh - 72, 96);
+      credit(ctx, d.credit, vh - 84, 1050, 'VÍDEO');
+      const yStart = vh + 42, yFooter = 1808, availH = yFooter - 22 - yStart;
+      const catH = cat ? (nd.pill ? 52 : 36) : 0;
+      let ti, de = null, gap = 18;
+      for (let sc = 1; sc >= 0.72; sc -= 0.04) {
+        gap = Math.max(12, Math.round(18 * sc));
+        const tSz = Math.round(60 * sc), tLh = Math.round(66 * sc);
+        const dSz = Math.round(33 * sc), dLh = Math.round(41 * sc);
+        ti = block(ctx, d.title, 900, tSz, tLh, 936, d.description ? 3 : 4);
+        de = d.description ? block(ctx, d.description, 400, dSz, dLh, 936, sc < 0.85 ? 2 : 3) : null;
+        const tot = (cat ? catH + gap : 0) + ti.h + (de ? gap + de.h : 0);
+        if (tot <= availH) break;
+      }
+      let y = yStart;
       ctx.globalAlpha = catA;
       if (cat && nd.pill) {
-        chip(ctx, up(cat), 72, y + (1 - catA) * 12, 30, { bg: nd.cat, color: lum(nd.cat) > 0.35 ? C.navy : C.branco, sp: 2, h: lineH(30) + 16 });
-        y += lineH(30) + 16 + 12;
+        chip(ctx, up(cat), 72, y + (1 - catA) * 12, 28, { bg: nd.cat, color: lum(nd.cat) > 0.35 ? C.navy : C.branco, sp: 2, h: 52 });
+        y += 52 + gap;
       } else if (cat) {
-        font(ctx, 800, 32, 2); ctx.fillStyle = nd.cat; ctx.fillText(up(cat), 72, y + (1 - catA) * 12, 936);
-        y += 38 + 8;
+        font(ctx, 800, 30, 2); ctx.fillStyle = nd.cat; ctx.fillText(up(cat), 72, y + (1 - catA) * 12, 936);
+        y += 36 + gap;
       }
-      const ti = block(ctx, d.title, 900, 64, 70, 936, d.description ? 3 : 4);
-      ctx.globalAlpha = tiA; y = draw(ctx, ti, 72, y + (1 - tiA) * 20, C.preto) - (1 - tiA) * 20 + 12;
-      ctx.globalAlpha = deA;
-      if (d.description) y = draw(ctx, block(ctx, d.description, 400, 34, 42, 936, 3), 72, y + (1 - deA) * 14, C.preto) - (1 - deA) * 14 + 12;
-      if (d.source) { font(ctx, 400, 26); ctx.fillStyle = 'rgba(29,29,27,.6)'; ctx.fillText('Fonte: ' + d.source, 72, y + (1 - deA) * 12); }
+      ctx.globalAlpha = tiA; y = draw(ctx, ti, 72, y + (1 - tiA) * 18, C.preto) - (1 - tiA) * 18;
+      if (de) {
+        y += gap;
+        ctx.globalAlpha = deA; y = draw(ctx, de, 72, y + (1 - deA) * 14, C.preto) - (1 - deA) * 14;
+      }
       ctx.globalAlpha = 1;
-      drawLogo(ctx, true, 72, 1786, 250);
-      font(ctx, 700, 26); ctx.fillStyle = C.tealM; ctx.textAlign = 'right'; ctx.fillText(BRAND.handle, 1008, 1798); ctx.textAlign = 'left';
+      if (d.source) { font(ctx, 600, 26); ctx.fillStyle = 'rgba(29,29,27,.62)'; ctx.fillText('Fonte: ' + d.source, 72, yFooter + 6, 440); }
+      font(ctx, 800, 34); ctx.fillStyle = C.tealM; ctx.textAlign = 'right'; ctx.fillText(BRAND.handle, 1008, yFooter); ctx.textAlign = 'left';
     } else if (id === 'r03') {
       // Reel 3 (Modelo Referência 1): Vídeo em tela cheia + card superior esquerdo customizável + logo Portal Reconstruções no topo direito + bloco com fade lateral escuro/colorido atrás do título embaixo
       const r3 = look(d).r3, bgc = r3.bg || '#000000', a = (r3.opacity ?? 90) / 100;

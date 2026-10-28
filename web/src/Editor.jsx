@@ -243,6 +243,7 @@ function NdCtl({ e, patch, video, hideHeight }) {
   return <Pair>
     <Card title={video ? 'Vídeo' : 'Foto'} right={resetBtn(e, patch, 'nd')}>
       {!hideHeight && <Rng label={'Altura d' + (video ? 'o vídeo' : 'a foto')} value={Math.round(cur.ph / 13.5)} unit="%" min={30} max={75} onChange={v => set({ ph: Math.round(v * 13.5) })} />}
+      {video && <SwitchRow label="Mostrar logo no topo" on={cur.topLogo !== false} set={topLogo => set({ topLogo })} />}
       <SwitchRow label="Mostrar símbolo" on={cur.sym} set={sym => set({ sym })} />
     </Card>
     <Card title="Categoria">
