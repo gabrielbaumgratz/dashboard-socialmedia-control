@@ -22,7 +22,7 @@ const REEL_USES = {
   r00: [],
   r01: ['title', 'category', 'description', 'credit'],
   r02: ['title', 'category', 'description', 'source', 'credit'],
-  r03: ['title', 'category', 'description', 'source', 'credit'],
+  r03: ['title', 'category', 'chip', 'description', 'credit'],
   r04: ['title', 'category', 'chip', 'description', 'credit']
 };
 const STORY_USES = { s02: ['title', 'category', 'credit'], s03: ['title', 'category', 'description', 'credit'], s01: [], s04: ['title', 'category', 'description', 'credit'] };
@@ -133,7 +133,7 @@ function Crop({ f, set, photo, w, h, extra, pw = 340, cols = 2, fitLabel = 'Foto
 }
 
 const SWATCHES = [['#006173', 'Verde petróleo'], ['#008995', 'Teal'], ['#00b0ac', 'Turquesa'], ['#5cbba4', 'Verde'], ['#fabd0d', 'Amarelo'], ['#735400', 'Âmbar'], ['#0f172a', 'Azul marinho'], ['#1d1d1b', 'Preto'], ['#ffffff', 'Branco']];
-const cname = v => (SWATCHES.find(([c]) => c === String(v).toLowerCase()) || [, String(v).toUpperCase()])[1];
+const cname = v => (String(v).toLowerCase() === '#000000' ? 'Preto' : (SWATCHES.find(([c]) => c === String(v).toLowerCase()) || [, String(v).toUpperCase()])[1]);
 // linha padrão de ajuste: rótulo à esquerda, controle à direita (tudo alinhado)
 const Row = ({ label, children }) => <div className="crow"><span className="clbl">{label}</span><div className="cctl">{children}</div></div>;
 // cor compacta: mostra a cor atual; clicando abre a paleta. opts = escolhas extras tipo Auto / Sem barra
@@ -237,7 +237,7 @@ function UhCtl({ e, patch, k = 'uh' }) {
   </Pair>;
 }
 
-// post 2 e reels de jornal (r02/r03): vídeo/foto e divisória num card, categoria no outro
+// post 2 e reel 2: vídeo/foto e divisória num card, categoria no outro
 function NdCtl({ e, patch, video, hideHeight }) {
   const cur = { ...Render.LOOK.nd, ...((e.look || {}).nd) }, set = p => patch({ look: { ...(e.look || {}), nd: { ...cur, ...p } } });
   return <Pair>
@@ -248,6 +248,22 @@ function NdCtl({ e, patch, video, hideHeight }) {
     <Card title="Categoria">
       <Row label="Cor da categoria"><ColorMenu value={cur.cat} onChange={cat => set({ cat })} /></Row>
       <SwitchRow label="Categoria com selo" on={cur.pill} set={pill => set({ pill })} />
+    </Card>
+  </Pair>;
+}
+// reel 3: fundo escuro/colorido com fade atrás do texto + card superior esquerdo customizável
+function R3Ctl({ e, patch }) {
+  const cur = { ...Render.LOOK.r3, ...((e.look || {}).r3) }, set = p => patch({ look: { ...(e.look || {}), r3: { ...cur, ...p } } });
+  const R3_SW = [['#000000', 'Preto'], ...SWATCHES.filter(([c]) => c !== '#1d1d1b')];
+  return <Pair>
+    <Card title="Fundo com fade (texto)" right={resetBtn(e, patch, 'r3')}>
+      <Row label="Cor do fade"><ColorMenu value={cur.bg} onChange={bg => set({ bg })} palette={R3_SW} /></Row>
+      <Rng label="Opacidade" value={cur.opacity} unit="%" min={0} max={100} onChange={opacity => set({ opacity })} />
+      <Rng label="Altura" value={cur.size} unit="%" min={20} max={65} onChange={size => set({ size })} />
+      <TextColor value={cur.tc} onChange={tc => set({ tc })} />
+    </Card>
+    <Card title="Card superior">
+      <Row label="Cor do card"><ColorMenu value={cur.chip} onChange={chip => set({ chip })} opts={[['none', 'Sem card']]} palette={R3_SW} /></Row>
     </Card>
   </Pair>;
 }
@@ -412,7 +428,7 @@ export default function Editor() {
   const FIELDS = {
     title: () => field('title', 'Título', '', 1, 'w4'),
     category: () => field('category', 'Categoria', '', 0, 'w2'),
-    chip: c => field('chip', 'Selo', 'ÚLTIMA HORA', 0, c),
+    chip: c => field('chip', video && rtpl === 'r03' ? 'Texto do card superior' : 'Selo', video && rtpl === 'r03' ? 'opcional (usa a categoria se ficar vazio)' : 'ÚLTIMA HORA', 0, c),
     bigTitle: c => field('bigTitle', 'Título grande atrás do recorte', 'as 2 primeiras palavras do título', 0, c),
     description: () => <div key="description" className="descbox">{field('description', 'Descrição curta', 'sem descrição', 1)}<button type="button" className="ghost" onClick={genDesc} disabled={dbusy || !cfg.hasKey}>{dbusy ? 'Gerando…' : 'Gerar descrição com IA'}</button></div>,
     source: c => field('source', 'Fonte', 'sem fonte', 0, c),
@@ -485,7 +501,7 @@ export default function Editor() {
       </section>
 
       <section className="edsec">
-        <div className="sechead"><h3>{video ? 'Reel' : car ? 'Carrossel' : 'Post'}</h3><button className="ghost" onClick={() => patch({ look: { ...(e.look || {}), post: undefined, nd: undefined, uh: undefined, pbar: undefined, bg: undefined }, focal: { x: .5, y: .5, zoom: 1 } })}>{video ? 'Restaurar padrão do reel' : 'Restaurar padrão do post'}</button></div>
+        <div className="sechead"><h3>{video ? 'Reel' : car ? 'Carrossel' : 'Post'}</h3><button className="ghost" onClick={() => patch({ look: { ...(e.look || {}), post: undefined, nd: undefined, uh: undefined, r3: undefined, pbar: undefined, bg: undefined }, focal: { x: .5, y: .5, zoom: 1 } })}>{video ? 'Restaurar padrão do reel' : 'Restaurar padrão do post'}</button></div>
         <div className="edpv">
           {video ? (() => {
             const rbox = Render.reelBox(base), vphoto = vdim || (photo && { width: photo.videoWidth || photo.width || 1080, height: photo.videoHeight || photo.height || 1920 }) || { width: 1080, height: 1920 };
@@ -544,7 +560,8 @@ export default function Editor() {
           )}
           {renderFields(video ? (REEL_USES[rtpl] || REEL_USES.r01) : postUses)}
           {(video ? rtpl === 'r01' : ptpl === 'p01') && <LookCtl e={e} patch={patch} k="post" pre={<PBarRow e={e} patch={patch} />} />}
-          {(video ? (rtpl === 'r02' || rtpl === 'r03') : ptpl === 'p04') && <NdCtl e={e} patch={patch} video={video} />}
+          {(video ? rtpl === 'r02' : ptpl === 'p04') && <NdCtl e={e} patch={patch} video={video} />}
+          {video && rtpl === 'r03' && <R3Ctl e={e} patch={patch} />}
           {(video ? rtpl === 'r04' : ptpl === 'p02') && <UhCtl e={e} patch={patch} />}
           {!video && ptpl === 'p03' && <UhCtl e={e} patch={patch} k="cut" />}
           {midSlide && <SlideRow s={types.some(t => t.id === e.slides[slideIdx].type) ? e.slides[slideIdx] : { ...e.slides[slideIdx], type: types[0].id }} i={slideIdx} n={n} types={types} set={v => slideSet(slideIdx, v)}
