@@ -145,15 +145,18 @@ export function ReelOverlay({ it, playing }) {
     let id, alive = true; const d = artData(it), tpl = it.tpl && it.tpl.reel;
     const animate = (playing && !prevPlay.current) || (tpl !== prevTpl.current);
     prevPlay.current = !!playing; prevTpl.current = tpl;
-    const t0 = performance.now();
-    const step = async () => {
-      const cv = c.current; if (!alive || !cv) return;
-      if (cv.width !== 540 || cv.height !== 960) { cv.width = 540; cv.height = 960; }
-      const dt = animate ? (performance.now() - t0) / 1000 : 99;
-      await Render.reel(cv, d, dt, true);
-      if (alive && animate && dt < 1.05) id = requestAnimationFrame(step);
-    };
-    step();
+    Render.preload().then(() => {
+      if (!alive) return;
+      const t0 = performance.now();
+      const step = () => {
+        const cv = c.current; if (!alive || !cv) return;
+        if (cv.width !== 540 || cv.height !== 960) { cv.width = 540; cv.height = 960; }
+        const dt = animate ? (performance.now() - t0) / 1000 : 99;
+        Render.reelSync(cv, d, dt, true);
+        if (alive && animate && dt < 1.0) id = requestAnimationFrame(step);
+      };
+      step();
+    });
     return () => { alive = false; cancelAnimationFrame(id); };
   }, [playing, it.title, it.category, it.description, it.source, it.chip, it.credit, lookSig, it.tpl && it.tpl.reel]);
   return <canvas ref={c} className="rl-overlay" aria-hidden="true" />;

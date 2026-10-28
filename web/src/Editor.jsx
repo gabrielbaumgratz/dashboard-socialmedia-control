@@ -64,12 +64,17 @@ function TplRow({ list, kname, e, sig, draw, w, h, story, onPick }) {
   useEffect(() => {
     let alive = true;
     run(async () => {
+      const big = document.createElement('canvas'), sm = document.createElement('canvas');
+      sm.width = w * 2; sm.height = h * 2;
+      const sctx = sm.getContext('2d');
       for (const t of list) {
-        if (!alive) return;
-        const big = document.createElement('canvas'); await draw(big, t.id);
-        const sm = document.createElement('canvas'); sm.width = w * 2; sm.height = h * 2; sm.getContext('2d').drawImage(big, 0, 0, sm.width, sm.height);
-        if (alive) setUrls(u => ({ ...u, [t.id]: sm.toDataURL('image/jpeg', .8) }));
+        if (!alive) break;
+        await draw(big, t.id);
+        sctx.clearRect(0, 0, sm.width, sm.height);
+        sctx.drawImage(big, 0, 0, sm.width, sm.height);
+        if (alive) setUrls(u => ({ ...u, [t.id]: sm.toDataURL('image/jpeg', .78) }));
       }
+      big.width = 0; big.height = 0; sm.width = 0; sm.height = 0;
     });
     return () => { alive = false; };
   }, [deb]);
@@ -410,6 +415,7 @@ export default function Editor() {
   }
   async function saveVideo() {
     if (!e.videoUrl || vbusy) return;
+    if (vref.current && !vref.current.paused) try { vref.current.pause(); } catch {}
     setVbusy(true); toast('Gravando vídeo em 4K na melhor qualidade… mantenha esta aba aberta.');
     try {
       const { blob, ext } = await exportReel({ ...e, tpl: e.tpl }, () => {}, 2);

@@ -29,7 +29,8 @@ const Render = (() => {
   };
 
   // ---------- recursos ----------
-  const imgs = {};
+  const imgs = {}, imgsSync = {};
+  let fontsReady = false, fontsPromise = null;
   function loadImage(url) {
     return new Promise((resolve, reject) => {
       const img = new Image(); img.crossOrigin = 'anonymous'; // fotos do R2 (outro domínio) sem travar o canvas
@@ -40,11 +41,18 @@ const Render = (() => {
     });
   }
   async function asset(name) {
-    if (!(name in imgs)) imgs[name] = loadImage(`/assets/${name}.png`).catch(() => null);
+    if (name in imgsSync) return imgsSync[name];
+    if (!(name in imgs)) imgs[name] = loadImage(`/assets/${name}.png`).then(im => (imgsSync[name] = im)).catch(() => (imgsSync[name] = null));
     return imgs[name];
   }
   async function ensureFonts() {
-    try { await Promise.all(['400', '600', '700', '800', '900'].map(w => document.fonts.load(`${w} 40px Nunito`))); } catch {}
+    if (fontsReady) return;
+    if (!fontsPromise) fontsPromise = Promise.all(['400', '600', '700', '800', '900'].map(w => document.fonts.load(`${w} 40px Nunito`))).then(() => { fontsReady = true; }).catch(() => { fontsReady = true; });
+    await fontsPromise;
+  }
+  async function preload() {
+    await ensureFonts();
+    await Promise.all([asset('logo-escuro'), asset('logo-branco')]);
   }
 
   // ---------- desenho básico ----------
@@ -105,8 +113,11 @@ const Render = (() => {
     }
     return best;
   }
-  // mede um bloco de texto; se passar de maxLines, diminui a fonte (mínimo 70% do tamanho do template)
+  // mede um bloco de texto; se passar de maxLines, diminui a fonte (mínimo 70% do tamanho do template). Cacheia pra não recalcular a cada frame de vídeo.
+  const blockCache = new Map();
   function block(ctx, text, weight, size, lh, maxW, maxLines = 99, spacing = 0) {
+    const key = `${weight}|${size}|${lh}|${maxW}|${maxLines}|${spacing}|${text || ''}`;
+    if (blockCache.has(key)) return blockCache.get(key);
     let s = size, l = lh, lines;
     for (; s >= size * 0.7; s -= 2, l = lh * s / size) {
       font(ctx, weight, s, spacing); lines = wrap(ctx, text, maxW);
@@ -114,7 +125,10 @@ const Render = (() => {
     }
     if (lines.length > maxLines) { lines = lines.slice(0, maxLines); lines[maxLines - 1] = lines[maxLines - 1].replace(/\s*\S*$/, '') + '…'; }
     else if (lines.length > 1) lines = balance(ctx, text, maxW, lines.length);
-    return { weight, size: s, lh: l, lines, spacing, h: lines.length * l };
+    const res = { weight, size: s, lh: l, lines, spacing, h: lines.length * l };
+    if (blockCache.size > 80) blockCache.delete(blockCache.keys().next().value);
+    blockCache.set(key, res);
+    return res;
   }
   function draw(ctx, b, x, y, color, align = 'left', w = 0) {
     font(ctx, b.weight, b.size, b.spacing); ctx.fillStyle = color; ctx.textAlign = align;
@@ -456,9 +470,8 @@ const Render = (() => {
     }
     return { x: 0, y: 0, w: 1080, h: 1920, r: 0 };
   }
-  async function reel(canvas, d, t = 99, clear = false) {
-    await ensureFonts();
-    const [lgDark, lgLight] = await Promise.all([asset('logo-escuro'), asset('logo-branco')]);
+  function reelSync(canvas, d, t = 99, clear = false) {
+    const lgDark = imgsSync['logo-escuro'], lgLight = imgsSync['logo-branco'];
     const drawLogo = (ctx, dark, x, y, w) => {
       const img = dark ? lgDark : lgLight;
       if (img) return ctx.drawImage(img, x, y, w, w * img.height / img.width);
@@ -490,10 +503,8 @@ const Render = (() => {
       // Reel 2 (Baseado no Post 2): Vídeo no topo + painel branco embaixo, auto-ajuste de texto sem sobreposição e opção de logo no topo
       const nd = look(d).nd, vh = box.h, cat = catOf(d);
       if (nd.topLogo !== false) {
-        vgrad(ctx, 0, 280, 'rgba(15,23,42,0.48)', 'rgba(15,23,42,0)');
-        ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 3;
+        vgrad(ctx, 0, 280, 'rgba(15,23,42,0.52)', 'rgba(15,23,42,0)');
         drawLogo(ctx, false, 72, 118, 270);
-        ctx.restore();
       }
       ctx.fillStyle = C.branco; ctx.fillRect(0, vh, 1080, 1920 - vh);
       if (nd.sym) symbol(ctx, 1080 - 72 - 96, vh - 72, 96);
@@ -531,11 +542,9 @@ const Render = (() => {
       // Reel 3 (Modelo Referência 1): Vídeo em tela cheia + card superior esquerdo customizável + logo Portal Reconstruções no topo direito + bloco com fade lateral escuro/colorido atrás do título embaixo
       const r3 = look(d).r3, bgc = r3.bg || '#000000', a = (r3.opacity ?? 90) / 100;
       const topA = seg(t, 0.05, 0.50), boxA = seg(t, 0.12, 0.68);
-      vgrad(ctx, 0, 320, 'rgba(0,0,0,0.34)', 'rgba(0,0,0,0)');
-      ctx.save(); ctx.globalAlpha = topA;
-      ctx.shadowColor = 'rgba(0,0,0,0.48)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 4;
+      vgrad(ctx, 0, 340, 'rgba(0,0,0,0.44)', 'rgba(0,0,0,0)');
+      ctx.globalAlpha = topA;
       drawLogo(ctx, false, 1080 - 52 - 290, 152, 290);
-      ctx.restore();
       const rawTag = String(d.chip || catOf(d) || '').trim();
       if (r3.chip !== 'none' && rawTag) {
         const cc = r3.chip || C.tealE, tagTc = lum(cc) > 0.42 ? C.navy : C.branco;
@@ -592,18 +601,22 @@ const Render = (() => {
     }
     ctx.restore();
   }
+  async function reel(canvas, d, t = 99, clear = false) {
+    await preload();
+    reelSync(canvas, d, t, clear);
+  }
   async function reelThumb(canvas, d, img) {
-    await ensureFonts();
+    await preload();
     const ctx = setup(canvas, 1080, 1920), box = reelBox(d);
     ctx.fillStyle = C.navy; ctx.fillRect(0, 0, 1080, 1920);
     ctx.save(); rrect(ctx, box.x, box.y, box.w, box.h, box.r || 0); ctx.clip();
     photo(ctx, img, box.x, box.y, box.w, box.h, d.focal);
     ctx.restore();
-    await reel(canvas, d, 99, false);
+    reelSync(canvas, d, 99, false);
   }
 
   return {
-    REELS, reel, reelBox, reelThumb,
+    REELS, reel, reelSync, preload, reelBox, reelThumb,
     POSTS, CAROUSELS, STORIES, SLIDE_TYPES, BRAND, loadImage, ensureFonts, count, slidesOf,
     setBrand(b) { Object.assign(BRAND, b); if (b && b.handle && !b.site) BRAND.site = b.handle; },
     setScale(s) { S = s || 1; },
