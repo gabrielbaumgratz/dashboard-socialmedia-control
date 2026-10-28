@@ -136,12 +136,20 @@ export async function exportReel(it, onProgress = () => {}) {
   const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8e6 }), chunks = [];
   rec.ondataavailable = e => e.data.size && chunks.push(e.data);
   const stopped = new Promise(r => (rec.onstop = r));
-  const box = Render.reelBox(d);
+  const box = Render.reelBox(d), f = d.focal || { x: 0.5, y: 0.5, zoom: 1 };
   const frame = async () => {
-    const s = Math.max(box.w / v.videoWidth, box.h / v.videoHeight), w = v.videoWidth * s, h = v.videoHeight * s;
-    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 1080, 1920);
+    const cov = Math.max(box.w / v.videoWidth, box.h / v.videoHeight), s = cov * (f.zoom || 1);
+    const w = v.videoWidth * s, h = v.videoHeight * s;
+    const px = w >= box.w ? box.x - (w - box.w) * f.x : box.x + (box.w - w) / 2;
+    const py = h >= box.h ? box.y - (h - box.h) * f.y : box.y + (box.h - h) / 2;
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, 1080, 1920);
     ctx.save(); ctx.beginPath(); ctx.roundRect(box.x, box.y, box.w, box.h, box.r || 0); ctx.clip();
-    ctx.drawImage(v, box.x + (box.w - w) / 2, box.y + (box.h - h) / 2, w, h);
+    if (w < box.w - 1 || h < box.h - 1) {
+      try { ctx.filter = 'blur(40px) brightness(.7)'; } catch {}
+      ctx.drawImage(v, box.x - box.w * .1 - (v.videoWidth * cov - box.w) * .5, box.y - box.h * .1 - (v.videoHeight * cov - box.h) * .5, v.videoWidth * cov + box.w * .2, v.videoHeight * cov + box.h * .2);
+      ctx.filter = 'none';
+    }
+    ctx.drawImage(v, px, py, w, h);
     ctx.restore();
     await Render.reel(c, d, v.currentTime, false);
     onProgress(v.duration ? v.currentTime / v.duration : 0);

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, uploadMedia } from './api.js';
-import { ReelOverlay, reelVideoStyle } from './previews.jsx';
+import { ReelOverlay, reelBoxStyle, reelVideoStyle } from './previews.jsx';
 import { useApp, vt } from './store.jsx';
 import Render from './render.js';
 import { artData, getImg, getVideoFrame } from './art.js';
@@ -23,7 +23,7 @@ const REEL_USES = {
   r01: ['title', 'category', 'description', 'credit'],
   r02: ['title', 'category', 'description', 'source', 'credit'],
   r03: ['title', 'category', 'description', 'source', 'credit'],
-  r04: ['title', 'category', 'description', 'credit']
+  r04: ['title', 'category', 'chip', 'description', 'credit']
 };
 const STORY_USES = { s02: ['title', 'category', 'credit'], s03: ['title', 'category', 'description', 'credit'], s01: [], s04: ['title', 'category', 'description', 'credit'] };
 // baixa em tamanho real, sem guias, exatamente o que está sendo editado
@@ -113,7 +113,7 @@ function SlideRow({ s, i, n, types, set, remove, move }) {
 // zoom mínimo = foto inteira dentro do quadro (sobra vira fundo borrado)
 const fitZoom = (photo, w, h) => (photo ? Math.min(1, Math.min(w / photo.width, h / photo.height) / Math.max(w / photo.width, h / photo.height)) : 1);
 
-function Crop({ f, set, photo, w, h, extra, pw = 340, cols = 2 }) {
+function Crop({ f, set, photo, w, h, extra, pw = 340, cols = 2, fitLabel = 'Foto inteira' }) {
   if (!photo) return null;
   const min = fitZoom(photo, w, h), r = v => Math.round(v * 100) / 100;
   return (
@@ -124,7 +124,7 @@ function Crop({ f, set, photo, w, h, extra, pw = 340, cols = 2 }) {
         <CropRng label="Vertical" value={Math.round(f.y * 100)} unit="%" min={0} max={100} onChange={v => set({ ...f, y: v / 100 })} />
       </div>
       <div className="crop-btns" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
-        <button className="ghost" onClick={() => set({ x: .5, y: .5, zoom: min })}>Foto inteira</button>
+        <button className="ghost" onClick={() => set({ x: .5, y: .5, zoom: min })}>{fitLabel}</button>
         <button className="ghost" onClick={() => set({ x: .5, y: .5, zoom: 1 })}>Preencher</button>
         {extra}
       </div>
@@ -281,7 +281,7 @@ export default function Editor() {
   const [src] = useState(() => byId(editorId) || { id: editorId, title: '', origTitle: '', category: '' });
   const [e, setE] = useState(() => ({ ...JSON.parse(JSON.stringify(src)), category: cleanCat(src.category), storyCategory: src.storyCategory != null ? cleanCat(src.storyCategory) : null, ...(src.tpl && src.tpl.post === 'p05' ? { look: { ...(src.look || {}), uh: { bg: '#735400', acc: '#fabd0d', ...((src.look || {}).uh) } } } : {}), focal: src.focal || { x: .5, y: .5, zoom: 1 }, focalStory: src.focalStory || src.focal || { x: .5, y: .5, zoom: 1 }, tpl: { ...DEF_TPL, ...(src.tpl || {}), ...(src.tpl && src.tpl.post === 'p05' ? { post: 'p02' } : {}) }, slides: Render.slidesOf(src) }));
   const [photo, setPhoto] = useState(null), [cut, setCut] = useState(null), [imgs, setImgs] = useState({}), [over, setOver] = useState(false), [up, setUp] = useState(false), [dbusy, setDbusy] = useState(false);
-  const [cur, setCur] = useState(0), [vr, setVr] = useState(null), [vp, setVp] = useState(false), vref = useRef(null);
+  const [cur, setCur] = useState(0), [vr, setVr] = useState(null), [vdim, setVdim] = useState(null), [vp, setVp] = useState(false), vref = useRef(null), vdrag = useRef(null);
   const kind = typeOf(e), car = kind === 'carrossel', video = kind === 'video';
   const patch = p => setE(x => ({ ...x, ...p }));
   const dirty = useRef(false), saved = useRef(false), first = useRef(true);
@@ -447,19 +447,37 @@ export default function Editor() {
       <section className="edsec">
         <div className="sechead"><h3>{video ? 'Reel' : car ? 'Carrossel' : 'Post'}</h3><button className="ghost" onClick={() => patch({ look: { ...(e.look || {}), post: undefined, nd: undefined, uh: undefined, pbar: undefined, bg: undefined }, focal: { x: .5, y: .5, zoom: 1 } })}>{video ? 'Restaurar padrão do reel' : 'Restaurar padrão do post'}</button></div>
         <div className="edpv">
-          {video ? (
-            <div className="pv">
-              {e.videoUrl && <div className="rl-media reelpv" onClick={() => { const v = vref.current; if (!v) return; if (v.paused) { if (v.currentTime < 0.3) v.currentTime = 0; v.play().catch(() => {}); } else v.pause(); }}>
-                <video ref={vref} style={reelVideoStyle(e)} src={e.videoUrl} loop playsInline preload="auto" onPlay={() => setVp(true)} onPause={() => setVp(false)} onLoadedMetadata={ev => setVr(ev.target.videoWidth / ev.target.videoHeight)} onLoadedData={ev => { try { if (ev.currentTarget.currentTime === 0) ev.currentTarget.currentTime = 0.05; } catch {} }} />
-                <ReelOverlay it={{ ...e, tpl: e.tpl }} playing={vp} />
-                {!vp && <button type="button" className="reelplay" aria-label="Tocar"><Icon name="play" /></button>}
-              </div>}
-              {e.videoUrl && <div className="crop-btns" style={{ gridTemplateColumns: '1fr', width: 225 }}>
-                <button type="button" className="ghost" onClick={() => { const v = vref.current; if (!v) return; if (v.paused) { if (v.currentTime < 0.3) v.currentTime = 0; v.play().catch(() => {}); } else v.pause(); }}>{vp ? 'Pausar vídeo' : 'Dar play no vídeo'}</button>
-                <SaveBtn onClick={() => savePng(c => Render.reelThumb(c, base, (vref.current && vref.current.readyState >= 2) ? vref.current : photo), slug(e.title) + '-reel')} />
-              </div>}
-            </div>
-          ) : (<>
+          {video ? (() => {
+            const rbox = Render.reelBox(base), vphoto = vdim || (photo && { width: photo.videoWidth || photo.width || 1080, height: photo.videoHeight || photo.height || 1920 }) || { width: 1080, height: 1920 };
+            const toggleVid = () => { const v = vref.current; if (!v) return; if (v.paused) { if (v.currentTime < 0.3) v.currentTime = 0; v.play().catch(() => {}); } else v.pause(); };
+            const vDown = ev => { if (ev.target.closest('button')) return; vdrag.current = { x: ev.clientX, y: ev.clientY, moved: false }; ev.currentTarget.setPointerCapture(ev.pointerId); };
+            const vMove = ev => {
+              const d = vdrag.current; if (!d) return;
+              const dx = ev.clientX - d.x, dy = ev.clientY - d.y;
+              if (!d.moved && Math.hypot(dx, dy) < 4) return;
+              d.moved = true;
+              const rect = ev.currentTarget.getBoundingClientRect(), f = e.focal || { x: .5, y: .5, zoom: 1 };
+              const k = 1080 / rect.width, sc = Math.max(rbox.w / vphoto.width, rbox.h / vphoto.height) * (f.zoom || 1);
+              const ox = vphoto.width * sc - rbox.w, oy = vphoto.height * sc - rbox.h;
+              patch({ focal: { ...f, x: ox > 0 ? Math.min(1, Math.max(0, f.x - dx * k / ox)) : f.x, y: oy > 0 ? Math.min(1, Math.max(0, f.y - dy * k / oy)) : f.y } });
+              d.x = ev.clientX; d.y = ev.clientY;
+            };
+            const vUp = () => { const d = vdrag.current; vdrag.current = null; if (d && !d.moved) toggleVid(); };
+            return (
+              <div className="pv">
+                {e.videoUrl && <div className="rl-media reelpv" style={{ cursor: 'grab', touchAction: 'none' }} onPointerDown={vDown} onPointerMove={vMove} onPointerUp={vUp}>
+                  <div style={reelBoxStyle(e)}>
+                    <video ref={vref} style={reelVideoStyle(e, vr)} src={e.videoUrl} loop playsInline preload="auto" onPlay={() => setVp(true)} onPause={() => setVp(false)} onLoadedMetadata={ev => { const vw = ev.target.videoWidth || 1080, vh = ev.target.videoHeight || 1920; setVr(vw / vh); setVdim({ width: vw, height: vh }); }} onLoadedData={ev => { try { if (ev.currentTarget.currentTime === 0) ev.currentTarget.currentTime = 0.05; } catch {} }} />
+                  </div>
+                  <ReelOverlay it={{ ...e, tpl: e.tpl }} playing={vp} />
+                  {!vp && <button type="button" className="reelplay" onClick={toggleVid} aria-label="Tocar"><Icon name="play" /></button>}
+                </div>}
+                {e.videoUrl && <Crop f={e.focal || { x: .5, y: .5, zoom: 1 }} set={f => patch({ focal: f })} photo={vphoto} w={rbox.w} h={rbox.h} pw={225} cols={2} fitLabel="Vídeo inteiro"
+                  extra={<><button type="button" className="ghost" onClick={toggleVid}>{vp ? 'Pausar vídeo' : 'Dar play no vídeo'}</button>
+                    <SaveBtn onClick={() => savePng(c => Render.reelThumb(c, base, (vref.current && vref.current.readyState >= 2) ? vref.current : photo), slug(e.title) + '-reel')} /></>} />}
+              </div>
+            );
+          })() : (<>
             <div className="pvwrap">
               <CanvasPv w={340} h={425} sig={textSig} photo={cp} focal={cf} onFocal={setCf}
                 label="" draw={c => (car ? Render.slide(c, { ...base, guides: true }, photo, at) : Render.post(c, { ...base, guides: true }, photo))} />
@@ -481,8 +499,7 @@ export default function Editor() {
           {renderFields(video ? (REEL_USES[rtpl] || REEL_USES.r01) : postUses)}
           {(video ? rtpl === 'r01' : ptpl === 'p01') && <LookCtl e={e} patch={patch} k="post" pre={<PBarRow e={e} patch={patch} />} />}
           {(video ? (rtpl === 'r02' || rtpl === 'r03') : ptpl === 'p04') && <NdCtl e={e} patch={patch} video={video} />}
-          {video && rtpl === 'r04' && <Pair><LookCtl e={e} patch={patch} k="bg" video pre={<PBarRow e={e} patch={patch} />} /></Pair>}
-          {!video && ptpl === 'p02' && <UhCtl e={e} patch={patch} />}
+          {(video ? rtpl === 'r04' : ptpl === 'p02') && <UhCtl e={e} patch={patch} />}
           {!video && ptpl === 'p03' && <UhCtl e={e} patch={patch} k="cut" />}
           {midSlide && <SlideRow s={types.some(t => t.id === e.slides[slideIdx].type) ? e.slides[slideIdx] : { ...e.slides[slideIdx], type: types[0].id }} i={slideIdx} n={n} types={types} set={v => slideSet(slideIdx, v)}
             remove={() => { setE(x => ({ ...x, slides: x.slides.filter((_, k) => k !== slideIdx) })); setCur(at - 1); }}

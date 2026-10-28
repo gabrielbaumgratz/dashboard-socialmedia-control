@@ -120,11 +120,23 @@ export function StoryPhone({ src, zone, it, cfg, guides }) {
 }
 
 // ---------- reel ----------
-// posição da janela onde o vídeo aparece (tela cheia no modelo 1, topo no 2, card arredondado no 3 e 4)
-export function reelVideoStyle(it) {
+// janela onde o vídeo aparece (tela cheia no 1 e 4, topo no 2, parte inferior no 3) e enquadramento/zoom (focal)
+export function reelBoxStyle(it) {
   const b = Render.reelBox(artData(it));
-  if (b.x === 0 && b.y === 0 && b.w === 1080 && b.h === 1920) return undefined;
-  return { position: 'absolute', left: (b.x / 10.8) + '%', top: (b.y / 19.2) + '%', width: (b.w / 10.8) + '%', height: (b.h / 19.2) + '%', objectFit: 'cover' };
+  return { position: 'absolute', left: (b.x / 10.8) + '%', top: (b.y / 19.2) + '%', width: (b.w / 10.8) + '%', height: (b.h / 19.2) + '%', overflow: 'hidden', background: '#0f172a' };
+}
+export function reelVideoStyle(it, vr) {
+  const b = Render.reelBox(artData(it)), br = b.w / b.h;
+  const f = (it && it.focal) || { x: 0.5, y: 0.5, zoom: 1 }, fx = f.x ?? 0.5, fy = f.y ?? 0.5, z = f.zoom || 1;
+  if (vr) {
+    const w0 = vr >= br ? (vr / br) * 100 : 100, h0 = vr >= br ? 100 : (br / vr) * 100;
+    const dw = w0 * z, dh = h0 * z;
+    const left = dw >= 100 ? -(dw - 100) * fx : (100 - dw) / 2;
+    const top = dh >= 100 ? -(dh - 100) * fy : (100 - dh) / 2;
+    return { position: 'absolute', left: left + '%', top: top + '%', width: dw + '%', height: dh + '%', maxWidth: 'none', maxHeight: 'none', objectFit: 'fill' };
+  }
+  const px = Math.round(fx * 100), py = Math.round(fy * 100);
+  return { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: `${px}% ${py}%`, transformOrigin: `${px}% ${py}%`, transform: z !== 1 ? `scale(${z})` : undefined };
 }
 // camada gráfica do template de reel por cima do vídeo (com animação suave de entrada na barra e nos textos)
 export function ReelOverlay({ it, playing }) {
@@ -149,13 +161,13 @@ export function ReelOverlay({ it, playing }) {
 
 export function ReelPhone({ it, cfg, cover, guides }) {
   const handle = handleOf(cfg), v = useRef(null);
-  const [playing, setPlaying] = useState(false), [liked, setLiked] = useState(false);
+  const [playing, setPlaying] = useState(false), [liked, setLiked] = useState(false), [vr, setVr] = useState(null);
   const toggle = () => { if (!v.current) return; if (v.current.paused) { if (v.current.currentTime < 0.3) v.current.currentTime = 0; v.current.play().catch(() => {}); } else v.current.pause(); };
   return (
     <div className="phone reel">
       <div className="phone-screen">
         <div className="rl-media" onClick={toggle}>
-          {it.videoUrl ? <video ref={v} style={reelVideoStyle(it)} src={it.videoUrl} loop playsInline preload="auto" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onLoadedData={ev => { try { if (ev.currentTarget.currentTime === 0) ev.currentTarget.currentTime = 0.05; } catch {} }} /> :
+          {it.videoUrl ? <div style={reelBoxStyle(it)}><video ref={v} style={reelVideoStyle(it, vr)} src={it.videoUrl} loop playsInline preload="auto" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onLoadedMetadata={ev => setVr(ev.target.videoWidth / ev.target.videoHeight)} onLoadedData={ev => { try { if (ev.currentTarget.currentTime === 0) ev.currentTarget.currentTime = 0.05; } catch {} }} /></div> :
             cover ? <img src={cover} alt="" draggable="false" /> : <div className="skel" />}
           {it.videoUrl && <ReelOverlay it={it} playing={playing} />}
         </div>
