@@ -447,13 +447,13 @@ export default function Editor() {
         <div className="edpv">
           {video ? (
             <div className="pv">
-              {e.videoUrl && <div className="rl-media reelpv" onClick={() => { const v = vref.current; if (!v) return; if (v.paused) v.play().catch(() => {}); else v.pause(); }}>
+              {e.videoUrl && <div className="rl-media reelpv" onClick={() => { const v = vref.current; if (!v) return; if (v.paused) { if (v.currentTime < 0.3) v.currentTime = 0; v.play().catch(() => {}); } else v.pause(); }}>
                 <video ref={vref} style={reelVideoStyle(e)} src={e.videoUrl} loop playsInline preload="auto" onPlay={() => setVp(true)} onPause={() => setVp(false)} onLoadedMetadata={ev => setVr(ev.target.videoWidth / ev.target.videoHeight)} onLoadedData={ev => { try { if (ev.currentTarget.currentTime === 0) ev.currentTarget.currentTime = 0.05; } catch {} }} />
-                <ReelOverlay it={{ ...e, tpl: e.tpl }} />
+                <ReelOverlay it={{ ...e, tpl: e.tpl }} playing={vp} />
                 {!vp && <button type="button" className="reelplay" aria-label="Tocar"><Icon name="play" /></button>}
               </div>}
               {e.videoUrl && <div className="crop-btns" style={{ gridTemplateColumns: '1fr', width: 225 }}>
-                <button type="button" className="ghost" onClick={() => { const v = vref.current; if (!v) return; if (v.paused) v.play().catch(() => {}); else v.pause(); }}>{vp ? 'Pausar vídeo' : 'Dar play no vídeo'}</button>
+                <button type="button" className="ghost" onClick={() => { const v = vref.current; if (!v) return; if (v.paused) { if (v.currentTime < 0.3) v.currentTime = 0; v.play().catch(() => {}); } else v.pause(); }}>{vp ? 'Pausar vídeo' : 'Dar play no vídeo'}</button>
                 <SaveBtn onClick={() => savePng(c => Render.reelThumb(c, base, (vref.current && vref.current.readyState >= 2) ? vref.current : photo), slug(e.title) + '-reel')} />
               </div>}
             </div>

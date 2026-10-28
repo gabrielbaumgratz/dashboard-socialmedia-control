@@ -113,7 +113,7 @@ function QueueCard({ it }) {
 
 export default function Queue() {
   const [view, setView] = usePref('queue-view', 'grid');
-  const { items, banner, setBanner, createItem } = useApp();
+  const { items, banner, setBanner } = useApp();
   const list = items.filter(i => i.status !== 'posted')
     .sort((x, y) => (x.scheduledAt ? 0 : 1) - (y.scheduledAt ? 0 : 1) || sortKey(x).localeCompare(sortKey(y)));
   let last = null;
@@ -121,7 +121,6 @@ export default function Queue() {
     <>
       <PageHead title="Fila">
         <ViewToggle value={view} onChange={setView} />
-        <button onClick={createItem}>+ Novo post</button>
       </PageHead>
       {banner > 0 && <div className="banner glass"><span>{banner} notícia(s) nova(s) chegaram na fila.</span><button className="ghost" onClick={() => setBanner(0)}>Ok</button></div>}
       {!list.length && <Empty>Nada na fila. Quando sair notícia nova no site, ela aparece aqui. Você também pode mandar uma pela aba "Notícias do site".</Empty>}

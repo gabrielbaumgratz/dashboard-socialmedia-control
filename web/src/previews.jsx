@@ -126,32 +126,38 @@ export function reelVideoStyle(it) {
   if (b.x === 0 && b.y === 0 && b.w === 1080 && b.h === 1920) return undefined;
   return { position: 'absolute', left: (b.x / 10.8) + '%', top: (b.y / 19.2) + '%', width: (b.w / 10.8) + '%', height: (b.h / 19.2) + '%', objectFit: 'cover' };
 }
-// camada gráfica do template de reel por cima do vídeo
-export function ReelOverlay({ it }) {
-  const c = useRef(null), lookSig = JSON.stringify(it.look || {});
+// camada gráfica do template de reel por cima do vídeo (com animação suave de entrada na barra e nos textos)
+export function ReelOverlay({ it, playing }) {
+  const c = useRef(null), lookSig = JSON.stringify(it.look || {}), prevPlay = useRef(false), prevTpl = useRef(it.tpl && it.tpl.reel);
   useEffect(() => {
-    let alive = true; const d = artData(it);
-    (async () => {
+    let id, alive = true; const d = artData(it), tpl = it.tpl && it.tpl.reel;
+    const animate = (playing && !prevPlay.current) || (tpl !== prevTpl.current);
+    prevPlay.current = !!playing; prevTpl.current = tpl;
+    const t0 = performance.now();
+    const step = async () => {
       const cv = c.current; if (!alive || !cv) return;
-      cv.width = 540; cv.height = 960; cv.getContext('2d').clearRect(0, 0, 540, 960);
-      await Render.reel(cv, d);
-    })();
-    return () => { alive = false; };
-  }, [it.title, it.category, it.description, it.source, it.chip, it.credit, lookSig, it.tpl && it.tpl.reel]);
+      if (cv.width !== 540 || cv.height !== 960) { cv.width = 540; cv.height = 960; }
+      const dt = animate ? (performance.now() - t0) / 1000 : 99;
+      await Render.reel(cv, d, dt, true);
+      if (alive && animate && dt < 1.05) id = requestAnimationFrame(step);
+    };
+    step();
+    return () => { alive = false; cancelAnimationFrame(id); };
+  }, [playing, it.title, it.category, it.description, it.source, it.chip, it.credit, lookSig, it.tpl && it.tpl.reel]);
   return <canvas ref={c} className="rl-overlay" aria-hidden="true" />;
 }
 
 export function ReelPhone({ it, cfg, cover, guides }) {
   const handle = handleOf(cfg), v = useRef(null);
   const [playing, setPlaying] = useState(false), [liked, setLiked] = useState(false);
-  const toggle = () => { if (!v.current) return; if (v.current.paused) v.current.play().catch(() => {}); else v.current.pause(); };
+  const toggle = () => { if (!v.current) return; if (v.current.paused) { if (v.current.currentTime < 0.3) v.current.currentTime = 0; v.current.play().catch(() => {}); } else v.current.pause(); };
   return (
     <div className="phone reel">
       <div className="phone-screen">
         <div className="rl-media" onClick={toggle}>
           {it.videoUrl ? <video ref={v} style={reelVideoStyle(it)} src={it.videoUrl} loop playsInline preload="auto" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onLoadedData={ev => { try { if (ev.currentTarget.currentTime === 0) ev.currentTarget.currentTime = 0.05; } catch {} }} /> :
             cover ? <img src={cover} alt="" draggable="false" /> : <div className="skel" />}
-          {it.videoUrl && <ReelOverlay it={it} />}
+          {it.videoUrl && <ReelOverlay it={it} playing={playing} />}
         </div>
         {!playing && it.videoUrl && <button type="button" className="reelplay" onClick={toggle} aria-label="Tocar"><Icon name="play" /></button>}
         {guides && <>

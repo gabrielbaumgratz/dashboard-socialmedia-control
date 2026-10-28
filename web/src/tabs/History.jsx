@@ -24,7 +24,7 @@ function SheetCell({ it }) {
 }
 
 export default function History() {
-  const { items, trash, openPost, createItem, restoreItem, purgeItem, trashItem, toast } = useApp();
+  const { items, trash, openPost, restoreItem, purgeItem, trashItem, toast } = useApp();
   const [st, setSt] = useState('all'), [mo, setMo] = useState(''), [q, setQ] = useState('');
   const rows = items.filter(it => (st === 'all' || it.status === st)
     && (!mo || dayKey(new Date(itemDate(it) || it.createdAt)).startsWith(mo))
@@ -59,7 +59,6 @@ export default function History() {
         <Seg value={st} onChange={setSt} options={[['all', 'Todos'], ['posted', 'Postados'], ['scheduled', 'Programados'], ['draft', 'Rascunhos'], ['trash', `Lixeira${trash.length ? ' (' + trash.length + ')' : ''}`]]} />
         <input type="month" className="mini glass" value={mo} onChange={e => setMo(e.target.value)} aria-label="Filtrar por mês" />
         <ExpandableSearch value={q} onChange={setQ} placeholder="Buscar título" />
-        <button onClick={createItem}>+ Novo post</button>
       </PageHead>
       <div className="tablewrap">
         <table className="table">

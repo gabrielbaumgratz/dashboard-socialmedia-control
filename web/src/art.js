@@ -142,7 +142,7 @@ export async function exportReel(it, onProgress = () => {}) {
     ctx.save(); ctx.beginPath(); ctx.roundRect(box.x, box.y, box.w, box.h, box.r || 0); ctx.clip();
     ctx.drawImage(v, box.x + (box.w - w) / 2, box.y + (box.h - h) / 2, w, h);
     ctx.restore();
-    await Render.reel(c, d);
+    await Render.reel(c, d, v.currentTime, false);
     onProgress(v.duration ? v.currentTime / v.duration : 0);
     if (!v.ended) requestAnimationFrame(frame);
   };

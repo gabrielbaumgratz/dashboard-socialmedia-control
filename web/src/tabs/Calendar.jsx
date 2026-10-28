@@ -102,7 +102,7 @@ function KCol({ st, name, list, onMove }) {
 }
 
 export default function Calendar() {
-  const { items, cfg, saveItem, replace, byId, createItem, toast } = useApp();
+  const { items, cfg, saveItem, replace, byId, toast } = useApp();
   const [view, setView] = usePref('cal-view', 'week');
   const [wf, setWf] = useState({ draft: true, scheduled: true, posted: true });
   const [menu, setMenu] = useState(null);
@@ -148,7 +148,6 @@ export default function Calendar() {
           <button className="ghost glass" onClick={today}>Hoje</button>
           <button className="ghost glass" onClick={() => step(1)} aria-label="Próximo">&rarr;</button>
         </span>}
-        <button onClick={createItem}>+ Novo post</button>
       </PageHead>
       <div className="legend">
         {[['draft', 'Rascunho'], ['scheduled', 'Programado'], ['posted', 'Postado']].map(([st, n]) => (

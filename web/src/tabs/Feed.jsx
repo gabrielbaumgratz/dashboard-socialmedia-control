@@ -21,7 +21,7 @@ function LineItem({ it }) {
 }
 
 export default function Feed() {
-  const { items, cfg, openPost, createItem, trashItem } = useApp();
+  const { items, cfg, openPost, trashItem } = useApp();
   const [brand, setBrand] = useState(false);
   const [mode, setMode] = useState('grid'), [sub, setSub] = useState('posts'), [drafts, setDrafts] = useState(false);
   const [avatar, setAvatar] = useState(null);
@@ -40,7 +40,6 @@ export default function Feed() {
         <label className="check"><input type="checkbox" checked={drafts} onChange={e => setDrafts(e.target.checked)} /> incluir rascunhos</label>
         <ViewToggle value={mode} onChange={setMode} alt="line" />
         <button className="ghost iconbtn" aria-label="Marca e legenda" title="Marca e legenda" onClick={() => setBrand(b => !b)}><Icon name="gear" /></button>
-        <button onClick={createItem}>+ Novo post</button>
       </PageHead>
       {brand && <BrandForm onClose={() => setBrand(false)} />}
       {mode === 'grid' ? (
