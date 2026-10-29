@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../store.jsx';
-import { Cover, PageHead, Seg, Status , ViewToggle } from '../ui.jsx';
+import { Cover, PageHead, Status, ViewToggle } from '../ui.jsx';
 import { Icon } from '../icons.jsx';
 import { IgPost, useSet } from '../previews.jsx';
 import { storyUrl } from '../art.js';

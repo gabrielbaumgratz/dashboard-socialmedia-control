@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { useApp, vt } from '../store.jsx';
-import { ExpandableSearch, PageHead, Seg, Spin, Status, usePref , ViewToggle } from '../ui.jsx';
+import { ExpandableSearch, PageHead, Spin, Status, usePref, ViewToggle } from '../ui.jsx';
 import { Icon } from '../icons.jsx';
 import { STATUS, cap1, isoLocal } from '../util.js';
 

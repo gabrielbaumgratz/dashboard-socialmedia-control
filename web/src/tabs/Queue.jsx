@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { hiresSet } from '../art.js';
 import { downloadSet } from '../PostView.jsx';
-import { useApp, vt } from '../store.jsx';
-import { Cover, PageHead, Seg, Status, TypeTag, Empty, Spin, usePref , DateTime , ViewToggle, askChoice } from '../ui.jsx';
+import { useApp } from '../store.jsx';
+import { Cover, PageHead, Status, Empty, Spin, usePref, DateTime, ViewToggle, askChoice } from '../ui.jsx';
 import { Icon } from '../icons.jsx';
 import { STYLE, cap1, fmtTags, parseTags, sortKey, suggestWhen, toLocalInput, typeOf } from '../util.js';
 

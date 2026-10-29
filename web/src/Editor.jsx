@@ -17,7 +17,6 @@ const SLIDE_FIELDS = {
 };
 // quais campos cada template realmente usa (o que não aparece aqui não vai na arte)
 const POST_USES = { p01: ['title', 'category', 'credit'], p02: ['title', 'chip', 'description', 'credit'], p03: ['title', 'category', 'bigTitle', 'cutout', 'credit'], p04: ['title', 'category', 'description', 'source', 'credit'], p05: ['title', 'chip', 'description', 'credit'] };
-const CAR_USES = ['title', 'category'];
 const REEL_USES = {
   r00: [],
   r01: ['title', 'category', 'description', 'credit'],
@@ -165,8 +164,6 @@ function Rng({ label, value, unit = '', min, max, step = 1, onChange }) {
 const CropRng = ({ label, value, unit = '', min, max, step = 1, onChange }) => <label className="rng"><span>{label}<b>{value}{unit}</b></span><input type="range" min={min} max={max} step={step} value={value} onChange={ev => onChange(+ev.target.value)} /></label>;
 const TEXT_SW = [['#ffffff', 'Branco'], ['#1d1d1b', 'Preto'], ['#006173', 'Verde petróleo'], ['#0f172a', 'Azul marinho']];
 const TextColor = ({ value, onChange }) => <Row label="Cor do texto"><ColorMenu value={value} onChange={onChange} opts={[['auto', 'Automática']]} palette={TEXT_SW} /></Row>;
-const Head = ({ title, reset }) => <div className="lookhead"><b>{title}</b>{reset}</div>;
-const Check = ({ label, on, set }) => <label className="chk"><input type="checkbox" checked={!!on} onChange={ev => set(ev.target.checked)} />{label}</label>;
 // ---- cards de aparência: cada grupo de função num card; interruptor liga/desliga e as opções ficam no lugar (só apagam), sem pular o layout
 const Card = ({ title, right, off, cls = '', children }) => <div className={'lookbox ' + cls}><div className="lookhead"><b>{title}</b>{right}</div><div className={'lbody' + (off ? ' off' : '')} aria-disabled={off || undefined}>{children}</div></div>;
 const Switch = ({ on, set, label }) => <label className="swt" title={label}><input type="checkbox" role="switch" aria-label={label} checked={!!on} onChange={ev => set(ev.target.checked)} /><i aria-hidden="true" /></label>;

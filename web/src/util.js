@@ -15,7 +15,6 @@ export function typeOf(it) {
   if (it.mediaType === 'video' || it.format === 'video') return 'video';
   return (it.slides && it.slides.length) ? 'carrossel' : 'post';
 }
-export const slideCount = it => (typeOf(it) === 'carrossel' ? it.slides.length + 2 : 1);
 
 export const fmtTags = arr => (arr || []).map(t => '#' + t).join(' ');
 export const parseTags = s => String(s || '').split(/[\s,]+/).map(t => t.replace(/^#/, '')).filter(Boolean);
