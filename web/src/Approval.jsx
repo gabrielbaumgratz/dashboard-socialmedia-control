@@ -9,7 +9,8 @@ const ST = { pendente: ['Aguardando a cliente', 'var(--mut)'], aprovado: ['Aprov
 export default function Approval({ it, live, setCaption }) {
   const { saveItem, toast } = useApp();
   const [ap, setAp] = useState(undefined), [busy, setBusy] = useState(false);
-  const load = useCallback(() => getApproval(it.id).then(setAp).catch(() => {}), [it.id]);
+  const [err, setErr] = useState('');
+  const load = useCallback(() => getApproval(it.id).then(a => { setErr(''); setAp(a); }).catch(e => { setErr(e.message); setAp(cur => cur === undefined ? null : cur); }), [it.id]);
   useEffect(() => { setAp(undefined); load(); const t = setInterval(load, 20000); return () => clearInterval(t); }, [load]);
 
   const send = async () => {
@@ -38,6 +39,7 @@ export default function Approval({ it, live, setCaption }) {
       <div className="caphead"><b>Aprovação da cliente</b>
         {ap && <span className="apst" style={{ color: cor }}>● {label}</span>}</div>
       {ap === undefined && <div className="meta"><Spin /> Verificando…</div>}
+      {err && <div className="aierr">Não consegui verificar: {err} <button className="ghost" onClick={load}>Tentar de novo</button></div>}
       {ap && ap.respondidoPor && <div className="meta">Resposta de {ap.respondidoPor.split('@')[0]} em {new Date(ap.respondidoEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>}
       {ap && ap.comentario && <p className="apcom">“{ap.comentario}”</p>}
       {sugs.map(([nome, v, , patch]) => (
@@ -48,7 +50,7 @@ export default function Approval({ it, live, setCaption }) {
           <div className="apbtns"><button className="ghost" onClick={() => { setCaption(leg); toast('Legenda dela aplicada.'); }}>Usar</button><button className="ghost" onClick={() => copy(leg)}>Copiar</button></div></div>
       )}
       <button onClick={send} disabled={busy || ap === undefined}>{busy ? <><Spin /> Enviando…</> : ap ? 'Reenviar para aprovação' : 'Enviar para aprovação'}</button>
-      {ap && <button className="danger" onClick={remove} disabled={busy}>Remover da aprovação</button>}
+      {(ap || err) && <button className="danger" onClick={remove} disabled={busy}>Remover da aprovação</button>}
     </div>
   );
 }
