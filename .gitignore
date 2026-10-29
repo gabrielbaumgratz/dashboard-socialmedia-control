@@ -5,3 +5,4 @@ web/node_modules/
 .vercel
 _lixo/
 *.log
+dist/

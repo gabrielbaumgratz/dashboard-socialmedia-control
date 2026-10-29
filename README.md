@@ -1,7 +1,7 @@
 # Dashboard Reconstruções
 
 Painel local que acompanha o site reconstrucoes.digital, prepara os posts do Instagram (arte, 3 opções de legenda, hashtags) e organiza a semana.
-Roda só no seu PC. Precisa apenas do Node.js 18 ou mais novo para usar. A tela é feita em React (Vite) e já vem compilada na pasta `dist`.
+Roda só no seu PC. Precisa apenas do Node.js 18 ou mais novo para usar. A tela é feita em React (Vite) e é compilada na pasta `dist`, que não vai para o GitHub: depois de baixar o projeto, rode `npm run build` dentro de `web` (a Vercel já faz isso sozinha).
 
 ## Como abrir
 Rode `node server.js` na pasta do projeto. O navegador abre em http://localhost:3000. Deixe a janela preta aberta enquanto usar.
