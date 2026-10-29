@@ -59,12 +59,12 @@ export function IgPost({ it, cfg, set, onDelete }) {
         {n > 1 && idx < n - 1 && <button className="nav next" onClick={() => setIdx(idx + 1)} aria-label="Próxima">&rsaquo;</button>}
       </div>
       <div className="acts">
-        <button className={'ico like' + (liked ? ' liked' : '')} onClick={() => setLiked(!liked)} title="Curtir"><Icon name={liked ? 'heart-f' : 'heart'} /></button>
-        <button className="ico" title="Comentar"><Icon name="comment" /></button>
-        <button className="ico" title="Compartilhar"><Icon name="share" /></button>
+        <button className={'ico like' + (liked ? ' liked' : '')} onClick={() => setLiked(!liked)} title="Curtir" aria-label="Curtir" aria-pressed={liked}><Icon name={liked ? 'heart-f' : 'heart'} /></button>
+        <button className="ico" title="Comentar" aria-label="Comentar"><Icon name="comment" /></button>
+        <button className="ico" title="Compartilhar" aria-label="Compartilhar"><Icon name="share" /></button>
         {n > 1 && <span className="dots">{slides.map((_, i) => <i key={i} className={i === idx ? 'on' : ''} />)}</span>}
         <span className="sp" />
-        <button className="ico" onClick={() => setSaved(!saved)} title="Salvar"><Icon name={saved ? 'save-f' : 'save'} /></button>
+        <button className="ico" onClick={() => setSaved(!saved)} title="Salvar" aria-label="Salvar" aria-pressed={saved}><Icon name={saved ? 'save-f' : 'save'} /></button>
       </div>
       <div className="likes">{liked ? '1 curtida' : 'Seja o primeiro a curtir'}</div>
       <div className="cap"><b>{handle}</b> <Caption text={fullCaption(it)} limit={125} /></div>
@@ -169,7 +169,7 @@ export function ReelPhone({ it, cfg, cover, guides }) {
   return (
     <div className="phone reel">
       <div className="phone-screen">
-        <div className="rl-media" onClick={toggle}>
+        <div className="rl-media" onClick={toggle} role="button" tabIndex={0} aria-label={playing ? 'Pausar vídeo' : 'Tocar vídeo'} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }}>
           {it.videoUrl ? <div style={reelBoxStyle(it)}><video ref={v} style={reelVideoStyle(it, vr)} src={it.videoUrl} loop playsInline preload="auto" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onLoadedMetadata={ev => setVr(ev.target.videoWidth / ev.target.videoHeight)} onLoadedData={ev => { try { if (ev.currentTarget.currentTime === 0) ev.currentTarget.currentTime = 0.05; } catch {} }} /></div> :
             cover ? <img src={cover} alt="" draggable="false" /> : <div className="skel" />}
           {it.videoUrl && <ReelOverlay it={it} playing={playing} />}
@@ -178,10 +178,10 @@ export function ReelPhone({ it, cfg, cover, guides }) {
         {guides && <>
           <div className="rl-top" style={{ pointerEvents: 'none' }}><b>Reels</b><span className="sp" /><Icon name="story" /></div>
           <div className="rl-rail">
-            <button onClick={() => setLiked(!liked)} className={liked ? 'liked' : ''}><Icon name={liked ? 'heart-f' : 'heart'} /><small>{liked ? 1 : 0}</small></button>
-            <button><Icon name="comment" /><small>0</small></button>
-            <button><Icon name="share" /><small>0</small></button>
-            <button><Icon name="dots" /></button>
+            <button onClick={() => setLiked(!liked)} className={liked ? 'liked' : ''} aria-label="Curtir" aria-pressed={liked}><Icon name={liked ? 'heart-f' : 'heart'} /><small>{liked ? 1 : 0}</small></button>
+            <button aria-label="Comentar"><Icon name="comment" /><small>0</small></button>
+            <button aria-label="Compartilhar"><Icon name="share" /><small>0</small></button>
+            <button aria-label="Mais opções"><Icon name="dots" /></button>
             <span className="audio"><Icon name="music" /></span>
           </div>
           <div className="rl-bottom" style={{ pointerEvents: 'none' }}>

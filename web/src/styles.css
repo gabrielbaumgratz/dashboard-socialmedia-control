@@ -91,7 +91,7 @@ label{display:grid;gap:5px;font-weight:700;font-size:12.5px;color:var(--mut)}
 label.check{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--txt);cursor:pointer;font-size:13.5px}
 label.check input{width:auto}
 input,textarea,select{background:color-mix(in srgb,var(--surface) 55%,transparent);border:1px solid var(--line2);color:var(--txt);border-radius:12px;padding:9px 12px;font:inherit;font-size:14px;width:100%;transition:border-color .2s,box-shadow .2s}
-input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+input:focus-visible,textarea:focus-visible,select:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 input[type=checkbox]{accent-color:var(--accent)}
 textarea{resize:vertical;line-height:1.5}
 input.mini{width:auto;padding:8px 10px;font-size:13px}
@@ -854,3 +854,18 @@ button.ncover:hover,button.ncover:active,button[style*="background-image"]:hover
 .aifields{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-radius:14px;border:1px dashed var(--line2);background:color-mix(in srgb,var(--accent) 6%,transparent)}
 .aifields input{flex:1;min-width:200px}
 .aifields button{flex:none;white-space:nowrap}
+
+/* ajustes de acessibilidade e toque */
+h1,h2,h3{text-wrap:balance}
+.choice-bg,.ctxmenu{overscroll-behavior:contain}
+.toast{bottom:calc(26px + env(safe-area-inset-bottom))}
+@supports(padding:max(0px)){body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}}
+
+/* aprovação da cliente */
+.apbox{display:grid;gap:10px}
+.apst{font-size:12.5px;font-weight:800;margin-left:auto}
+.apcom{margin:0;padding:8px 10px;border-left:3px solid var(--danger);background:var(--surface2);border-radius:8px;font-size:13.5px;white-space:pre-wrap}
+.apsug{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.apsug small{color:var(--mut);font-weight:700}
+.apsug p{margin:2px 0 0;font-size:13.5px;white-space:pre-wrap}
+.apbtns{display:grid;gap:6px}

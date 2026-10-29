@@ -258,6 +258,10 @@ function NdCtl({ e, patch, video, hideHeight }) {
       <Row label="Cor da categoria"><ColorMenu value={cur.cat} onChange={cat => set({ cat })} /></Row>
       <SwitchRow label="Categoria com selo" on={cur.pill} set={pill => set({ pill })} />
     </Card>
+    <Card title="Fundo e texto" cls="full">
+      <Row label="Cor do fundo"><ColorMenu value={cur.bg} onChange={bg => set({ bg })} /></Row>
+      <TextColor value={cur.tc} onChange={tc => set({ tc })} />
+    </Card>
   </Pair>;
 }
 // reel 3: fundo escuro/colorido com fade atrás do texto + card superior esquerdo customizável
@@ -419,7 +423,7 @@ export default function Editor() {
   async function saveVideo() {
     if (!e.videoUrl || vbusy) return;
     if (vref.current && !vref.current.paused) try { vref.current.pause(); } catch {}
-    setVbusy(true); toast('Baixando vídeo...');
+    setVbusy(true); toast('Baixando vídeo…');
     try {
       const { blob, ext } = await exportReel({ ...e, tpl: e.tpl }, () => {}, 1);
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${slug(e.title)}-reel.${ext}`; a.click();
@@ -499,7 +503,7 @@ export default function Editor() {
               <span>{p === 0 ? 'Capa' : p + 1}</span>
               {i > 0 && drag === null && <button className="x" aria-label="Tirar slide" onClick={ev => { ev.stopPropagation(); setE(x => ({ ...x, slides: x.slides.filter((_, k) => k !== i - 1) })); setCur(c => Math.min(c, order.length - 2)); }}>×</button>}
             </div>); })}
-          {car && <div className={'mthumb fin' + (at === n - 1 ? ' sel' : '')} onClick={() => setCur(n - 1)} title="O último slide é sempre o de chamada"><em>Final</em></div>}
+          {car && <div className={'mthumb fin' + (at === n - 1 ? ' sel' : '')} onClick={() => setCur(n - 1)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCur(n - 1); } }} role="button" tabIndex={0} aria-label="Slide final" title="O último slide é sempre o de chamada"><em>Final</em></div>}
           {video && <div className="mthumb vid"><Icon name="reels" /><button className="x" aria-label="Tirar vídeo" onClick={() => patch({ mediaType: 'image', videoUrl: '' })}>×</button></div>}
           <label className="mthumb add">+<input type="file" multiple accept=".jpg,.jpeg,.png,.svg,.mp4" disabled={up} onChange={ev => { take(ev.target.files, thumbs.length ? 'add' : ''); ev.target.value = ''; }} /></label>
         </div>

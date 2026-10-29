@@ -5,6 +5,7 @@ import { useApp, vt } from './store.jsx';
 import { IgPost, ReelPhone, StoryPhone, useSet, WhenNote } from './previews.jsx';
 import { DateTime, Seg, Spin, Status, askChoice } from './ui.jsx';
 import { Icon } from './icons.jsx';
+import Approval from './Approval.jsx';
 import { exportReel, exportSet, hiresSet } from './art.js';
 import { prepareExport } from './publish.js';
 import { STYLE, fmtTags, fullCaption, parseTags, suggestWhen, toLocalInput, typeOf } from './util.js';
@@ -102,7 +103,7 @@ export default function PostView() {
     setBusy(false);
   };
   const doReel = async () => {
-    setExp(true); toast('Baixando vídeo...');
+    setExp(true); toast('Baixando vídeo…');
     try { const { blob, ext } = await exportReel(live, () => {}, 1); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `reel.${ext}`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); toast('Vídeo baixado.'); }
     catch (e) { toast(e.message, true); }
     setExp(false);
@@ -154,6 +155,8 @@ export default function PostView() {
             <input value={tags} onChange={e => setTags(e.target.value)} aria-label="Hashtags" placeholder="#hashtags" />
             {it.aiError && <div className="aierr">IA: {it.aiError}</div>}
           </div>
+
+          {!posted && <Approval it={it} live={live} setCaption={setCaption} />}
 
           {!posted && <>
             <DateTime value={when} onChange={setWhen} />
