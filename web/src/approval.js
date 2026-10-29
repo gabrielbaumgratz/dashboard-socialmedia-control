@@ -52,23 +52,32 @@ async function shrink(dataUrl) {
 export const getApproval = async id => fromDoc(await fs('/aprovacoes/' + id));
 export const removeApproval = async id => { const a = await getApproval(id); if (!a) return; await Promise.all([...(a.imagens || []), a.story].filter(Boolean).map(x => fs('/imagens/' + x, 'DELETE'))); await fs('/aprovacoes/' + id, 'DELETE'); };
 
-// it: o post já com a legenda e hashtags atuais. Reenviar zera o pedido anterior, mas guarda a legenda que ela escreveu.
-export async function sendApproval(it, onStep = () => {}) {
+// it: o post já com a arte e o texto da arte. A legenda e as hashtags (geradas pela IA) NÃO vão para o calendário: só se ela quiser escrever uma.
+// Reenviar zera o pedido anterior, mas guarda a legenda que ela escreveu. ctl.cancelado = true interrompe o envio e apaga o que já subiu.
+export async function sendApproval(it, onStep = () => {}, ctl = {}) {
+  const parar = () => { if (ctl.cancelado) throw new Error('Envio cancelado.'); };
   const old = await getApproval(it.id);
   onStep('Renderizando a arte…');
   const set = await renderSet(it, 'image/jpeg');
+  parar();
   const versao = (old?.versao || 0) + 1, ids = [];
   onStep('Enviando para a cliente…');
-  const put = async (name, f) => { const id = `${it.id}-v${versao}-${name}`; await fs('/imagens/' + id, 'PATCH', { fields: toFields({ data: await shrink(f.dataUrl) }) }); ids.push(id); return id; };
-  const imagens = []; for (let i = 0; i < set.slides.length; i++) imagens.push(await put(String(i + 1), set.slides[i]));
-  const story = await put('story', set.story);
-  const dados = {
-    titulo: it.title || it.origTitle || '', categoria: it.category || '', descricao: it.description || '',
-    tipo: typeOf(it) === 'video' ? 'reel' : typeOf(it), imagens, story,
-    legenda: it.caption || '', hashtags: (it.hashtags || []).map(t => '#' + t).join(' '),
-    status: 'pendente', versao, enviadoEm: new Date().toISOString(), respondidoEm: '', respondidoPor: '', legendaCliente: '', comentario: '', sugTitulo: '', sugCategoria: '', sugDescricao: '',
-  };
-  await fs(`/aprovacoes/${it.id}?${mask(dados)}`, 'PATCH', { fields: toFields(dados) });
+  try {
+    const put = async (name, f) => { parar(); const id = `${it.id}-v${versao}-${name}`; await fs('/imagens/' + id, 'PATCH', { fields: toFields({ data: await shrink(f.dataUrl) }) }); ids.push(id); return id; };
+    const imagens = []; for (let i = 0; i < set.slides.length; i++) imagens.push(await put(String(i + 1), set.slides[i]));
+    const story = await put('story', set.story);
+    parar();
+    const dados = {
+      titulo: it.title || it.origTitle || '', categoria: it.category || '', descricao: it.description || '',
+      tipo: typeOf(it) === 'video' ? 'reel' : typeOf(it), imagens, story,
+      legenda: '', hashtags: '',
+      status: 'pendente', versao, enviadoEm: new Date().toISOString(), respondidoEm: '', respondidoPor: '', legendaCliente: '', comentario: '', sugTitulo: '', sugCategoria: '', sugDescricao: '',
+    };
+    await fs(`/aprovacoes/${it.id}?${mask(dados)}`, 'PATCH', { fields: toFields(dados) });
+  } catch (e) {
+    await Promise.all(ids.map(x => fs('/imagens/' + x, 'DELETE').catch(() => {}))); // cancelou ou deu erro: não deixa arte solta no banco
+    throw e;
+  }
   if (old) await Promise.all([...(old.imagens || []), old.story].filter(Boolean).map(x => fs('/imagens/' + x, 'DELETE').catch(() => {})));
   return getApproval(it.id);
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getApproval, removeApproval, sendApproval } from './approval.js';
 import { useApp } from './store.jsx';
 import { Spin } from './ui.jsx';
@@ -8,21 +8,22 @@ const ST = { pendente: ['Aguardando a cliente', 'var(--mut)'], aprovado: ['Aprov
 // bloco da prévia: manda a arte para o calendário da cliente e mostra o que ela respondeu
 export default function Approval({ it, live, setCaption }) {
   const { saveItem, toast } = useApp();
-  const [ap, setAp] = useState(undefined), [busy, setBusy] = useState(false);
+  const [ap, setAp] = useState(undefined), [busy, setBusy] = useState(false), [sending, setSending] = useState(false), ctl = useRef({}), parou = useRef(false);
   const [err, setErr] = useState('');
-  const load = useCallback(() => getApproval(it.id).then(a => { setErr(''); setAp(a); }).catch(e => { setErr(e.message); setAp(cur => cur === undefined ? null : cur); }), [it.id]);
+  const load = useCallback(() => getApproval(it.id).then(a => { if (parou.current) return; setErr(''); setAp(a); }).catch(e => { setErr(e.message); setAp(cur => cur === undefined ? null : cur); }), [it.id]);
   useEffect(() => { setAp(undefined); load(); const t = setInterval(load, 20000); return () => clearInterval(t); }, [load]);
 
   const send = async () => {
     setBusy(true);
-    try { setAp(await sendApproval(live, s => toast(s))); toast('Enviado. Ela já vê no calendário.'); }
+    ctl.current = {}; setSending(true);
+    try { setAp(await sendApproval(live, s => toast(s), ctl.current)); toast('Enviado. Ela já vê no calendário.'); }
     catch (e) { toast(e.message, true); }
-    setBusy(false);
+    setSending(false); setBusy(false);
   };
   const remove = async () => {
-    if (!confirm('Remover este post da aprovação? Ele some do calendário da cliente.')) return;
+    if (!confirm('Cancelar o pedido de aprovação? Ele some do calendário da cliente.')) return;
     setBusy(true);
-    try { await removeApproval(it.id); setAp(null); toast('Removido da aprovação.'); }
+    try { await removeApproval(it.id); setAp(null); toast('Pedido de aprovação cancelado.'); }
     catch (e) { toast(e.message, true); }
     setBusy(false);
   };
@@ -38,7 +39,7 @@ export default function Approval({ it, live, setCaption }) {
     <div className="capbox apbox">
       <div className="caphead"><b>Aprovação da cliente</b>
         {ap && <span className="apst" style={{ color: cor }}>● {label}</span>}</div>
-      {ap === undefined && <div className="meta"><Spin /> Verificando…</div>}
+      {ap === undefined && <div className="meta"><Spin /> Verificando… <button className="ghost" onClick={() => { parou.current = true; setAp(null); }}>Cancelar</button></div>}
       {err && <div className="aierr">Não consegui verificar: {err} <button className="ghost" onClick={load}>Tentar de novo</button></div>}
       {ap && ap.respondidoPor && <div className="meta">Resposta de {ap.respondidoPor.split('@')[0]} em {new Date(ap.respondidoEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>}
       {ap && ap.comentario && <p className="apcom">“{ap.comentario}”</p>}
@@ -50,7 +51,8 @@ export default function Approval({ it, live, setCaption }) {
           <div className="apbtns"><button className="ghost" onClick={() => { setCaption(leg); toast('Legenda dela aplicada.'); }}>Usar</button><button className="ghost" onClick={() => copy(leg)}>Copiar</button></div></div>
       )}
       <button onClick={send} disabled={busy || ap === undefined}>{busy ? <><Spin /> Enviando…</> : ap ? 'Reenviar para aprovação' : 'Enviar para aprovação'}</button>
-      {(ap || err) && <button className="danger" onClick={remove} disabled={busy}>Remover da aprovação</button>}
+      {sending && <button className="ghost" onClick={() => { ctl.current.cancelado = true; toast('Cancelando o envio…'); }}>Cancelar envio</button>}
+      {(ap || err) && <button className="danger" onClick={remove} disabled={busy}>Cancelar pedido de aprovação</button>}
     </div>
   );
 }
