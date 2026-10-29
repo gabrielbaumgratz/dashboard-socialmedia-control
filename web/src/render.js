@@ -169,15 +169,15 @@ const Render = (() => {
     const lines = [], ws = []; for (let k = n, j = N; k > 0; k--) { const i = cut[k][j]; lines.unshift(words.slice(i, j).join(' ')); ws.push(width(i, j)); j = i; }
     return { lines, spread: (Math.max(...ws) - Math.min(...ws)) / Math.max(...ws) };
   }
-  // procura, entre tamanhos de fonte próximos (até 8% menor, e até 4% maior só em 2 e 3 linhas, para não invadir o rodapé) e números de linhas,
+  // procura, entre tamanhos de fonte próximos (até 20% menor; maior só se maxGrow permitir, e só em 2 e 3 linhas, para não invadir o rodapé) e números de linhas,
   // a combinação que deixa as linhas mais parecidas. Fonte menor às vezes junta tudo em uma linha a menos e some com a viúva.
   // Há uma pequena preferência pelo tamanho do template. Texto longo que já encolheu sozinho não é mexido.
-  function evenTitle(ctx, text, weight, size, lh, W, maxLines) {
+  function evenTitle(ctx, text, weight, size, lh, W, maxLines, maxGrow = 1) {
     const b0 = block(ctx, text, weight, size, lh, W, maxLines);
     if (b0.lines.length < 2 || b0.size < size) return b0;
     let best = null;
-    for (const k of [1, 0.98, 1.02, 0.96, 1.04, 0.94, 0.92]) {
-      if (k > 1 && b0.lines.length > 3) continue;
+    for (const k of [1, 0.98, 1.02, 0.96, 1.04, 0.94, 0.92, 0.9, 0.88, 0.86, 0.84, 0.82, 0.8]) {
+      if (k > 1 && (b0.lines.length > 3 || k > maxGrow + 0.001)) continue; // só cresce se o modelo permitir (maxGrow)
       const sz = Math.round(size * k);
       for (let n = 2; n <= b0.lines.length; n++) {
         const r = evenLines(ctx, text, weight, sz, b0.spacing, W, n); if (!r) continue;
@@ -237,6 +237,7 @@ const Render = (() => {
   const cleanCat = s => { const v = String(s || '').trim(); return /^(uncategorized|sem categoria)$/i.test(v) ? '' : v; };
   const catOf = d => cleanCat(d.category); // categoria em branco = sem texto (fica só o tracinho)
   const G = 18; // respiro padrão entre blocos de texto nos posts (o story usa 22, como o Foto em cima + painel)
+  const PM = 88, PW = 1008 - PM; // margem esquerda padrão dos posts e largura do texto (a margem direita continua em 1008)
   // aparência editável: painel atrás do texto (post e story) e cor/degradê do fundo dos stories
   const LOOK = { post: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, story: { on: false, color: '#0f172a', opacity: 70, bw: 0, bc: '#ffffff', bo: 60, r: 28, tc: 'auto' }, bg: { color: C.tealE, fade: 100, ph: 760, tc: 'auto', op: 100, sym: false }, uh: { bg: C.tealE, acc: C.turq, size: 48, bar: '', chip: '' }, r3: { bg: '#000000', opacity: 90, size: 36, chip: C.tealE, tc: 'auto' }, tag: { on: true, bg: C.turq, tc: C.navy }, pbar: { bar: '' }, nd: { ph: 680, sym: true, topLogo: true, cat: C.tealM, pill: false, bg: C.branco, tc: 'auto' }, cut: { bg: C.navy, size: 52, bar: C.verde } }; // uh.bar: '' = igual ao destaque, 'none' = sem barra
   const UH_PRESETS = [['Verde petróleo', C.tealE, C.turq], ['Amarelo', '#735400', '#fabd0d'], ['Azul marinho', C.navy, C.turq], ['Teal', C.tealM, C.verde], ['Preto', C.preto, '#fabd0d']];
@@ -266,15 +267,15 @@ const Render = (() => {
       photo(ctx, img, 0, 0, 1080, 1350, d.focal); // foto ocupa tudo, cor só embaixo do texto
       const gh = 1350 * uh.size / 100; // tamanho do degradê, 0 a 100% da altura
       ctx.save(); ctx.globalAlpha = 0.92; vgrad(ctx, 1350 - gh, gh, rgba(bgc, 0), bgc); ctx.restore();
-      await logo(ctx, false, 72, 72, 298.7);
+      await logo(ctx, false, PM, 72, 298.7);
       if (uh.bar !== 'none') { ctx.fillStyle = uh.bar || acc; ctx.fillRect(0, 1334, 1080, 16); }
-      const ti = block(ctx, d.title, 900, 66, 72, 936, 4), de = d.description ? block(ctx, d.description, 400, 30, 39, 936, 3) : null;
+      const ti = evenTitle(ctx, d.title, 900, 66, 72, PW, 4), de = d.description ? block(ctx, d.description, 400, 30, 39, PW, 3) : null;
       const noChip = uh.chip === 'none', chipH = noChip ? -G : lineH(36) + 24, hh = lineH(30); // sem selo: não deixa espaço
       let y = 1350 - 96 - hh - G - (de ? de.h + G : 0) - ti.h - G - chipH;
-      const cc = uh.chip || acc; if (!noChip) chip(ctx, up(d.chip || 'Última hora'), 72, y, 36, { bg: cc, color: lum(cc) > 0.35 ? C.navy : C.branco }); y += chipH + G;
-      y = draw(ctx, ti, 72, y, C.branco) + G;
-      if (de) y = draw(ctx, de, 72, y, C.branco) + G;
-      font(ctx, 600, 30); ctx.fillStyle = C.branco; ctx.fillText(BRAND.handle, 72, y);
+      const cc = uh.chip || acc; if (!noChip) chip(ctx, up(d.chip || 'Última hora'), PM, y, 36, { bg: cc, color: lum(cc) > 0.35 ? C.navy : C.branco }); y += chipH + G;
+      y = draw(ctx, ti, PM, y, C.branco) + G;
+      if (de) y = draw(ctx, de, PM, y, C.branco) + G;
+      font(ctx, 600, 30); ctx.fillStyle = C.branco; ctx.fillText(BRAND.handle, PM, y);
       credit(ctx, d.credit, 790);
     } else if (t === 'p03') {
       ctx.fillStyle = C.navy; ctx.fillRect(0, 0, 1080, 1350);
@@ -283,33 +284,33 @@ const Render = (() => {
       // título grande atrás do recorte (2 linhas de 190px)
       const words = up(d.bigTitle || String(d.title || '').split(/\s+/).slice(0, 2).join(' ')).split(/\s+/).filter(Boolean);
       const big = [words.slice(0, Math.ceil(words.length / 2)).join(' '), words.slice(Math.ceil(words.length / 2)).join(' ')].filter(Boolean);
-      let bs = 190; font(ctx, 900, bs); while (bs > 90 && Math.max(...big.map(w => ctx.measureText(w).width)) > 936) { bs -= 6; font(ctx, 900, bs); }
-      ctx.fillStyle = C.branco; big.forEach((w, i) => ctx.fillText(w, 72, 225 + i * bs * 0.895 + (bs * 0.895 - bs * 1.364) / 2));
+      let bs = 190; font(ctx, 900, bs); while (bs > 90 && Math.max(...big.map(w => ctx.measureText(w).width)) > PW) { bs -= 6; font(ctx, 900, bs); }
+      ctx.fillStyle = C.branco; big.forEach((w, i) => ctx.fillText(w, PM, 225 + i * bs * 0.895 + (bs * 0.895 - bs * 1.364) / 2));
       if (d.cutoutImg) { // recorte PNG sem fundo, encaixado na caixa do Figma (230,300 620x900), apoiado embaixo
         const c = d.cutoutImg, k = Math.min(620 / c.width, 900 / c.height), w = c.width * k, h = c.height * k;
         ctx.drawImage(c, 230 + (620 - w) / 2, 300 + 900 - h, w, h);
       } // sem recorte: fica só a foto, sem caixa nem aviso
       const cu = look(d).cut, gh = 1350 * cu.size / 100, barH = cu.bar === 'none' ? 0 : 8 + G;
       vgrad(ctx, 1350 - gh, gh, rgba(cu.bg, 0), rgba(cu.bg, 0.92));
-      await logo(ctx, false, 72, 72, 298.7);
-      const ti = block(ctx, d.title, 800, 46, 52, 936, 2), hh = lineH(30) + G;
+      await logo(ctx, false, PM, 72, 298.7);
+      const ti = evenTitle(ctx, d.title, 800, 46, 52, PW, 2), hh = lineH(30) + G;
       const cat = catOf(d);
       let y = 1350 - 96 - hh - ti.h - barH - (cat ? G + lineH(36) : 0);
-      if (cat) { font(ctx, 700, 36, 2); ctx.fillStyle = C.verde; ctx.fillText(up(cat), 72, y, 936); y += lineH(36) + G; }
-      if (barH) { ctx.fillStyle = cu.bar; rrect(ctx, 72, y, 300, 8, 4); ctx.fill(); y += barH; }
-      y = draw(ctx, ti, 72, y, C.branco) + G;
-      font(ctx, 600, 30); ctx.fillStyle = C.branco; ctx.fillText(BRAND.handle, 72, y);
+      if (cat) { font(ctx, 700, 36, 2); ctx.fillStyle = C.verde; ctx.fillText(up(cat), PM, y, PW); y += lineH(36) + G; }
+      if (barH) { ctx.fillStyle = cu.bar; rrect(ctx, PM, y, 300, 8, 4); ctx.fill(); y += barH; }
+      y = draw(ctx, ti, PM, y, C.branco) + G;
+      font(ctx, 600, 30); ctx.fillStyle = C.branco; ctx.fillText(BRAND.handle, PM, y);
       credit(ctx, d.credit, 1249);
     } else if (t === 'p04') {
       const nd = look(d).nd, ph = nd.ph, th = ndTheme(nd); // altura da foto editável, o resto é o fundo (branco por padrão)
-      const M = 88, TW = 1008 - M; // margem esquerda maior; o texto fecha na mesma margem direita de antes
+      const M = PM, TW = PW;
       ctx.fillStyle = nd.bg; ctx.fillRect(0, 0, 1080, 1350);
       photo(ctx, img, 0, 0, 1080, ph, d.focal);
       if (nd.sym) symbol(ctx, 880, ph - 52, 105.6);
       let y = ph + 48;
       if (catOf(d) && nd.pill) { chip(ctx, up(catOf(d)), M, ph + 40, 32, { bg: nd.cat, color: lum(nd.cat) > 0.35 ? C.navy : C.branco, sp: 2 }); y = ph + 40 + lineH(32) + 24 + 44; }
       else if (catOf(d)) { font(ctx, 700, 32, 2); ctx.fillStyle = nd.cat; ctx.fillText(up(catOf(d)), M, y, TW); y += lineH(32) + 20; }
-      y = draw(ctx, evenTitle(ctx, d.title, 900, 56, 62, TW, 4), M, y, th.tc) + G;
+      y = draw(ctx, evenTitle(ctx, d.title, 900, 56, 62, TW, 4, 1.04), M, y, th.tc) + G;
       if (d.description) y = draw(ctx, block(ctx, d.description, 400, 30, 39, TW, 3), M, y, th.tc) + G;
       if (d.source) { font(ctx, 400, 26); ctx.fillStyle = th.sub; ctx.fillText('Fonte: ' + d.source, M, y); }
       if (nd.botLogo !== false) await logo(ctx, th.dk, M, 1228, 186.7); // logo de baixo: opcional
@@ -325,17 +326,17 @@ const Render = (() => {
     photo(ctx, img, 0, 0, 1080, 1350, d.focal);
     vgrad(ctx, 450, 900, 'rgba(15,23,42,0)', 'rgba(15,23,42,0.92)');
     vgrad(ctx, 0, 300, 'rgba(15,23,42,0.55)', 'rgba(15,23,42,0)');
-    await logo(ctx, false, 72, 72, 298.7);
-    const ti = block(ctx, d.title, 900, size, lh, 936, withHandle ? 4 : 5), hh = withHandle ? lineH(30) + G : 0;
+    await logo(ctx, false, PM, 72, 298.7);
+    const ti = evenTitle(ctx, d.title, 900, size, lh, PW, withHandle ? 4 : 5), hh = withHandle ? lineH(30) + G : 0;
     const cat = catOf(d), catH = cat ? lineH(40) + G : 0, pbar = look(d).pbar.bar, barH = pbar === 'none' ? 0 : 8 + G;
     let y = 1350 - pb - hh - ti.h - barH - catH;
     const lp = look(d).post, tc = panelInk(lp), dk = darkInk(tc);
     panel(ctx, lp, y - 36, catH + barH + ti.h + (withHandle ? G + lineH(30) : 0) + 72);
     ctx.fillStyle = dk ? C.tealE : C.verde;
-    if (cat) { font(ctx, 700, 40, 2); ctx.fillText(up(cat), 72, y, 936); y += catH; }
-    if (barH) { if (pbar) ctx.fillStyle = pbar; rrect(ctx, 72, y, 300, 8, 4); ctx.fill(); y += barH; }
-    y = draw(ctx, ti, 72, y, tc) + G;
-    if (withHandle) { font(ctx, 600, 30); ctx.fillStyle = tc; ctx.fillText(BRAND.handle, 72, y); credit(ctx, d.credit, 1278); }
+    if (cat) { font(ctx, 700, 40, 2); ctx.fillText(up(cat), PM, y, PW); y += catH; }
+    if (barH) { if (pbar) ctx.fillStyle = pbar; rrect(ctx, PM, y, 300, 8, 4); ctx.fill(); y += barH; }
+    y = draw(ctx, ti, PM, y, tc) + G;
+    if (withHandle) { font(ctx, 600, 30); ctx.fillStyle = tc; ctx.fillText(BRAND.handle, PM, y); credit(ctx, d.credit, 1278); }
   }
 
   // ---------- carrossel ----------
