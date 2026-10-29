@@ -1,15 +1,23 @@
 // Aprovação da cliente: grava no mesmo Firebase do calendário (login anônimo + Firestore REST, sem SDK).
 // aprovacoes/{id do post}: o que você mandou e, nos campos da cliente, o que ela respondeu.
+import { api } from './api.js';
 import { renderSet } from './art.js';
 import { typeOf } from './util.js';
 
-const KEY = 'AIzaSyBMKBtMZraKNlSX7TibSB8RkVHK4So-1e8', PROJ = 'reconstrucoes-posts';
+const PROJ = 'reconstrucoes-posts';
+// a chave não fica no código: vem do servidor (config.json local ou FIREBASE_API_KEY na Vercel)
+let KEY = '';
+async function apiKey() {
+  if (!KEY) KEY = (await api('/api/firebase-key')).key;
+  if (!KEY) throw new Error('Falta a chave do Firebase: coloque firebaseKey no config.json (ou FIREBASE_API_KEY na Vercel).');
+  return KEY;
+}
 const FS = `https://firestore.googleapis.com/v1/projects/${PROJ}/databases/(default)/documents`;
 
 let tok = null;
 async function token() {
   if (tok && tok.exp > Date.now()) return tok.id;
-  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${KEY}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ returnSecureToken: true }) });
+  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${await apiKey()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ returnSecureToken: true }) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error('Não consegui entrar no Firebase: ' + (j.error?.message || r.status));
   tok = { id: j.idToken, exp: Date.now() + (+j.expiresIn - 120) * 1000 };
@@ -58,7 +66,7 @@ export async function sendApproval(it, onStep = () => {}) {
     titulo: it.title || it.origTitle || '', categoria: it.category || '', descricao: it.description || '',
     tipo: typeOf(it) === 'video' ? 'reel' : typeOf(it), imagens, story,
     legenda: it.caption || '', hashtags: (it.hashtags || []).map(t => '#' + t).join(' '),
-    status: 'pendente', versao, enviadoEm: new Date().toISOString(), respondidoEm: '', comentario: '', sugTitulo: '', sugCategoria: '', sugDescricao: '',
+    status: 'pendente', versao, enviadoEm: new Date().toISOString(), respondidoEm: '', respondidoPor: '', legendaCliente: '', comentario: '', sugTitulo: '', sugCategoria: '', sugDescricao: '',
   };
   await fs(`/aprovacoes/${it.id}?${mask(dados)}`, 'PATCH', { fields: toFields(dados) });
   if (old) await Promise.all([...(old.imagens || []), old.story].filter(Boolean).map(x => fs('/imagens/' + x, 'DELETE').catch(() => {})));

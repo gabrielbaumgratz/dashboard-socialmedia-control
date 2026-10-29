@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getApproval, sendApproval } from './approval.js';
+import { getApproval, removeApproval, sendApproval } from './approval.js';
 import { useApp } from './store.jsx';
 import { Spin } from './ui.jsx';
 
@@ -18,6 +18,13 @@ export default function Approval({ it, live, setCaption }) {
     catch (e) { toast(e.message, true); }
     setBusy(false);
   };
+  const remove = async () => {
+    if (!confirm('Remover este post da aprovação? Ele some do calendário da cliente.')) return;
+    setBusy(true);
+    try { await removeApproval(it.id); setAp(null); toast('Removido da aprovação.'); }
+    catch (e) { toast(e.message, true); }
+    setBusy(false);
+  };
   const apply = (patch, msg) => saveItem(it, patch).then(() => { toast(msg); load(); }).catch(e => toast(e.message, true));
   const copy = t => navigator.clipboard.writeText(t).then(() => toast('Copiado.'), () => toast('Não deu para copiar.', true));
 
@@ -31,6 +38,7 @@ export default function Approval({ it, live, setCaption }) {
       <div className="caphead"><b>Aprovação da cliente</b>
         {ap && <span className="apst" style={{ color: cor }}>● {label}</span>}</div>
       {ap === undefined && <div className="meta"><Spin /> Verificando…</div>}
+      {ap && ap.respondidoPor && <div className="meta">Resposta de {ap.respondidoPor.split('@')[0]} em {new Date(ap.respondidoEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>}
       {ap && ap.comentario && <p className="apcom">“{ap.comentario}”</p>}
       {sugs.map(([nome, v, , patch]) => (
         <div className="apsug" key={nome}><div><small>{nome} sugerido</small><p>{v}</p></div><button className="ghost" onClick={() => apply(patch, nome + ' atualizado.')}>Aplicar</button></div>
@@ -40,6 +48,7 @@ export default function Approval({ it, live, setCaption }) {
           <div className="apbtns"><button className="ghost" onClick={() => { setCaption(leg); toast('Legenda dela aplicada.'); }}>Usar</button><button className="ghost" onClick={() => copy(leg)}>Copiar</button></div></div>
       )}
       <button onClick={send} disabled={busy || ap === undefined}>{busy ? <><Spin /> Enviando…</> : ap ? 'Reenviar para aprovação' : 'Enviar para aprovação'}</button>
+      {ap && <button className="danger" onClick={remove} disabled={busy}>Remover da aprovação</button>}
     </div>
   );
 }

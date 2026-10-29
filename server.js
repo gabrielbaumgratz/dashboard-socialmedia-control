@@ -41,6 +41,7 @@ async function refreshConfig(force) {
   let file = {}; try { file = JSON.parse(await store.readText('config.json')) || {}; } catch {}
   CFG = { ...DEFAULTS, ...file };
   if (process.env.GEMINI_API_KEY) CFG.geminiKey = process.env.GEMINI_API_KEY;
+  if (process.env.FIREBASE_API_KEY) CFG.firebaseKey = process.env.FIREBASE_API_KEY; // chave web do Firebase (aprovação da cliente): fica fora do código
   cfgAt = Date.now();
 }
 const loadConfig = () => CFG;
@@ -529,6 +530,7 @@ async function handleApi(req, res, url) {
     for (const k of PUBLIC_KEYS) out[k] = c[k];
     return send(res, 200, out);
   }
+  if (p === '/api/firebase-key' && m === 'GET') return send(res, 200, { key: loadConfig().firebaseKey || '' });
   if (p === '/api/config' && m === 'POST') {
     const b = await readJson(req), patch = {};
     for (const k of ['geminiKey', 'geminiKey2', ...PUBLIC_KEYS]) if (k in b && b[k] !== undefined && b[k] !== null) {
