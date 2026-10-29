@@ -149,6 +149,46 @@ const Render = (() => {
     ctx.textAlign = 'left';
     return y + b.h;
   }
+  // título do Post 2: divide o texto em n linhas o mais parecidas possível (sem linha curta sobrando, a "viúva"),
+  // com o espaço normal entre as palavras. Devolve { lines, spread } ou null se não couber em n linhas.
+  // spread = quanto a linha mais curta é menor que a mais longa (0 = todas iguais).
+  function evenLines(ctx, text, weight, size, spacing, W, n) {
+    font(ctx, weight, size, spacing);
+    const words = String(text || '').split(/\s+/).filter(Boolean), sp = ctx.measureText(' ').width, w = words.map(t => ctx.measureText(t).width), N = words.length;
+    if (N < n) return null;
+    const width = (i, j) => { let t = sp * (j - i - 1); for (let k = i; k < j; k++) t += w[k]; return t; };
+    const T = width(0, N) / n; // alvo: todas as linhas com a largura média
+    // dp[k][j] = menor custo de dividir as j primeiras palavras em k linhas; custo de cada linha = (alvo - largura)²
+    const dp = Array.from({ length: n + 1 }, () => Array(N + 1).fill(Infinity)), cut = Array.from({ length: n + 1 }, () => Array(N + 1).fill(0));
+    dp[0][0] = 0;
+    for (let k = 1; k <= n; k++) for (let j = k; j <= N; j++) for (let i = k - 1; i < j; i++) {
+      const lw = width(i, j); if (lw > W + 0.5 || dp[k - 1][i] === Infinity) continue;
+      const c = dp[k - 1][i] + (T - lw) ** 2; if (c < dp[k][j]) { dp[k][j] = c; cut[k][j] = i; }
+    }
+    if (dp[n][N] === Infinity) return null;
+    const lines = [], ws = []; for (let k = n, j = N; k > 0; k--) { const i = cut[k][j]; lines.unshift(words.slice(i, j).join(' ')); ws.push(width(i, j)); j = i; }
+    return { lines, spread: (Math.max(...ws) - Math.min(...ws)) / Math.max(...ws) };
+  }
+  // procura, entre tamanhos de fonte próximos (até 8% menor, e até 4% maior só em 2 e 3 linhas, para não invadir o rodapé) e números de linhas,
+  // a combinação que deixa as linhas mais parecidas. Fonte menor às vezes junta tudo em uma linha a menos e some com a viúva.
+  // Há uma pequena preferência pelo tamanho do template. Texto longo que já encolheu sozinho não é mexido.
+  function evenTitle(ctx, text, weight, size, lh, W, maxLines) {
+    const b0 = block(ctx, text, weight, size, lh, W, maxLines);
+    if (b0.lines.length < 2 || b0.size < size) return b0;
+    let best = null;
+    for (const k of [1, 0.98, 1.02, 0.96, 1.04, 0.94, 0.92]) {
+      if (k > 1 && b0.lines.length > 3) continue;
+      const sz = Math.round(size * k);
+      for (let n = 2; n <= b0.lines.length; n++) {
+        const r = evenLines(ctx, text, weight, sz, b0.spacing, W, n); if (!r) continue;
+        const score = r.spread + Math.abs(1 - k) * 0.5;
+        if (!best || score < best.score) best = { score, sz, n, lines: r.lines };
+      }
+    }
+    if (!best) return b0;
+    const l = lh * best.sz / size;
+    return { weight, size: best.sz, lh: l, lines: best.lines, spacing: b0.spacing, h: best.n * l };
+  }
   const lineH = size => size * 1.364; // "leading normal" da Nunito
   // selo com o texto centrado de verdade (mede a caixa real das letras, não a altura da linha)
   function chip(ctx, text, x, y, size, opts = {}) {
@@ -262,16 +302,17 @@ const Render = (() => {
       credit(ctx, d.credit, 1249);
     } else if (t === 'p04') {
       const nd = look(d).nd, ph = nd.ph, th = ndTheme(nd); // altura da foto editável, o resto é o fundo (branco por padrão)
+      const M = 88, TW = 1008 - M; // margem esquerda maior; o texto fecha na mesma margem direita de antes
       ctx.fillStyle = nd.bg; ctx.fillRect(0, 0, 1080, 1350);
       photo(ctx, img, 0, 0, 1080, ph, d.focal);
       if (nd.sym) symbol(ctx, 880, ph - 52, 105.6);
       let y = ph + 48;
-      if (catOf(d) && nd.pill) { chip(ctx, up(catOf(d)), 72, ph + 40, 32, { bg: nd.cat, color: lum(nd.cat) > 0.35 ? C.navy : C.branco, sp: 2 }); y = ph + 40 + lineH(32) + 24 + 44; }
-      else if (catOf(d)) { font(ctx, 700, 32, 2); ctx.fillStyle = nd.cat; ctx.fillText(up(catOf(d)), 72, y, 936); y += lineH(32) + 20; }
-      y = draw(ctx, block(ctx, d.title, 900, 56, 62, 936, 4), 72, y, th.tc) + G;
-      if (d.description) y = draw(ctx, block(ctx, d.description, 400, 30, 39, 936, 3), 72, y, th.tc) + G;
-      if (d.source) { font(ctx, 400, 26); ctx.fillStyle = th.sub; ctx.fillText('Fonte: ' + d.source, 72, y); }
-      await logo(ctx, th.dk, 72, 1228, 186.7);
+      if (catOf(d) && nd.pill) { chip(ctx, up(catOf(d)), M, ph + 40, 32, { bg: nd.cat, color: lum(nd.cat) > 0.35 ? C.navy : C.branco, sp: 2 }); y = ph + 40 + lineH(32) + 24 + 44; }
+      else if (catOf(d)) { font(ctx, 700, 32, 2); ctx.fillStyle = nd.cat; ctx.fillText(up(catOf(d)), M, y, TW); y += lineH(32) + 20; }
+      y = draw(ctx, evenTitle(ctx, d.title, 900, 56, 62, TW, 4), M, y, th.tc) + G;
+      if (d.description) y = draw(ctx, block(ctx, d.description, 400, 30, 39, TW, 3), M, y, th.tc) + G;
+      if (d.source) { font(ctx, 400, 26); ctx.fillStyle = th.sub; ctx.fillText('Fonte: ' + d.source, M, y); }
+      await logo(ctx, th.dk, M, 1228, 186.7);
       font(ctx, 700, 28); ctx.fillStyle = th.acc; ctx.textAlign = 'right'; ctx.fillText(BRAND.site, 1008, 1234); ctx.textAlign = 'left';
       credit(ctx, d.credit, 640);
     } else {
