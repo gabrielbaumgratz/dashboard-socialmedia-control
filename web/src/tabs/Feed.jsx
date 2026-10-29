@@ -21,7 +21,7 @@ function LineItem({ it }) {
 }
 
 export default function Feed() {
-  const { items, cfg, openPost, trashItem } = useApp();
+  const { items, cfg, openPost, trashItem, setTab } = useApp();
   const [brand, setBrand] = useState(false);
   const [mode, setMode] = useState('grid'), [sub, setSub] = useState('posts'), [drafts, setDrafts] = useState(false);
   const [avatar, setAvatar] = useState(null);
@@ -67,7 +67,7 @@ export default function Feed() {
             ))}
           </div>
           <div className={'iggrid' + (sub === 'stories' ? ' stories' : '')}>
-            {!shown.length && <p className="hint pad">{sub === 'reels' ? 'Nenhum reel ainda. Suba um vídeo em "Editar arte".' : 'Nada programado ou postado ainda.'}</p>}
+            {!shown.length && <div className="hint pad">{sub === 'reels' ? 'Nenhum reel ainda. Suba um vídeo em "Editar arte".' : 'Nada programado ou postado ainda.'}<div><button type="button" className="ghost" onClick={() => setTab('news')}>Criar um post</button></div></div>}
             {shown.map(it => {
               const t = typeOf(it);
               return (
@@ -84,7 +84,7 @@ export default function Feed() {
         </div>
       ) : (
         <div className="feedline">
-          {!list.length && <p className="hint">Nada programado ou postado ainda.</p>}
+          {!list.length && <div className="hint">Nada programado ou postado ainda.<div><button type="button" className="ghost" onClick={() => setTab('news')}>Criar um post</button></div></div>}
           {list.slice(0, 15).map(it => <LineItem key={it.id} it={it} />)}
         </div>
       )}

@@ -4,7 +4,7 @@ import { downloadSet } from '../PostView.jsx';
 import { fullCaption } from '../util.js';
 import { api } from '../api.js';
 import { useApp, vt } from '../store.jsx';
-import { Cover, ExpandableSearch, PageHead, Seg, usePref, askChoice } from '../ui.jsx';
+import { Cover, Empty, ExpandableSearch, PageHead, Seg, usePref, askChoice } from '../ui.jsx';
 import { STATUS, TYPE, cap1, dayKey, itemDate, mondayOf, pad, slotsList, suggestWhen, typeOf } from '../util.js';
 
 const drag = it => e => e.dataTransfer.setData('text/plain', it.id);
@@ -102,7 +102,7 @@ function KCol({ st, name, list, onMove }) {
 }
 
 export default function Calendar() {
-  const { items, cfg, saveItem, replace, byId, toast } = useApp();
+  const { items, cfg, saveItem, replace, byId, toast, setTab } = useApp();
   const [view, setView] = usePref('cal-view', 'week');
   const [wf, setWf] = useState({ draft: true, scheduled: true, posted: true });
   const [menu, setMenu] = useState(null);
@@ -111,6 +111,8 @@ export default function Calendar() {
   const [month, setMonth] = usePref('cal-month', (() => { const d = new Date(); d.setDate(1); return d; })());
   const slots = slotsList(cfg), todayK = dayKey(new Date());
   const shown = it => wf[it.status];
+  // aviso quando o período está vazio, apontando pra onde ir: Fila se já tem rascunho, senão as notícias do site
+  const emptyGo = items.some(i => i.status === 'draft') ? { label: 'Abrir a Fila', onClick: () => setTab('queue') } : { label: 'Ver notícias do site', onClick: () => setTab('news') };
 
   async function dropTo(id, day, time) {
     const it = byId(id); if (!it || it.status === 'posted') return;
@@ -188,10 +190,12 @@ export default function Calendar() {
             {(by[dayKey(d)] || []).sort((x, y) => itemDate(x).localeCompare(itemDate(y))).map(it => <WCard key={it.id} it={it} compact />)}
           </MonthCell>);
         }
-        return <><div className="monthgrid">{['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(d => <div key={d} className="dow">{d}</div>)}{cells}</div></>;
+        const m0 = new Date(month), vazio = !items.some(it => { const iso = itemDate(it); if (!iso || !shown(it)) return false; const d = new Date(iso); return d.getFullYear() === m0.getFullYear() && d.getMonth() === m0.getMonth(); });
+        return <>{vazio && <Empty slim action={emptyGo}>Nenhum post neste mês. Programe um da Fila ou crie a partir de uma notícia.</Empty>}<div className="monthgrid">{['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(d => <div key={d} className="dow">{d}</div>)}{cells}</div></>;
       })()}
 
       {view === 'week' && <>
+        {!items.some(it => shown(it) && itemDate(it) && (d => d >= new Date(weekStart) && d < new Date(new Date(weekStart).getTime() + 7 * 864e5))(new Date(itemDate(it)))) && <Empty slim action={emptyGo}>Nenhum post nesta semana. Programe um da Fila ou crie a partir de uma notícia.</Empty>}
         <div className="unsched"><b>Sem data:</b>
           {wf.draft && items.filter(i => i.status === 'draft' && !i.scheduledAt).map(i => <WCard key={i.id} it={i} />)}
           {!(wf.draft && items.some(i => i.status === 'draft' && !i.scheduledAt)) && <span className="hint">nada</span>}

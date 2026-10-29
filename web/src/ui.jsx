@@ -73,7 +73,8 @@ export function ExpandableSearch({ value, onChange, placeholder = 'Buscar…', w
   );
 }
 
-export function Empty({ children }) { return <div className="empty">{children}</div>; }
+// estado vazio: texto + (opcional) um botão que leva ao próximo passo. slim = versão compacta, pra ficar acima de uma grade
+export function Empty({ children, action, slim }) { return <div className={'empty' + (slim ? ' slim' : '')}>{children}{action && <div><button type="button" onClick={action.onClick}>{action.label}</button></div>}</div>; }
 export const Spin = () => <span className="spin" aria-hidden="true" />;
 export { cap1, Icon };
 

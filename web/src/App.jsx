@@ -33,7 +33,7 @@ function Sidebar({ mini, toggle }) {
         <button className="sidetoggle" onClick={toggle} aria-expanded={!mini} aria-label={mini ? 'Expandir a barra lateral' : 'Recolher a barra lateral'} title={mini ? 'Expandir a barra lateral' : 'Recolher a barra lateral'}><Icon name="sidebar" /></button></div>
       <nav>
         {NAV.map(([id, icon, label]) => (
-          <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)} aria-current={tab === id ? 'page' : undefined} title={mini ? label : undefined}>
+          <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)} aria-label={label} aria-current={tab === id ? 'page' : undefined} title={mini ? label : undefined}>
             {tab === id && <motion.i layoutId="navpill" className="navpill" transition={{ type: 'spring', stiffness: 400, damping: 34 }} />}
             <Icon name={icon} /><span>{label}</span>
             {id === 'queue' && q > 0 && <b className="badge">{q}</b>}

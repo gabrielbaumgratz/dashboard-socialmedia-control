@@ -869,3 +869,8 @@ h1,h2,h3{text-wrap:balance}
 .apsug small{color:var(--mut);font-weight:700}
 .apsug p{margin:2px 0 0;font-size:13.5px;white-space:pre-wrap}
 .apbtns{display:grid;gap:6px}
+
+/* estados vazios com botão */
+.empty button{margin-top:14px}
+.empty.slim{padding:18px;margin-bottom:12px}
+.hint button{margin-top:10px}
