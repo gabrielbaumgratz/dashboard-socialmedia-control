@@ -312,7 +312,7 @@ const Render = (() => {
       y = draw(ctx, evenTitle(ctx, d.title, 900, 56, 62, TW, 4), M, y, th.tc) + G;
       if (d.description) y = draw(ctx, block(ctx, d.description, 400, 30, 39, TW, 3), M, y, th.tc) + G;
       if (d.source) { font(ctx, 400, 26); ctx.fillStyle = th.sub; ctx.fillText('Fonte: ' + d.source, M, y); }
-      await logo(ctx, th.dk, M, 1228, 186.7);
+      if (nd.botLogo !== false) await logo(ctx, th.dk, M, 1228, 186.7); // logo de baixo: opcional
       font(ctx, 700, 28); ctx.fillStyle = th.acc; ctx.textAlign = 'right'; ctx.fillText(BRAND.site, 1008, 1234); ctx.textAlign = 'left';
       credit(ctx, d.credit, 640);
     } else {
